@@ -108,6 +108,7 @@ class Connection:
         result = cursor.mogrify(sql_query, parameters)
         return result
 
+    @property
     def is_busy(self):
         """Check if the connection is busy or not."""
         return self.connection.isexecuting() or (self.connection.closed == 0 and
@@ -164,6 +165,3 @@ class Connection:
     def register_hstore(self):
         # TODO: implement
         raise NotImplementedError
-
-
-
