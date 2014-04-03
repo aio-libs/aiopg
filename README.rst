@@ -1,7 +1,7 @@
-pgtulip
+aiopg
 =======
 
-**Pgtulip** is a library for accessing a PostgreSQL_ database
+**Aiopg** is a library for accessing a PostgreSQL_ database
 from the asyncio_ (PEP-3156/tulip) framework. It wraps
 asynchronous features of the Psycopg database driver.
 
@@ -14,7 +14,7 @@ Example
 .. code-block:: python
 
     import asyncio
-    from pgtulip.pool import Pool
+    from aiopg.pool import Pool
 
     dsn = 'dbname=jetty user=nick password=1234 host=localhost port=5432'
 
