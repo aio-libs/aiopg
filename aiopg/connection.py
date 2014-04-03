@@ -1,13 +1,44 @@
 import asyncio
-from collections import deque
 
 import psycopg2
 from psycopg2.extensions import (
-    connection as base_connection,
-    cursor as base_cursor,
-    POLL_OK, POLL_READ, POLL_WRITE, POLL_ERROR,
-    TRANSACTION_STATUS_IDLE)
-from pgtulip.exceptions import UnknownPollException
+    POLL_OK, POLL_READ, POLL_WRITE, POLL_ERROR)
+from .exceptions import UnknownPollError, ConnectionClosedError
+
+
+__all__ = ('connect',)
+
+
+ALLOWED_ARGS = {'host', 'hostaddr', 'port', 'dbname', 'user',
+                'password', 'connect_timeout', 'client_encoding',
+                'options', 'application_name',
+                'fallback_application_name', 'keepalives',
+                'keepalives_idle', 'keepalives_interval',
+                'keepalives_count', 'tty', 'sslmode', 'requiressl',
+                'sslcompression', 'sslcert', 'sslkey', 'sslrootcert',
+                'sslcrl', 'requirepeer', 'krbsrvname', 'gsslib',
+                'service', 'database'}
+
+
+@asyncio.coroutine
+def connect(dsn=None, *,
+            connection_factory=psycopg2.extensions.connection,
+            cursor_factory=psycopg2.extensions.cursor,
+            loop=None, **kwargs):
+
+    if loop is None:
+        loop = asyncio.get_event_loop()
+
+    for k in kwargs:
+        if k not in ALLOWED_ARGS:
+            raise TypeError("connect() got unexpected keyword argument '{}'"
+                            .format(k))
+
+    waiter = asyncio.Future(loop=loop)
+    conn = Connection(dsn, connection_factory, cursor_factory,
+                      loop, waiter, **kwargs)
+    yield from waiter
+    return conn
 
 
 class Connection:
@@ -20,77 +51,89 @@ class Connection:
         but other uses are possible
     :param asyncio.EventLoop loop: A list or tuple with query parameters.
             Defaults to an empty tuple."""
-    def __init__(self, dsn, connection_factory=None, cursor_factory=None,
-                 loop=None, **kwargs):
+    def __init__(self, dsn, connection_factory, cursor_factory, loop, waiter,
+                 **kwargs):
 
-        self._connection_factory = connection_factory or base_connection
-        self._cursor_factory = cursor_factory or base_cursor
+        self._connection_factory = connection_factory
+        self._cursor_factory = cursor_factory
 
-        self.loop = loop or asyncio.get_event_loop()
+        self._loop = loop
 
-        kwargs.update(
+        self._connection = psycopg2.connect(
+            dsn,
             cursor_factory=self._cursor_factory,
-            connection_factory=self._connection_factory,
-            async=True
-        )
-        self.connection = psycopg2.connect(dsn, **kwargs)
-        self.fileno = self.connection.fileno()
-        self._transaction_status = self.connection.get_transaction_status
+            connection_factory=connection_factory,
+            async=True,
+            **kwargs)
+        self._fileno = self._connection.fileno()
+        self._done_waiters = []
+        loop.add_writer(self._fileno, self._ready, 'writing', None)
+        self._waiter = waiter
 
-    def poller(self, future, event=None):
+    def _ready(self, action, result):
+        if action == 'writing':
+            self._loop.remove_writer(self._fileno)
+        elif action == 'reading':
+            self._loop.remove_reader(self._fileno)
+        else:
+            raise RuntimeError("Unknown action {!r}".format(action))
         try:
-            state = self.connection.poll()
+            state = self._connection.poll()
         except (psycopg2.Warning, psycopg2.Error) as error:
-            self._remove_both(self.fileno)
-            future.set_exception(error)
-            return future
+            self._waiter.set_exception(error)
+            self._waiter = None
         else:
             if state == POLL_OK:
-                future.set_result(event)
-                self._remove_both(self.fileno)
+                self._waiter.set_result(result)
+                self._waiter = None
             elif state == POLL_READ:
-                self.loop.add_reader(self.fileno, self.poller, future, event)
+                self._loop.add_reader(self._fileno, self._ready,
+                                      'reading', result)
             elif state == POLL_WRITE:
-                self.loop.add_writer(self.fileno, self.poller, future, event)
+                self._loop.add_writer(self._fileno, self._ready,
+                                      'writing', result)
             elif state == POLL_ERROR:
-                raise psycopg2.OperationalError("poll() returned %s" % state)
+                raise psycopg2.OperationalError("poll() returned {}"
+                                                .format(state))
             else:
-                raise UnknownPollException
+                raise UnknownPollError()
 
-
-    def _remove_both(self, fd):
-        self.loop.remove_reader(fd)
-        self.loop.remove_writer(fd)
-
-    def connect(self):
-        """Initiate async connection to the database."""
-        future = asyncio.Future(loop=self.loop)
-        self.loop.add_writer(self.fileno, self.poller, future, self)
-        yield from future
-
+    @asyncio.coroutine
     def execute(self, operation, parameters=()):
         """Prepare and execute a database operation (query or command).
 
-        :param string sql_query: an SQL query to execute
-        :param tuple/list parameters: A list or tuple with query parameters.
-            Defaults to an empty tuple.
-        :returns tuple:
+        sql_query -- an SQL query to execute
 
-        .. _Passing parameters to SQL queries: http://initd.org/psycopg/docs/usage.html#query-parameters
+        parameters -- a list or tuple with query parameters, empty
+        tuple by default.
+
+        Returns cursor object.
+
+        Passing parameters to SQL queries:
+         http://initd.org/psycopg/docs/usage.html#query-parameters
         """
-        cursor = self.connection.cursor(cursor_factory=self._cursor_factory)
+        if not self._connection:
+            raise ConnectionClosedError()
+        while self._waiter is not None:
+            yield from self._waiter
+        cursor = self._connection.cursor(cursor_factory=self._cursor_factory)
         cursor.execute(operation, parameters)
-        future = asyncio.Future(loop=self.loop)
-        self.loop.add_writer(self.fileno, self.poller, future, cursor)
-        return future
+        self._waiter = fut = asyncio.Future(loop=self.loop)
+        self.loop.add_writer(self.fileno, self._ready, 'writing', cursor)
+        return (yield from fut)
 
+    @asyncio.coroutine
     def callproc(self, procname, parameters=()):
         """Call stored procedure"""
-        cursor = self.connection.cursor()
+        if not self._connection:
+            raise ConnectionClosedError()
+        while self._waiter is not None:
+            yield from self._waiter
+        cursor = self._connection.cursor(cursor_factory=self._cursor_factory)
         cursor.callproc(procname, parameters)
-        future = asyncio.Future(loop=self.loop)
-        self.loop.add_writer(self.fileno, self.poller, future, cursor)
-        return future
+        self._waiter = fut = asyncio.Future(loop=self.loop)
+        self.loop.add_writer(self.fileno, self._ready, 'reading', cursor)
+        return (yield from fut)
 
     @asyncio.coroutine
     def morgify(self, sql_query, parameters=()):
@@ -104,64 +147,20 @@ class Connection:
         :param tuple/list parameters: A list or tuple with query parameters.
 
         :return: resulting query as a byte string"""
-        cursor = self.connection.cursor()
+        if not self._connection:
+            raise ConnectionClosedError()
+        cursor = self._connection.cursor(cursor_factory=self._cursor_factory)
         result = cursor.mogrify(sql_query, parameters)
         return result
 
-    @property
-    def is_busy(self):
-        """Check if the connection is busy or not."""
-        return self.connection.isexecuting() or (self.connection.closed == 0 and
-            self._transaction_status() != TRANSACTION_STATUS_IDLE)
+    # FIXME: add transaction and TPC methods
 
-    @property
-    def is_closed(self):
-        """Indicates whether the connection is closed or not."""
-        # 0 = open, 1 = closed, 2 = 'something horrible happened'
-        return self.connection.closed > 0
+    def register_hstore(self):
+        # TODO: implement. Do we need this at all?
+        raise NotImplementedError
 
     def close(self):
         """Remove the connection from the event_loop and close it."""
-        self.connection.close()
-
-
-    @asyncio.coroutine
-    def run_query(self, operation, parameters=()):
-        """Execute and fetch SQL query
-
-        :param string sql_query: an SQL query to execute
-        :param tuple/list parameters: A list or tuple with query parameters.
-            Defaults to an empty tuple.
-        :returns tuple: query results
-        """
-        cursor = yield from self.execute(operation, parameters)
-        return cursor.fetchall()
-
-    @asyncio.coroutine
-    def run_transaction(self, sql_queries):
-        """
-        Run multiple sql queries in transaction.
-
-        :param tuple sql_queries: tuple with of (sql, params) pairs to execute
-        :returns tuple: query results
-        """
-        cursors, q = [], deque()
-        for sql in sql_queries:
-            q.append((sql, ())) if isinstance(sql, str) else q.append(sql[:2])
-        q.appendleft(("BEGIN;", ()))
-        q.append(("COMMIT;", ()))
-
-        for sql, params in q:
-            try:
-                cursors.append((yield from self.execute(sql, params)))
-            except Exception:
-                #TODO: fix exception
-                self.execute("ROLLBACK;")
-                raise
-        # no need include cursors for BEGIN and COMMIT command
-        results = [c.fetchall() for c in cursors[1:-1]]
-        return results
-
-    def register_hstore(self):
-        # TODO: implement
-        raise NotImplementedError
+        if self._connection is None:
+            return
+        self._connection.close()

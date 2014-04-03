@@ -1,9 +1,7 @@
 import asyncio
 import psycopg2
-from psycopg2.extensions import TRANSACTION_STATUS_IDLE
 
 from pgtulip.connection import Connection
-from pgtulip.exceptions import BusyConnection
 
 
 class Pool:
@@ -51,8 +49,6 @@ class Pool:
         if conn.is_closed:
             raise psycopg2.extensions.OperationalError("""Connection is
             closed: %r""" % (conn,))
-        elif conn.is_busy:
-            raise BusyConnection("Busy connections must not be returned to pool")
         self._pool.put_nowait(conn)
 
     @asyncio.coroutine

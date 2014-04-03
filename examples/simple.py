@@ -1,7 +1,7 @@
 import asyncio
 from pgtulip.pool import Pool
 
-dsn = 'dbname=jetty user=nick password=1234 host=localhost port=5432'
+dsn = 'dbname=jetty user=nick password=1234 host=localhost'
 
 
 @asyncio.coroutine
