@@ -17,14 +17,13 @@ ALLOWED_ARGS = {'host', 'hostaddr', 'port', 'dbname', 'user',
                 'keepalives_count', 'tty', 'sslmode', 'requiressl',
                 'sslcompression', 'sslcert', 'sslkey', 'sslrootcert',
                 'sslcrl', 'requirepeer', 'krbsrvname', 'gsslib',
-                'service', 'database'}
+                'service', 'database', 'connection_factory', 'cursor_factory'}
 
 
 @asyncio.coroutine
 def connect(dsn=None, *,
-            connection_factory=psycopg2.extensions.connection,
-            cursor_factory=psycopg2.extensions.cursor,
             loop=None, **kwargs):
+    """XXX"""
 
     if loop is None:
         loop = asyncio.get_event_loop()
@@ -35,8 +34,7 @@ def connect(dsn=None, *,
                             .format(k))
 
     waiter = asyncio.Future(loop=loop)
-    conn = Connection(dsn, connection_factory, cursor_factory,
-                      loop, waiter, **kwargs)
+    conn = Connection(dsn, loop, waiter, **kwargs)
     yield from waiter
     return conn
 
@@ -51,40 +49,39 @@ class Connection:
         but other uses are possible
     :param asyncio.EventLoop loop: A list or tuple with query parameters.
             Defaults to an empty tuple."""
-    def __init__(self, dsn, connection_factory, cursor_factory, loop, waiter,
+    def __init__(self, dsn, loop, waiter,
                  **kwargs):
-
-        self._connection_factory = connection_factory
-        self._cursor_factory = cursor_factory
 
         self._loop = loop
 
-        self._connection = psycopg2.connect(
+        self._conn = psycopg2.connect(
             dsn,
             cursor_factory=self._cursor_factory,
             connection_factory=connection_factory,
             async=True,
             **kwargs)
-        self._fileno = self._connection.fileno()
+        self._fileno = self._conn.fileno()
         self._done_waiters = []
         loop.add_writer(self._fileno, self._ready, 'writing', None)
         self._waiter = waiter
 
-    def _ready(self, action, result):
-        if action == 'writing':
+    def _ready(self, action):
+        if action == None:
+            pass
+        elif action == 'writing':
             self._loop.remove_writer(self._fileno)
         elif action == 'reading':
             self._loop.remove_reader(self._fileno)
         else:
             raise RuntimeError("Unknown action {!r}".format(action))
         try:
-            state = self._connection.poll()
+            state = self._conn.poll()
         except (psycopg2.Warning, psycopg2.Error) as error:
             self._waiter.set_exception(error)
             self._waiter = None
         else:
             if state == POLL_OK:
-                self._waiter.set_result(result)
+                self._waiter.set_result(None)
                 self._waiter = None
             elif state == POLL_READ:
                 self._loop.add_reader(self._fileno, self._ready,
@@ -97,6 +94,28 @@ class Connection:
                                                 .format(state))
             else:
                 raise UnknownPollError()
+
+    def _create_waiter(self, func_name):
+        if self._waiter is not None:
+            raise RuntimeError('%s() called while another coroutine is '
+                               'already waiting for incoming data' % func_name)
+        return futures.Future(loop=self._loop)
+
+    @asyncio.coroutine
+    def cursor(self, name=None, cursor_factory=None,
+               scrollable=None, withhold=False):
+        """XXX"""
+        if not self._conn:
+            raise ConnectionClosedError()
+        impl = self._conn.cursor(name=name, cursor_factory=cursor_factory,
+                                 scrollable=scrollable, withhold=withhold)
+        self._waiter = self._create_waiter('cursor')
+        self.loop.add_writer(self.fileno, self._ready, 'writing')
+        try:
+            yield from self._waiter
+        finally:
+            self._waiter = None
+        return Cursor(self, impl)
 
     @asyncio.coroutine
     def execute(self, operation, parameters=()):
@@ -112,11 +131,11 @@ class Connection:
         Passing parameters to SQL queries:
          http://initd.org/psycopg/docs/usage.html#query-parameters
         """
-        if not self._connection:
+        if not self._conn:
             raise ConnectionClosedError()
         while self._waiter is not None:
             yield from self._waiter
-        cursor = self._connection.cursor(cursor_factory=self._cursor_factory)
+        cursor = self._conn.cursor(cursor_factory=self._cursor_factory)
         cursor.execute(operation, parameters)
         self._waiter = fut = asyncio.Future(loop=self.loop)
         self.loop.add_writer(self.fileno, self._ready, 'writing', cursor)
@@ -125,11 +144,11 @@ class Connection:
     @asyncio.coroutine
     def callproc(self, procname, parameters=()):
         """Call stored procedure"""
-        if not self._connection:
+        if not self._conn:
             raise ConnectionClosedError()
         while self._waiter is not None:
             yield from self._waiter
-        cursor = self._connection.cursor(cursor_factory=self._cursor_factory)
+        cursor = self._conn.cursor(cursor_factory=self._cursor_factory)
         cursor.callproc(procname, parameters)
         self._waiter = fut = asyncio.Future(loop=self.loop)
         self.loop.add_writer(self.fileno, self._ready, 'reading', cursor)
@@ -147,9 +166,9 @@ class Connection:
         :param tuple/list parameters: A list or tuple with query parameters.
 
         :return: resulting query as a byte string"""
-        if not self._connection:
+        if not self._conn:
             raise ConnectionClosedError()
-        cursor = self._connection.cursor(cursor_factory=self._cursor_factory)
+        cursor = self._conn.cursor(cursor_factory=self._cursor_factory)
         result = cursor.mogrify(sql_query, parameters)
         return result
 
@@ -161,6 +180,9 @@ class Connection:
 
     def close(self):
         """Remove the connection from the event_loop and close it."""
-        if self._connection is None:
+        if self._conn is None:
             return
-        self._connection.close()
+        self._loop.remove_reader(self._fileno)
+        self._loop.remove_writer(self._fileno)
+        self._conn.close()
+        self._conn = None
