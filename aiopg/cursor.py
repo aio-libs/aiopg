@@ -1,3 +1,6 @@
+import asyncio
+
+
 class Cursor:
 
     def __init__(self, conn, impl):
@@ -43,38 +46,38 @@ class Cursor:
     def withhold(self, val):
         self._impl.withhold = val
 
-    @coroutine
+    @asyncio.coroutine
     def execute(self, operation, parameters=()):
         self._impl.execute(operation, parameters)
         yield from self._poll()
 
-    @coroutine
+    @asyncio.coroutine
     def executemany(self, operation, seq_of_parameters):
         self._impl.executemany(operation, seq_of_parameters)
         yield from self._poll()
 
-    @coroutine
+    @asyncio.coroutine
     def callproc(self, procname, parameters):
         self._impl.callproc(procname, parameters)
         yield from self._poll()
 
-    @coroutine
+    @asyncio.coroutine
     def mogrify(self, procname, parameters):
         self._impl.callproc(procname, parameters)
         yield from self._poll()
 
-    @coroutine
+    @asyncio.coroutine
     def setinputsizes(self, sizes):
         self._impl.setinputsizes(sizes)
 
-    @coroutine
+    @asyncio.coroutine
     def fetchone(self):
         ret = self._impl.fetchone()
         assert not self._conn.isexecuted(), ("Don't support server side "
                                              "cursors yet")
         return ret
 
-    @coroutine
+    @asyncio.coroutine
     def fetchmany(self, size=None):
         if size is None:
             size = self._impl.arraysize
@@ -83,14 +86,14 @@ class Cursor:
                                              "cursors yet")
         return ret
 
-    @coroutine
+    @asyncio.coroutine
     def fetchall(self):
         ret = self._impl.fetchall()
         assert not self._conn.isexecuted(), ("Don't support server side "
                                              "cursors yet")
         return ret
 
-    @coroutine
+    @asyncio.coroutine
     def scroll(self, value, mode="relative"):
         ret = self._impl.scroll(value, mode)
         assert not self._conn.isexecuted(), ("Don't support server side "
@@ -133,7 +136,7 @@ class Cursor:
     def statusmessage(self):
         return self._impl.statusmessage
 
-    @coroutine
+    @asyncio.coroutine
     def cast(self, old, s):
         ret = self._impl.cast(old, s)
         assert not self._conn.isexecuted(), ("Don't support server side "
@@ -148,30 +151,30 @@ class Cursor:
     def tzinfo_factory(self, val):
         self._impl.tzinfo_factory = val
 
-    @coroutine
+    @asyncio.coroutine
     def nextset(self):
         ret = self._impl.nextset()
         assert not self._conn.isexecuted(), ("Don't support server side "
                                              "cursors yet")
         return ret
 
-    @coroutine
+    @asyncio.coroutine
     def setoutputsizes(self, size, column=None):
         self._impl.setoutputsizes(size, column)
 
-    @coroutine
+    @asyncio.coroutine
     def copy_from(file, table, sep='\t', null='\\N', size=8192, columns=None):
         self._impl.copy_from(file, table,
                              sep=sep, null=null, size=size, columns=columns)
         yield from self._poll()
 
-    @coroutine
+    @asyncio.coroutine
     def copy_to(file, table, sep='\t', null='\\N', columns=None):
         self._impl.copy_to(file, table,
                              sep=sep, null=null, columns=columns)
         yield from self._poll()
 
-    @coroutine
+    @asyncio.coroutine
     def copy_expert(sql, file, size=8192):
         self._impl.copy_expert(sql, file, size)
         yield from self._poll()

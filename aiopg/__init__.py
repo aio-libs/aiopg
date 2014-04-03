@@ -2,9 +2,10 @@ from collections import namedtuple
 import re
 import sys
 
-from .connection import connect
+from .connection import connect, Connection
+from .cursor import Cursor
 
-__all__ = ('connect', )
+__all__ = ('connect', 'Connection', 'Cursor')
 
 __version__ = '0.0.0a1'
 
@@ -38,4 +39,4 @@ version_info = _parse_version(__version__)
 
 
 # make pyflakes happy
-(connect, )
+(connect, Connection, Cursor)
