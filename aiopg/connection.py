@@ -20,9 +20,11 @@ ALLOWED_ARGS = {'host', 'hostaddr', 'port', 'dbname', 'user',
                 'service', 'database', 'connection_factory', 'cursor_factory'}
 
 
+#NB: psycopg2 adds POLL_READ and POLL_WRITE to self._conn.poll() and never rejects the options until POLL_OK. We need to process that.
+
+
 @asyncio.coroutine
-def connect(dsn=None, *,
-            loop=None, **kwargs):
+def connect(dsn=None, *, loop=None, **kwargs):
     """XXX"""
 
     if loop is None:
@@ -40,15 +42,8 @@ def connect(dsn=None, *,
 
 
 class Connection:
-    """Psycopg connection wrapper class.
-    :param string dsn:
-    :param psycopg2.extensions.cursor cursor_factory: argument can be used
-        to create non-standard cursors
-    :param psycopg2.extensions.connection connection_factory: class is usually
-        sub-classed only to provide an easy way to create customized cursors
-        but other uses are possible
-    :param asyncio.EventLoop loop: A list or tuple with query parameters.
-            Defaults to an empty tuple."""
+    """XXX"""
+
     def __init__(self, dsn, loop, waiter,
                  **kwargs):
 
@@ -60,7 +55,7 @@ class Connection:
             **kwargs)
         self._fileno = self._conn.fileno()
         self._waiter = waiter
-        self._ready(None)
+        self._ready('writing')
 
     def _ready(self, action):
         assert self._waiter is not None, "BAD STATE"
@@ -84,9 +79,10 @@ class Connection:
             self._waiter = None
         else:
             if state == POLL_OK:
-                print('READY DONE')
-                self._waiter.set_result(None)
-                self._waiter = None
+                if not self._conn.isexecuted():
+                    print('READY DONE')
+                    self._waiter.set_result(None)
+                    self._waiter = None
             elif state == POLL_READ:
                 print('READY READ')
                 self._loop.add_reader(self._fileno, self._ready,
