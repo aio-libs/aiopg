@@ -345,4 +345,8 @@ class TestCursor(unittest.TestCase):
             ret = yield from cur.fetchone()
             self.assertEqual((2,), ret)
 
+            cur.close()
+            with self.assertRaises(psycopg2.InterfaceError):
+                yield from cur.callproc('inc', [1])
+
         self.loop.run_until_complete(go())
