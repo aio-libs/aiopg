@@ -3,6 +3,7 @@ import aiopg
 import unittest
 
 from aiopg.connection import Connection
+from aiopg.cursor import Cursor
 
 
 class TestConnection(unittest.TestCase):
@@ -42,7 +43,10 @@ class TestConnection(unittest.TestCase):
         @asyncio.coroutine
         def go():
             conn = yield from self.connect()
-            curs = yield from conn.cursor('SELECT 1')
-            self.assertIsInstance(conn, Connection)
+            cur = yield from conn.cursor()
+            self.assertIsInstance(cur, Cursor)
+            yield from cur.execute('SELECT 1')
+            ret = yield from cur.fetchone()
+            self.assertEqual(1, ret)
 
         self.loop.run_until_complete(go())

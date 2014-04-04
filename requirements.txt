@@ -1,2 +1,0 @@
-asyncio==0.3.1
-psycopg2==2.5.2
