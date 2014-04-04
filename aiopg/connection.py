@@ -87,7 +87,7 @@ class Connection:
             'message': message,
             'connection': self,
             })
-        self.close()
+        self._close()
 
     @asyncio.coroutine
     def _create_waiter(self, func_name):
@@ -124,11 +124,21 @@ class Connection:
 
     # FIXME: add transaction and TPC methods
 
+    @asyncio.coroutine
     def close(self):
         """Remove the connection from the event_loop and close it."""
+        self._close()
+
+    def _close(self):
         if self._conn is None:
             return
         self._loop.remove_reader(self._fileno)
         self._loop.remove_writer(self._fileno)
         self._conn.close()
         self._conn = None
+
+    @property
+    def closed(self):
+        """Read-only attribute reporting whether the database connection
+        is open (False) or closed (True)."""
+        return self._conn is None

@@ -68,7 +68,7 @@ class TestConnection(unittest.TestCase):
         @asyncio.coroutine
         def go():
             conn = yield from self.connect()
-            conn.close()
+            yield from conn.close()
             self.assertIsNone(conn._conn)
 
         self.loop.run_until_complete(go())
@@ -78,8 +78,8 @@ class TestConnection(unittest.TestCase):
         @asyncio.coroutine
         def go():
             conn = yield from self.connect()
-            conn.close()
-            conn.close()
+            yield from conn.close()
+            yield from conn.close()
             self.assertIsNone(conn._conn)
 
         self.loop.run_until_complete(go())
@@ -90,7 +90,7 @@ class TestConnection(unittest.TestCase):
         def go():
             conn = yield from self.connect()
             cur = yield from conn.cursor()
-            conn.close()
+            yield from conn.close()
             with self.assertRaises(aiopg.ConnectionClosedError):
                 #TODO: use connection method, not cursor
                 yield from cur.execute('SELECT 1')
@@ -132,5 +132,16 @@ class TestConnection(unittest.TestCase):
             yield from cur.execute('SELECT 1 AS a')
             ret = yield from cur.fetchone()
             self.assertEqual(1, ret['a'])
+
+        self.loop.run_until_complete(go())
+
+    def test_closed(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            self.assertFalse(conn.closed)
+            yield from conn.close()
+            self.assertTrue(conn.closed)
 
         self.loop.run_until_complete(go())
