@@ -16,18 +16,13 @@ class TestConnection(unittest.TestCase):
         self.loop.close()
         self.loop = None
 
+    @asyncio.coroutine
     def connect(self):
-
-        @asyncio.coroutine
-        def go():
-            conn = yield from aiopg.connect(database='aiopg',
-                                            user='aiopg',
-                                            password='passwd',
-                                            host='127.0.0.1',
-                                            loop=self.loop)
-            return conn
-
-        return self.loop.run_until_complete(go())
+        return (yield from aiopg.connect(database='aiopg',
+                                         user='aiopg',
+                                         password='passwd',
+                                         host='127.0.0.1',
+                                         loop=self.loop))
 
     def test_connect(self):
 
@@ -47,6 +42,6 @@ class TestConnection(unittest.TestCase):
             self.assertIsInstance(cur, Cursor)
             yield from cur.execute('SELECT 1')
             ret = yield from cur.fetchone()
-            self.assertEqual(1, ret)
+            self.assertEqual((1,), ret)
 
         self.loop.run_until_complete(go())

@@ -5,6 +5,8 @@ from psycopg2.extensions import (
     POLL_OK, POLL_READ, POLL_WRITE, POLL_ERROR)
 from .exceptions import UnknownPollError, ConnectionClosedError
 
+from .cursor import Cursor
+
 
 __all__ = ('connect',)
 
@@ -18,9 +20,6 @@ ALLOWED_ARGS = {'host', 'hostaddr', 'port', 'dbname', 'user',
                 'sslcompression', 'sslcert', 'sslkey', 'sslrootcert',
                 'sslcrl', 'requirepeer', 'krbsrvname', 'gsslib',
                 'service', 'database', 'connection_factory', 'cursor_factory'}
-
-
-#NB: psycopg2 adds POLL_READ and POLL_WRITE to self._conn.poll() and never rejects the options until POLL_OK. We need to process that.
 
 
 @asyncio.coroutine
@@ -44,55 +43,36 @@ def connect(dsn=None, *, loop=None, **kwargs):
 class Connection:
     """XXX"""
 
-    def __init__(self, dsn, loop, waiter,
-                 **kwargs):
-
+    def __init__(self, dsn, loop, waiter, **kwargs):
         self._loop = loop
-
-        self._conn = psycopg2.connect(
-            dsn,
-            async=True,
-            **kwargs)
+        self._conn = psycopg2.connect(dsn, async=True, **kwargs)
+        assert self._conn.isexecuting(), "Is conn async at all???"
         self._fileno = self._conn.fileno()
         self._waiter = waiter
-        self._ready('writing')
+        self._ready()
 
-    def _ready(self, action):
+    def _ready(self):
         assert self._waiter is not None, "BAD STATE"
-        print('READY', action)
-
-        if action == None:
-            pass
-        elif action == 'writing':
-            self._loop.remove_writer(self._fileno)
-        elif action == 'reading':
-            self._loop.remove_reader(self._fileno)
-        else:
-            self._fatal_error(RuntimeError("Unknown action {!r}"
-                                           .format(action)))
 
         try:
             state = self._conn.poll()
-            print('READY STATE', state)
-        except (psycopg2.Warning, psycopg2.Error) as error:
-            self._waiter.set_exception(error)
+        except (psycopg2.Warning, psycopg2.Error) as exc:
+            self._loop.remove_reader(self._fileno)
+            self._loop.remove_writer(self._fileno)
+            self._waiter.set_exception(exc)
             self._waiter = None
         else:
             if state == POLL_OK:
-                if not self._conn.isexecuted():
-                    print('READY DONE')
+                if not self._conn.isexecuting():
+                    self._loop.remove_reader(self._fileno)
+                    self._loop.remove_writer(self._fileno)
                     self._waiter.set_result(None)
                     self._waiter = None
             elif state == POLL_READ:
-                print('READY READ')
-                self._loop.add_reader(self._fileno, self._ready,
-                                      'reading')
+                self._loop.add_reader(self._fileno, self._ready)
             elif state == POLL_WRITE:
-                print('READY WRITE')
-                self._loop.add_writer(self._fileno, self._ready,
-                                      'writing')
+                self._loop.add_writer(self._fileno, self._ready)
             elif state == POLL_ERROR:
-                print('READY ERROR')
                 self._fatal_error(psycopg2.OperationalError(
                     "aiopg poll() returned {}".format(state)))
             else:
@@ -103,17 +83,19 @@ class Connection:
         self._loop.call_exception_handler({
             'message': message,
             'exception': exc,
-            'transport': self,
-            'protocol': self._protocol,
+            'connection': self,
             })
-        self._force_close(exc)
+        self.close()
 
     @asyncio.coroutine
     def _poll(self):
         assert self._waiter is not None
-        assert self._conn.isexecuted(), ("Underlying connection "
-                                         "is not executing, is it async?")
-        self._ready(None)
+        if not self._conn.isexecuting():
+            # Underlying connection is not executing, the call is not async
+            self._waiter = None
+            return
+
+        self._ready()
         try:
             yield from self._waiter
         finally:
@@ -132,8 +114,12 @@ class Connection:
                scrollable=None, withhold=False):
         """XXX"""
         self._create_waiter('cursor')
-        impl = self._conn.cursor(name=name, cursor_factory=cursor_factory,
-                                 scrollable=scrollable, withhold=withhold)
+        if cursor_factory is None:
+            impl = self._conn.cursor(name=name,
+                                     scrollable=scrollable, withhold=withhold)
+        else:
+            impl = self._conn.cursor(name=name, cursor_factory=cursor_factory,
+                                     scrollable=scrollable, withhold=withhold)
         yield from self._poll()
         return Cursor(self, impl)
 
