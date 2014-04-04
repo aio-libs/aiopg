@@ -69,7 +69,7 @@ class TestConnection(unittest.TestCase):
         def go():
             conn = yield from self.connect()
             yield from conn.close()
-            self.assertIsNone(conn._conn)
+            self.assertTrue(conn.closed)
 
         self.loop.run_until_complete(go())
 
@@ -80,7 +80,7 @@ class TestConnection(unittest.TestCase):
             conn = yield from self.connect()
             yield from conn.close()
             yield from conn.close()
-            self.assertIsNone(conn._conn)
+            self.assertTrue(conn.closed)
 
         self.loop.run_until_complete(go())
 

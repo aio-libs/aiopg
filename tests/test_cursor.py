@@ -47,6 +47,7 @@ class TestCursor(unittest.TestCase):
             conn = yield from self.connect()
             cur = yield from conn.cursor()
             self.assertEqual(None, cur.description)
+            # FIXME: add test for description after .execute
 
         self.loop.run_until_complete(go())
 

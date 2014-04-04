@@ -28,6 +28,7 @@ class Connection:
     def __init__(self, dsn, loop, waiter, **kwargs):
         self._loop = loop
         self._conn = psycopg2.connect(dsn, async=True, **kwargs)
+        self._dsn = self._conn.dsn
         assert self._conn.isexecuting(), "Is conn async at all???"
         self._fileno = self._conn.fileno()
         self._waiter = waiter
@@ -91,8 +92,6 @@ class Connection:
 
     @asyncio.coroutine
     def _create_waiter(self, func_name):
-        if not self._conn:
-            raise psycopg2.InterfaceError('connection has been closed')
         while self._waiter is not None:
             yield from self._waiter
         self._waiter = asyncio.Future(loop=self._loop)
@@ -122,23 +121,124 @@ class Connection:
                                      scrollable=scrollable, withhold=withhold)
         return Cursor(self, impl)
 
-    # FIXME: add transaction and TPC methods
-
     @asyncio.coroutine
     def close(self):
         """Remove the connection from the event_loop and close it."""
+        # FIXME: process closing with uncommitted transaction
+        # that should wait for _conn.poll() I guess.
         self._close()
 
     def _close(self):
-        if self._conn is None:
-            return
-        self._loop.remove_reader(self._fileno)
-        self._loop.remove_writer(self._fileno)
+        if self._reading:
+            self._loop.remove_reader(self._fileno)
+        if self._writing:
+            self._loop.remove_writer(self._fileno)
         self._conn.close()
-        self._conn = None
 
     @property
     def closed(self):
         """Read-only attribute reporting whether the database connection
         is open (False) or closed (True)."""
-        return self._conn is None
+        return self._conn.closed
+
+    @asyncio.coroutine
+    def commit(self):
+        """XXX"""
+        waiter = yield from self._conn._create_waiter('commit')
+        self._conn.commit()
+        yield from self._conn._poll(waiter)
+
+    @asyncio.coroutine
+    def rollback(self):
+        """XXX"""
+        waiter = yield from self._conn._create_waiter('rollback')
+        self._conn.rollback()
+        yield from self._conn._poll(waiter)
+
+    # TPC
+
+    @asyncio.coroutine
+    def xid(self, format_id, gtrid, bqual):
+        return self._conn.xid(format_id, gtrid, bqual)
+
+    @asyncio.coroutine
+    def tpc_begin(self, xid=None):
+        raise psycopg2.ProgrammingError(
+            "tpc_begin cannot be used in asynchronous mode")
+
+    @asyncio.coroutine
+    def tpc_prepare(self):
+        raise psycopg2.ProgrammingError(
+            "tpc_prepare cannot be used in asynchronous mode")
+
+    @asyncio.coroutine
+    def tpc_commit(self, xid=None):
+        raise psycopg2.ProgrammingError(
+            "tpc_commit cannot be used in asynchronous mode")
+
+    @asyncio.coroutine
+    def tpc_rollback(self, xid=None):
+        raise psycopg2.ProgrammingError(
+            "tpc_rollback cannot be used in asynchronous mode")
+
+    @asyncio.coroutine
+    def tpc_recover(self):
+        raise psycopg2.ProgrammingError(
+            "tpc_recover cannot be used in asynchronous mode")
+
+    @asyncio.coroutine
+    def cancel(self):
+        waiter = yield from self._conn._create_waiter('cancel')
+        self._conn.cancel()
+        yield from self._conn._poll(waiter)
+
+    @asyncio.coroutine
+    def reset(self):
+        raise psycopg2.ProgrammingError(
+            "reset cannot be used in asynchronous mode")
+
+    @property
+    def dsn(self):
+        return self._dsn
+
+    @asyncio.coroutine
+    def set_session(self, *, isolation_level=None, readonly=None,
+                    deferrable=None, autocommit=None):
+        return self._conn.set_session(isolation_level=isolation_level,
+                                      readonly=readonly,
+                                      deferrable=deferrable,
+                                      autocommit=autocommit)
+
+    @property
+    def autocommit(self):
+        """XXX"""
+        self._check_closed()
+        return self._impl.autocommit
+
+    @autocommit.setter
+    def autocommit(self, val):
+        """XXX"""
+        self._check_closed()
+        self._impl.autocommit = val
+
+    @property
+    def isolation_level(self):
+        """XXX"""
+        self._check_closed()
+        return self._impl.isolation_level
+
+    @asyncio.coroutine
+    def set_isolation_level(self, val):
+        self._check_closed()
+        self._conn.set_isolation_level(val)
+
+    @property
+    def encoding(self):
+        """XXX"""
+        self._check_closed()
+        return self._impl.encoding
+
+    @asyncio.coroutine
+    def set_client_encoding(self, val):
+        self._check_closed()
+        self._conn.set_client_encoding(val)

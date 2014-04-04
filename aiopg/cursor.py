@@ -17,7 +17,6 @@ class Cursor:
         """XXX"""
         if self._conn is None:
             return
-        self._conn = None
         self._impl.close()
 
     @property
@@ -58,8 +57,6 @@ class Cursor:
     @asyncio.coroutine
     def execute(self, operation, parameters=()):
         """XXX"""
-        if self.closed:
-            raise psycopg2.InterfaceError('cursor is closed')
         waiter = yield from self._conn._create_waiter('cursor.execute')
         self._impl.execute(operation, parameters)
         yield from self._conn._poll(waiter)
@@ -73,8 +70,6 @@ class Cursor:
     @asyncio.coroutine
     def callproc(self, procname, parameters):
         """XXX"""
-        if self.closed:
-            raise psycopg2.InterfaceError('cursor is closed')
         waiter = yield from self._conn._create_waiter('cursor.callproc')
         self._impl.callproc(procname, parameters)
         yield from self._conn._poll(waiter)
