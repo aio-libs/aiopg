@@ -11,28 +11,11 @@ from .cursor import Cursor
 __all__ = ('connect',)
 
 
-ALLOWED_ARGS = {'host', 'hostaddr', 'port', 'dbname', 'user',
-                'password', 'connect_timeout', 'client_encoding',
-                'options', 'application_name',
-                'fallback_application_name', 'keepalives',
-                'keepalives_idle', 'keepalives_interval',
-                'keepalives_count', 'tty', 'sslmode', 'requiressl',
-                'sslcompression', 'sslcert', 'sslkey', 'sslrootcert',
-                'sslcrl', 'requirepeer', 'krbsrvname', 'gsslib',
-                'service', 'database', 'connection_factory', 'cursor_factory'}
-
-
 @asyncio.coroutine
 def connect(dsn=None, *, loop=None, **kwargs):
     """XXX"""
-
     if loop is None:
         loop = asyncio.get_event_loop()
-
-    for k in kwargs:
-        if k not in ALLOWED_ARGS:
-            raise TypeError("connect() got unexpected keyword argument '{}'"
-                            .format(k))
 
     waiter = asyncio.Future(loop=loop)
     conn = Connection(dsn, loop, waiter, **kwargs)

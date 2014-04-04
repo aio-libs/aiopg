@@ -4,8 +4,9 @@ import sys
 
 from .connection import connect, Connection
 from .cursor import Cursor
+from .exceptions import ConnectionClosedError
 
-__all__ = ('connect', 'Connection', 'Cursor')
+__all__ = ('connect', 'Connection', 'Cursor', 'ConnectionClosedError')
 
 __version__ = '0.0.0a1'
 
@@ -39,4 +40,4 @@ version_info = _parse_version(__version__)
 
 
 # make pyflakes happy
-(connect, Connection, Cursor)
+(connect, Connection, Cursor, ConnectionClosedError)
