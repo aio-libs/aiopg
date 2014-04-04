@@ -3,7 +3,6 @@ import asyncio
 import psycopg2
 from psycopg2.extensions import (
     POLL_OK, POLL_READ, POLL_WRITE, POLL_ERROR)
-from .exceptions import UnknownPollError, ConnectionClosedError
 
 from .cursor import Cursor
 
@@ -38,7 +37,8 @@ class Connection:
 
     def _ready(self):
         if self._waiter is None:
-            self._fatal_error(None, "Bad state in aiopg _ready callback")
+            self._fatal_error("Fatal error on aiopg connetion: "
+                              "bad state in _ready callback")
             return
 
         try:
@@ -78,13 +78,13 @@ class Connection:
                 self._fatal_error(psycopg2.OperationalError(
                     "aiopg poll() returned {}".format(state)))
             else:
-                self._fatal_error(UnknownPollError())
+                self._fatal_error("Fatal error on aiopg connetion: "
+                                  "unknown anser from underlying .poll()")
 
-    def _fatal_error(self, exc, message='Fatal error on aiopg connetion'):
+    def _fatal_error(self, message):
         # Should be called from exception handler only.
         self._loop.call_exception_handler({
             'message': message,
-            'exception': exc,
             'connection': self,
             })
         self.close()
@@ -92,7 +92,7 @@ class Connection:
     @asyncio.coroutine
     def _create_waiter(self, func_name):
         if not self._conn:
-            raise ConnectionClosedError()
+            raise psycopg2.InterfaceError('connection has been closed')
         while self._waiter is not None:
             yield from self._waiter
         self._waiter = asyncio.Future(loop=self._loop)
