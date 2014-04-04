@@ -212,33 +212,64 @@ class Connection:
     @property
     def autocommit(self):
         """XXX"""
-        self._check_closed()
         return self._impl.autocommit
 
     @autocommit.setter
     def autocommit(self, val):
         """XXX"""
-        self._check_closed()
         self._impl.autocommit = val
 
     @property
     def isolation_level(self):
         """XXX"""
-        self._check_closed()
         return self._impl.isolation_level
 
     @asyncio.coroutine
     def set_isolation_level(self, val):
-        self._check_closed()
         self._conn.set_isolation_level(val)
 
     @property
     def encoding(self):
         """XXX"""
-        self._check_closed()
         return self._impl.encoding
 
     @asyncio.coroutine
     def set_client_encoding(self, val):
-        self._check_closed()
         self._conn.set_client_encoding(val)
+
+    @property
+    def notices(self):
+        """XXX"""
+        return self._impl.notices
+
+    @property
+    def cursor_factory(self):
+        """XXX"""
+        return self._impl.cursor_factory
+
+    @asyncio.coroutine
+    def get_backend_pid(self):
+        self._conn.get_backend_pid()
+
+    @asyncio.coroutine
+    def get_parameter_status(self, parameter):
+        self._conn.get_parameter_status(parameter)
+
+    @asyncio.coroutine
+    def get_transaction_status(self):
+        self._conn.get_transaction_status()
+
+    @property
+    def protocol_version(self):
+        """XXX"""
+        return self._impl.protocol_version
+
+    @property
+    def server_version(self):
+        """XXX"""
+        return self._impl.server_version
+
+    @property
+    def status(self):
+        """XXX"""
+        return self._impl.status
