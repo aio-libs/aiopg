@@ -49,29 +49,50 @@ class Connection:
         assert self._conn.isexecuting(), "Is conn async at all???"
         self._fileno = self._conn.fileno()
         self._waiter = waiter
+        self._reading = False
+        self._writing = False
         self._ready()
 
     def _ready(self):
-        assert self._waiter is not None, "BAD STATE"
+        if self._waiter is None:
+            self._fatal_error(None, "Bad state in aiopg _ready callback")
+            return
 
         try:
             state = self._conn.poll()
         except (psycopg2.Warning, psycopg2.Error) as exc:
-            self._loop.remove_reader(self._fileno)
-            self._loop.remove_writer(self._fileno)
+            if self._reading:
+                self._loop.remove_reader(self._fileno)
+                self._reading = False
+            if self._writing:
+                self._loop.remove_writer(self._fileno)
+                self._writing = False
             self._waiter.set_exception(exc)
             self._waiter = None
         else:
             if state == POLL_OK:
-                if not self._conn.isexecuting():
+                if self._reading:
                     self._loop.remove_reader(self._fileno)
+                    self._reading = False
+                if self._writing:
                     self._loop.remove_writer(self._fileno)
-                    self._waiter.set_result(None)
-                    self._waiter = None
+                    self._writing = False
+                self._waiter.set_result(None)
+                self._waiter = None
             elif state == POLL_READ:
-                self._loop.add_reader(self._fileno, self._ready)
+                if not self._reading:
+                    self._loop.add_reader(self._fileno, self._ready)
+                    self._reading = True
+                if self._writing:
+                    self._loop.remove_writer(self._fileno)
+                    self._writing = False
             elif state == POLL_WRITE:
-                self._loop.add_writer(self._fileno, self._ready)
+                if self._reading:
+                    self._loop.remove_reader(self._fileno)
+                    self._reading = False
+                if not self._writing:
+                    self._loop.add_writer(self._fileno, self._ready)
+                    self._writing = True
             elif state == POLL_ERROR:
                 self._fatal_error(psycopg2.OperationalError(
                     "aiopg poll() returned {}".format(state)))
