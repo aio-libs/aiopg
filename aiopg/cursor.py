@@ -159,12 +159,12 @@ class Cursor:
     def statusmessage(self):
         return self._impl.statusmessage
 
-    @asyncio.coroutine
-    def cast(self, old, s):
-        ret = self._impl.cast(old, s)
-        assert not self._conn._isexecuting(), ("Don't support server side "
-                                               "cast")
-        return ret
+    ## @asyncio.coroutine
+    ## def cast(self, old, s):
+    ##     ret = self._impl.cast(old, s)
+    ##     assert not self._conn._isexecuting(), ("Don't support server side "
+    ##                                            "cast")
+    ##     return ret
 
     @property
     def tzinfo_factory(self):
@@ -176,36 +176,24 @@ class Cursor:
 
     @asyncio.coroutine
     def nextset(self):
-        ret = self._impl.nextset()
-        return ret
+        self._impl.nextset()  # raises psycopg2.NotSupportedError
 
     @asyncio.coroutine
-    def setoutputsizes(self, size, column=None):
-        self._impl.setoutputsizes(size, column)
+    def setoutputsize(self, size, column=None):
+        self._impl.setoutputsize(size, column)
 
     @asyncio.coroutine
     def copy_from(self, file, table, sep='\t', null='\\N', size=8192,
                   columns=None):
-        if self.closed:
-            raise psycopg2.InterfaceError('cursor is closed')
-        waiter = yield from self._conn._create_waiter('cursor.copy_from')
-        self._impl.copy_from(file, table,
-                             sep=sep, null=null, size=size, columns=columns)
-        yield from self._conn._poll(waiter)
+        raise psycopg2.ProgrammingError(
+            "copy_from cannot be used in asynchronous mode")
 
     @asyncio.coroutine
     def copy_to(self, file, table, sep='\t', null='\\N', columns=None):
-        if self.closed:
-            raise psycopg2.InterfaceError('cursor is closed')
-        waiter = yield from self._conn._create_waiter('cursor.copy_to')
-        self._impl.copy_to(file, table,
-                           sep=sep, null=null, columns=columns)
-        yield from self._conn._poll(waiter)
+        raise psycopg2.ProgrammingError(
+            "copy_to cannot be used in asynchronous mode")
 
     @asyncio.coroutine
     def copy_expert(self, sql, file, size=8192):
-        if self.closed:
-            raise psycopg2.InterfaceError('cursor is closed')
-        waiter = yield from self._conn._create_waiter('cursor.copy_expert')
-        self._impl.copy_expert(sql, file, size)
-        yield from self._conn._poll(waiter)
+        raise psycopg2.ProgrammingError(
+            "copy_expert cannot be used in asynchronous mode")

@@ -1,6 +1,7 @@
 import asyncio
 import aiopg
 import psycopg2
+import psycopg2.tz
 import unittest
 
 
@@ -16,11 +17,21 @@ class TestCursor(unittest.TestCase):
 
     @asyncio.coroutine
     def connect(self):
-        return (yield from aiopg.connect(database='aiopg',
+        conn = (yield from aiopg.connect(database='aiopg',
                                          user='aiopg',
                                          password='passwd',
                                          host='127.0.0.1',
                                          loop=self.loop))
+        cur = yield from conn.cursor()
+        yield from cur.execute("DROP TABLE IF EXISTS tbl")
+        yield from cur.execute("CREATE TABLE tbl (id int, name varchar(255))")
+        for i in [(1, 'a'), (2, 'b'), (3, 'c')]:
+            yield from cur.execute("INSERT INTO tbl VALUES(%s, %s)", i)
+        yield from cur.execute("DROP TABLE IF EXISTS tbl2")
+        yield from cur.execute("""CREATE TABLE tbl2
+                                  (id int, name varchar(255))
+                                  WITH OIDS""")
+        return conn
 
     def test_description(self):
 
@@ -221,13 +232,98 @@ class TestCursor(unittest.TestCase):
         def go():
             conn = yield from self.connect()
             cur = yield from conn.cursor()
-            yield from cur.execute('SELECT * from tbl;')
+            yield from cur.execute('SELECT * from tbl')
             self.assertEqual(3, cur.rowcount)
             self.assertEqual(0, cur.rownumber)
             yield from cur.fetchone()
             self.assertEqual(1, cur.rownumber)
-            self.assertEqual(1, cur.lastrowid)
 
             self.assertEqual(0, cur.lastrowid)
+            yield from cur.execute('INSERT INTO tbl2 VALUES (%s, %s)',
+                                   (4, 'd'))
+            self.assertNotEqual(0, cur.lastrowid)
+
+        self.loop.run_until_complete(go())
+
+    def test_query(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            cur = yield from conn.cursor()
+            yield from cur.execute('SELECT 1')
+            self.assertEqual(b'SELECT 1', cur.query)
+
+        self.loop.run_until_complete(go())
+
+    def test_statusmessage(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            cur = yield from conn.cursor()
+            yield from cur.execute('SELECT 1')
+            self.assertEqual('SELECT 1', cur.statusmessage)
+
+        self.loop.run_until_complete(go())
+
+    @unittest.expectedFailure
+    def test_cast(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            cur = yield from conn.cursor()
+            yield from cur.cast(1, 2)
+            self.assertEqual('SELECT 1', cur.statusmessage)
+
+        self.loop.run_until_complete(go())
+
+    def test_tzinfo_factory(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            cur = yield from conn.cursor()
+            self.assertIs(psycopg2.tz.FixedOffsetTimezone, cur.tzinfo_factory)
+
+            cur.tzinfo_factory = psycopg2.tz.LocalTimezone
+            self.assertIs(psycopg2.tz.LocalTimezone, cur.tzinfo_factory)
+
+        self.loop.run_until_complete(go())
+
+    def test_nextset(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            cur = yield from conn.cursor()
+            with self.assertRaises(psycopg2.NotSupportedError):
+                yield from cur.nextset()
+
+        self.loop.run_until_complete(go())
+
+    def test_setoutputsize(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            cur = yield from conn.cursor()
+            yield from cur.setoutputsize(4, 1)
+
+        self.loop.run_until_complete(go())
+
+    def test_copy_family(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            cur = yield from conn.cursor()
+            with self.assertRaises(psycopg2.ProgrammingError):
+                yield from cur.copy_from('file', 'table')
+            with self.assertRaises(psycopg2.ProgrammingError):
+                yield from cur.copy_to('file', 'table')
+            with self.assertRaises(psycopg2.ProgrammingError):
+                yield from cur.copy_expert('sql', 'table')
 
         self.loop.run_until_complete(go())
