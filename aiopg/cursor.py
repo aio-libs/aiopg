@@ -1,4 +1,5 @@
 import asyncio
+import psycopg2
 
 
 class Cursor:
@@ -13,6 +14,7 @@ class Cursor:
         return self._impl.description
 
     def close(self):
+        """XXX"""
         if self._conn is None:
             return
         self._conn = None
@@ -20,62 +22,79 @@ class Cursor:
 
     @property
     def closed(self):
+        """XXX"""
         return self._impl.closed
 
     @property
     def connection(self):
+        """XXX"""
         return self._conn
 
     @property
     def name(self):
+        """XXX"""
         return self._impl.name
 
     @property
     def scrollable(self):
+        """XXX"""
         return self._impl.scrollable
 
     @scrollable.setter
     def scrollable(self, val):
+        """XXX"""
         self._impl.scrollable = val
 
     @property
     def withhold(self):
+        """XXX 1"""
         return self._impl.withhold
 
     @withhold.setter
     def withhold(self, val):
+        """XXX 2"""
         self._impl.withhold = val
 
     @asyncio.coroutine
     def execute(self, operation, parameters=()):
+        """XXX"""
+        if self.closed:
+            raise psycopg2.InterfaceError('cursor is closed')
         waiter = yield from self._conn._create_waiter('cursor.execute')
         self._impl.execute(operation, parameters)
         yield from self._conn._poll(waiter)
 
     @asyncio.coroutine
     def executemany(self, operation, seq_of_parameters):
-        waiter = yield from self._conn._create_waiter('cursor.executemany')
-        self._impl.executemany(operation, seq_of_parameters)
-        yield from self._conn._poll(waiter)
+        """XXX"""
+        raise psycopg2.ProgrammingError(
+            "executemany cannot be used in asynchronous mode")
 
     @asyncio.coroutine
     def callproc(self, procname, parameters):
+        """XXX"""
+        if self.closed:
+            raise psycopg2.InterfaceError('cursor is closed')
         waiter = yield from self._conn._create_waiter('cursor.callproc')
         self._impl.callproc(procname, parameters)
         yield from self._conn._poll(waiter)
 
     @asyncio.coroutine
-    def mogrify(self, procname, parameters):
-        waiter = yield from self._conn._create_waiter('cursor.mogrify')
-        self._impl.callproc(procname, parameters)
-        yield from self._conn._poll(waiter)
+    def mogrify(self, operation, parameters=()):
+        """XXX"""
+        ret = self._impl.mogrify(operation, parameters)
+        assert not self._conn._isexecuting(), ("Don't support server side "
+                                               "mogrify")
+        return ret
 
     @asyncio.coroutine
     def setinputsizes(self, sizes):
+        """XXX"""
         self._impl.setinputsizes(sizes)
 
     @asyncio.coroutine
     def fetchone(self):
+        """XXX"""
         ret = self._impl.fetchone()
         assert not self._conn._isexecuting(), ("Don't support server side "
                                                "cursors yet")
@@ -167,6 +186,8 @@ class Cursor:
     @asyncio.coroutine
     def copy_from(self, file, table, sep='\t', null='\\N', size=8192,
                   columns=None):
+        if self.closed:
+            raise psycopg2.InterfaceError('cursor is closed')
         waiter = yield from self._conn._create_waiter('cursor.copy_from')
         self._impl.copy_from(file, table,
                              sep=sep, null=null, size=size, columns=columns)
@@ -174,6 +195,8 @@ class Cursor:
 
     @asyncio.coroutine
     def copy_to(self, file, table, sep='\t', null='\\N', columns=None):
+        if self.closed:
+            raise psycopg2.InterfaceError('cursor is closed')
         waiter = yield from self._conn._create_waiter('cursor.copy_to')
         self._impl.copy_to(file, table,
                            sep=sep, null=null, columns=columns)
@@ -181,6 +204,8 @@ class Cursor:
 
     @asyncio.coroutine
     def copy_expert(self, sql, file, size=8192):
+        if self.closed:
+            raise psycopg2.InterfaceError('cursor is closed')
         waiter = yield from self._conn._create_waiter('cursor.copy_expert')
         self._impl.copy_expert(sql, file, size)
         yield from self._conn._poll(waiter)

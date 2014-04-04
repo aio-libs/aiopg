@@ -84,7 +84,7 @@ class TestConnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-    def test_op_on_closed(self):
+    def xtest_op_on_closed(self):
 
         @asyncio.coroutine
         def go():
@@ -92,6 +92,7 @@ class TestConnection(unittest.TestCase):
             cur = yield from conn.cursor()
             conn.close()
             with self.assertRaises(aiopg.ConnectionClosedError):
+                #TODO: use connection method, not cursor
                 yield from cur.execute('SELECT 1')
 
         self.loop.run_until_complete(go())
@@ -104,10 +105,20 @@ class TestConnection(unittest.TestCase):
             cur = yield from conn.cursor()
             #import ipdb;ipdb.set_trace()
             coro1 = cur.execute('SELECT 1')
-            next(coro1)
-            with self.assertRaises(RuntimeError):
-                ret = yield from cur.execute('SELECT 2')
-                self.assertEqual((2,), ret)
+            fut = next(coro1)
+            print(fut)
+            coro2 = cur.execute('SELECT 2')
+            with self.assertRaises(asyncio.TimeoutError):
+                print('aaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+                yield from asyncio.wait_for(coro2, timeout=0.001,
+                                            loop=self.loop)
+
+            print(1111111111111111111111)
+            ret1 = yield from coro1
+            self.assertEqual((1,), ret1)
+
+            ret2 = yield from coro1
+            self.assertEqual((2,), ret2)
 
         self.loop.run_until_complete(go())
 

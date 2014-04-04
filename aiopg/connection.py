@@ -100,10 +100,6 @@ class Connection:
 
     @asyncio.coroutine
     def _poll(self, waiter):
-        if waiter is not self._waiter:
-            while self._waiter is not None:
-                yield from self._waiter
-
         assert waiter is self._waiter, (waiter, self._waiter)
         self._ready()
         try:
