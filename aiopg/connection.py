@@ -109,6 +109,9 @@ class Connection:
                                'already waiting for incoming data' % func_name)
         self._waiter = asyncio.Future(loop=self._loop)
 
+    def _isexecuting(self):
+        return self._conn.isexecuting()
+
     @asyncio.coroutine
     def cursor(self, name=None, cursor_factory=None,
                scrollable=None, withhold=False):

@@ -1,4 +1,4 @@
-"""Run aiozmq unittests.
+"""Run aiopg unittests.
 
 Usage:
   python3 runtests.py [flags] [pattern] ...
@@ -241,7 +241,7 @@ def runtests():
 
     if args.coverage:
         cov = coverage.coverage(branch=True,
-                                source=['aiozmq'],
+                                source=['aiopg'],
                                 )
         cov.start()
 

@@ -20,7 +20,7 @@ class Cursor:
 
     @property
     def closed(self):
-        return elf._impl.closed
+        return self._impl.closed
 
     @property
     def connection(self):
@@ -77,8 +77,8 @@ class Cursor:
     @asyncio.coroutine
     def fetchone(self):
         ret = self._impl.fetchone()
-        assert not self._conn._conn.isexecuting(), ("Don't support server side "
-                                             "cursors yet")
+        assert not self._conn._isexecuting(), ("Don't support server side "
+                                               "cursors yet")
         return ret
 
     @asyncio.coroutine
@@ -86,22 +86,22 @@ class Cursor:
         if size is None:
             size = self._impl.arraysize
         ret = self._impl.fetchmany(size)
-        assert not self._conn._conn.isexecuting(), ("Don't support server side "
-                                             "cursors yet")
+        assert not self._conn._isexecuting(), ("Don't support server side "
+                                               "cursors yet")
         return ret
 
     @asyncio.coroutine
     def fetchall(self):
         ret = self._impl.fetchall()
-        assert not self._conn._conn.isexecuting(), ("Don't support server side "
-                                             "cursors yet")
+        assert not self._conn._isexecuting(), ("Don't support server side "
+                                               "cursors yet")
         return ret
 
     @asyncio.coroutine
     def scroll(self, value, mode="relative"):
         ret = self._impl.scroll(value, mode)
-        assert not self._conn._conn.isexecuting(), ("Don't support server side "
-                                             "cursors yet")
+        assert not self._conn._isexecuting(), ("Don't support server side "
+                                               "cursors yet")
         return ret
 
     @property
@@ -143,15 +143,15 @@ class Cursor:
     @asyncio.coroutine
     def cast(self, old, s):
         ret = self._impl.cast(old, s)
-        assert not self._conn._conn.isexecuting(), ("Don't support server side "
-                                             "cast")
+        assert not self._conn._isexecuting(), ("Don't support server side "
+                                               "cast")
         return ret
 
     @property
     def tzinfo_factory(self):
         return self._impl.tzinfo_factory
 
-    @scrollable.setter
+    @tzinfo_factory.setter
     def tzinfo_factory(self, val):
         self._impl.tzinfo_factory = val
 
@@ -165,21 +165,22 @@ class Cursor:
         self._impl.setoutputsizes(size, column)
 
     @asyncio.coroutine
-    def copy_from(file, table, sep='\t', null='\\N', size=8192, columns=None):
+    def copy_from(self, file, table, sep='\t', null='\\N', size=8192,
+                  columns=None):
         self._conn._create_waiter('cursor.copy_from')
         self._impl.copy_from(file, table,
                              sep=sep, null=null, size=size, columns=columns)
         yield from self._conn._poll()
 
     @asyncio.coroutine
-    def copy_to(file, table, sep='\t', null='\\N', columns=None):
+    def copy_to(self, file, table, sep='\t', null='\\N', columns=None):
         self._conn._create_waiter('cursor.copy_to')
         self._impl.copy_to(file, table,
-                             sep=sep, null=null, columns=columns)
+                           sep=sep, null=null, columns=columns)
         yield from self._conn._poll()
 
     @asyncio.coroutine
-    def copy_expert(sql, file, size=8192):
+    def copy_expert(self, sql, file, size=8192):
         self._conn._create_waiter('cursor.copy_expert')
         self._impl.copy_expert(sql, file, size)
         yield from self._conn._poll()
