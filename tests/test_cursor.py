@@ -31,6 +31,13 @@ class TestCursor(unittest.TestCase):
         yield from cur.execute("""CREATE TABLE tbl2
                                   (id int, name varchar(255))
                                   WITH OIDS""")
+        yield from cur.execute("DROP FUNCTION IF EXISTS inc(val integer)")
+        yield from cur.execute("""CREATE FUNCTION inc(val integer)
+                                  RETURNS integer AS $$
+                                  BEGIN
+                                  RETURN val + 1;
+                                  END; $$
+                                  LANGUAGE PLPGSQL;""")
         return conn
 
     def test_description(self):
@@ -325,5 +332,17 @@ class TestCursor(unittest.TestCase):
                 yield from cur.copy_to('file', 'table')
             with self.assertRaises(psycopg2.ProgrammingError):
                 yield from cur.copy_expert('sql', 'table')
+
+        self.loop.run_until_complete(go())
+
+    def test_callproc(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            cur = yield from conn.cursor()
+            yield from cur.callproc('inc', [1])
+            ret = yield from cur.fetchone()
+            self.assertEqual((2,), ret)
 
         self.loop.run_until_complete(go())
