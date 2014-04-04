@@ -19,7 +19,7 @@ def connect(dsn=None, *, loop=None, **kwargs):
 
     waiter = asyncio.Future(loop=loop)
     conn = Connection(dsn, loop, waiter, **kwargs)
-    yield from waiter
+    yield from conn._poll(waiter)
     return conn
 
 
@@ -51,7 +51,6 @@ class Connection:
                 self._loop.remove_writer(self._fileno)
                 self._writing = False
             self._waiter.set_exception(exc)
-            self._waiter = None
         else:
             if state == POLL_OK:
                 if self._reading:
@@ -61,7 +60,6 @@ class Connection:
                     self._loop.remove_writer(self._fileno)
                     self._writing = False
                 self._waiter.set_result(None)
-                self._waiter = None
             elif state == POLL_READ:
                 if not self._reading:
                     self._loop.add_reader(self._fileno, self._ready)
@@ -92,26 +90,26 @@ class Connection:
         self.close()
 
     @asyncio.coroutine
-    def _poll(self):
-        assert self._waiter is not None
-        if not self._conn.isexecuting():
-            # Underlying connection is not executing, the call is not async
-            self._waiter = None
-            return
+    def _create_waiter(self, func_name):
+        if not self._conn:
+            raise ConnectionClosedError()
+        while self._waiter is not None:
+            yield from self._waiter
+        self._waiter = asyncio.Future(loop=self._loop)
+        return self._waiter
 
+    @asyncio.coroutine
+    def _poll(self, waiter):
+        if waiter is not self._waiter:
+            while self._waiter is not None:
+                yield from self._waiter
+
+        assert waiter is self._waiter, (waiter, self._waiter)
         self._ready()
         try:
             yield from self._waiter
         finally:
             self._waiter = None
-
-    def _create_waiter(self, func_name):
-        if not self._conn:
-            raise ConnectionClosedError()
-        if self._waiter is not None:
-            raise RuntimeError('%s() called while another coroutine is '
-                               'already waiting for incoming data' % func_name)
-        self._waiter = asyncio.Future(loop=self._loop)
 
     def _isexecuting(self):
         return self._conn.isexecuting()
@@ -120,14 +118,12 @@ class Connection:
     def cursor(self, name=None, cursor_factory=None,
                scrollable=None, withhold=False):
         """XXX"""
-        self._create_waiter('cursor')
         if cursor_factory is None:
             impl = self._conn.cursor(name=name,
                                      scrollable=scrollable, withhold=withhold)
         else:
             impl = self._conn.cursor(name=name, cursor_factory=cursor_factory,
                                      scrollable=scrollable, withhold=withhold)
-        yield from self._poll()
         return Cursor(self, impl)
 
     # FIXME: add transaction and TPC methods

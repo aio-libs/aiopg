@@ -48,27 +48,27 @@ class Cursor:
 
     @asyncio.coroutine
     def execute(self, operation, parameters=()):
-        self._conn._create_waiter('cursor.execute')
+        waiter = yield from self._conn._create_waiter('cursor.execute')
         self._impl.execute(operation, parameters)
-        yield from self._conn._poll()
+        yield from self._conn._poll(waiter)
 
     @asyncio.coroutine
     def executemany(self, operation, seq_of_parameters):
-        self._conn._create_waiter('cursor.executemany')
+        waiter = yield from self._conn._create_waiter('cursor.executemany')
         self._impl.executemany(operation, seq_of_parameters)
-        yield from self._conn._poll()
+        yield from self._conn._poll(waiter)
 
     @asyncio.coroutine
     def callproc(self, procname, parameters):
-        self._conn._create_waiter('cursor.callproc')
+        waiter = yield from self._conn._create_waiter('cursor.callproc')
         self._impl.callproc(procname, parameters)
-        yield from self._conn._poll()
+        yield from self._conn._poll(waiter)
 
     @asyncio.coroutine
     def mogrify(self, procname, parameters):
-        self._conn._create_waiter('cursor.mogrify')
+        waiter = yield from self._conn._create_waiter('cursor.mogrify')
         self._impl.callproc(procname, parameters)
-        yield from self._conn._poll()
+        yield from self._conn._poll(waiter)
 
     @asyncio.coroutine
     def setinputsizes(self, sizes):
@@ -167,20 +167,20 @@ class Cursor:
     @asyncio.coroutine
     def copy_from(self, file, table, sep='\t', null='\\N', size=8192,
                   columns=None):
-        self._conn._create_waiter('cursor.copy_from')
+        waiter = yield from self._conn._create_waiter('cursor.copy_from')
         self._impl.copy_from(file, table,
                              sep=sep, null=null, size=size, columns=columns)
-        yield from self._conn._poll()
+        yield from self._conn._poll(waiter)
 
     @asyncio.coroutine
     def copy_to(self, file, table, sep='\t', null='\\N', columns=None):
-        self._conn._create_waiter('cursor.copy_to')
+        waiter = yield from self._conn._create_waiter('cursor.copy_to')
         self._impl.copy_to(file, table,
                            sep=sep, null=null, columns=columns)
-        yield from self._conn._poll()
+        yield from self._conn._poll(waiter)
 
     @asyncio.coroutine
     def copy_expert(self, sql, file, size=8192):
-        self._conn._create_waiter('cursor.copy_expert')
+        waiter = yield from self._conn._create_waiter('cursor.copy_expert')
         self._impl.copy_expert(sql, file, size)
-        yield from self._conn._poll()
+        yield from self._conn._poll(waiter)
