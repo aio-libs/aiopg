@@ -273,3 +273,5 @@ class Connection:
     def status(self):
         """XXX"""
         return self._impl.status
+
+    # TODO: add __enter__ and __exit__ for transaction support
