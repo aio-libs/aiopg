@@ -144,16 +144,14 @@ class Connection:
     @asyncio.coroutine
     def commit(self):
         """XXX"""
-        waiter = yield from self._conn._create_waiter('commit')
-        self._conn.commit()
-        yield from self._conn._poll(waiter)
+        raise psycopg2.ProgrammingError(
+            "commit cannot be used in asynchronous mode")
 
     @asyncio.coroutine
     def rollback(self):
         """XXX"""
-        waiter = yield from self._conn._create_waiter('rollback')
-        self._conn.rollback()
-        yield from self._conn._poll(waiter)
+        raise psycopg2.ProgrammingError(
+            "rollback cannot be used in asynchronous mode")
 
     # TPC
 
@@ -188,9 +186,9 @@ class Connection:
 
     @asyncio.coroutine
     def cancel(self):
-        waiter = yield from self._conn._create_waiter('cancel')
+        waiter = yield from self._create_waiter('cancel')
         self._conn.cancel()
-        yield from self._conn._poll(waiter)
+        yield from self._poll(waiter)
 
     @asyncio.coroutine
     def reset(self):
@@ -204,25 +202,23 @@ class Connection:
     @asyncio.coroutine
     def set_session(self, *, isolation_level=None, readonly=None,
                     deferrable=None, autocommit=None):
-        return self._conn.set_session(isolation_level=isolation_level,
-                                      readonly=readonly,
-                                      deferrable=deferrable,
-                                      autocommit=autocommit)
+        raise psycopg2.ProgrammingError(
+            "set_session cannot be used in asynchronous mode")
 
     @property
     def autocommit(self):
         """XXX"""
-        return self._impl.autocommit
+        return self._conn.autocommit
 
     @autocommit.setter
     def autocommit(self, val):
         """XXX"""
-        self._impl.autocommit = val
+        self._conn.autocommit = val
 
     @property
     def isolation_level(self):
         """XXX"""
-        return self._impl.isolation_level
+        return self._conn.isolation_level
 
     @asyncio.coroutine
     def set_isolation_level(self, val):
@@ -231,7 +227,7 @@ class Connection:
     @property
     def encoding(self):
         """XXX"""
-        return self._impl.encoding
+        return self._conn.encoding
 
     @asyncio.coroutine
     def set_client_encoding(self, val):
@@ -240,43 +236,41 @@ class Connection:
     @property
     def notices(self):
         """XXX"""
-        return self._impl.notices
+        return self._conn.notices
 
     @property
     def cursor_factory(self):
         """XXX"""
-        return self._impl.cursor_factory
+        return self._conn.cursor_factory
 
     @asyncio.coroutine
     def get_backend_pid(self):
-        self._conn.get_backend_pid()
+        return self._conn.get_backend_pid()
 
     @asyncio.coroutine
     def get_parameter_status(self, parameter):
-        self._conn.get_parameter_status(parameter)
+        return self._conn.get_parameter_status(parameter)
 
     @asyncio.coroutine
     def get_transaction_status(self):
-        self._conn.get_transaction_status()
+        return self._conn.get_transaction_status()
 
     @property
     def protocol_version(self):
         """XXX"""
-        return self._impl.protocol_version
+        return self._conn.protocol_version
 
     @property
     def server_version(self):
         """XXX"""
-        return self._impl.server_version
+        return self._conn.server_version
 
     @property
     def status(self):
         """XXX"""
-        return self._impl.status
+        return self._conn.status
 
     @asyncio.coroutine
     def lobject(self, *args, **kwargs):
         raise psycopg2.ProgrammingError(
             "lobject cannot be used in asynchronous mode")
-
-    # TODO: add __enter__ and __exit__ for transaction support

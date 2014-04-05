@@ -22,7 +22,11 @@ Properties are unchanged, so ``conn.prop`` is correct as well as
 For documentation about connection and cursor methods/properties
 please go to psycopg docs: http://initd.org/psycopg/docs/
 
-The last part describes the **differences** from psycopg.
+The last part describes the **differences** from psycopg2.
+
+
+.. note:: psycopg2 creates new connections with ``autocommit=True``
+          option in asynchronous mode. Autocommitting cannot be disabled.
 
 Contents:
 
@@ -37,4 +41,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

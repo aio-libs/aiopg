@@ -19,13 +19,23 @@ class TestConnection(unittest.TestCase):
         self.loop = None
 
     @asyncio.coroutine
-    def connect(self, no_loop=False):
+    def connect(self, no_loop=False, **kwargs):
         loop = None if no_loop else self.loop
-        return (yield from aiopg.connect(database='aiopg',
+        conn = yield from aiopg.connect(database='aiopg',
+                                        user='aiopg',
+                                        password='passwd',
+                                        host='127.0.0.1',
+                                        loop=loop,
+                                        **kwargs)
+        conn2 = yield from aiopg.connect(database='aiopg',
                                          user='aiopg',
                                          password='passwd',
                                          host='127.0.0.1',
-                                         loop=loop))
+                                         loop=loop)
+        cur = yield from conn2.cursor()
+        yield from cur.execute("DROP TABLE IF EXISTS foo")
+        yield from conn2.close()
+        return conn
 
     def test_connect(self):
 
@@ -178,6 +188,28 @@ class TestConnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
+    def test_lobject(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+
+            with self.assertRaises(psycopg2.ProgrammingError):
+                yield from conn.lobject()
+
+        self.loop.run_until_complete(go())
+
+    def test_set_session(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+
+            with self.assertRaises(psycopg2.ProgrammingError):
+                yield from conn.set_session()
+
+        self.loop.run_until_complete(go())
+
     def test_dsn(self):
 
         @asyncio.coroutine
@@ -186,5 +218,154 @@ class TestConnection(unittest.TestCase):
             self.assertEqual(
                 'dbname=aiopg user=aiopg password=xxxxxx host=127.0.0.1',
                 conn.dsn)
+
+        self.loop.run_until_complete(go())
+
+    def test_get_backend_pid(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+
+            ret = yield from conn.get_backend_pid()
+            self.assertNotEqual(0, ret)
+
+        self.loop.run_until_complete(go())
+
+    def test_get_parameter_status(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+
+            ret = yield from conn.get_parameter_status('is_superuser')
+            self.assertEqual('off', ret)
+
+        self.loop.run_until_complete(go())
+
+    def test_cursor_factory(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect(
+                cursor_factory=psycopg2.extras.DictCursor)
+
+            self.assertIs(psycopg2.extras.DictCursor, conn.cursor_factory)
+
+        self.loop.run_until_complete(go())
+
+    def test_notices(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            cur = yield from conn.cursor()
+            yield from cur.execute("CREATE TABLE foo (id serial PRIMARY KEY);")
+
+            self.assertEqual(
+                ['NOTICE:  CREATE TABLE will create implicit sequence '
+                 '"foo_id_seq" for serial column "foo.id"\n',
+                 'NOTICE:  CREATE TABLE / PRIMARY KEY will create '
+                 'implicit index "foo_pkey" for table "foo"\n'],
+                conn.notices)
+
+        self.loop.run_until_complete(go())
+
+    def test_autocommit(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+
+            self.assertTrue(conn.autocommit)
+            with self.assertRaises(psycopg2.ProgrammingError):
+                conn.autocommit = False
+            self.assertTrue(conn.autocommit)
+
+        self.loop.run_until_complete(go())
+
+    def test_isolation_level(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+
+            self.assertEqual(0, conn.isolation_level)
+            with self.assertRaises(psycopg2.ProgrammingError):
+                yield from conn.set_isolation_level(1)
+            self.assertEqual(0, conn.isolation_level)
+
+        self.loop.run_until_complete(go())
+
+    def test_encoding(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+
+            self.assertEqual('UTF8', conn.encoding)
+            with self.assertRaises(psycopg2.ProgrammingError):
+                yield from conn.set_client_encoding('ascii')
+            self.assertEqual('UTF8', conn.encoding)
+
+        self.loop.run_until_complete(go())
+
+    def test_get_transaction_status(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+
+            ret = yield from conn.get_transaction_status()
+            self.assertEqual(0, ret)
+
+        self.loop.run_until_complete(go())
+
+    def test_transaction(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+
+            with self.assertRaises(psycopg2.ProgrammingError):
+                yield from conn.commit()
+            with self.assertRaises(psycopg2.ProgrammingError):
+                yield from conn.rollback()
+
+        self.loop.run_until_complete(go())
+
+    def test_status(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            self.assertEqual(1, conn.status)
+
+        self.loop.run_until_complete(go())
+
+    def test_protocol_version(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            self.assertLess(0, conn.protocol_version)
+
+        self.loop.run_until_complete(go())
+
+    def test_server_version(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            self.assertLess(0, conn.server_version)
+
+        self.loop.run_until_complete(go())
+
+    def test_cancel(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            yield from conn.cancel()
 
         self.loop.run_until_complete(go())
