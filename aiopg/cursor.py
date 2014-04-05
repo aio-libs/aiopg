@@ -15,8 +15,6 @@ class Cursor:
 
     def close(self):
         """XXX"""
-        if self._conn is None:
-            return
         self._impl.close()
 
     @property
