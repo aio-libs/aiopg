@@ -145,3 +145,46 @@ class TestConnection(unittest.TestCase):
             self.assertTrue(conn.closed)
 
         self.loop.run_until_complete(go())
+
+    def test_tpc(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            xid = yield from conn.xid(1, 'a', 'b')
+            self.assertEqual((1, 'a', 'b'), tuple(xid))
+
+            with self.assertRaises(psycopg2.ProgrammingError):
+                yield from conn.tpc_begin(xid)
+            with self.assertRaises(psycopg2.ProgrammingError):
+                yield from conn.tpc_prepare()
+            with self.assertRaises(psycopg2.ProgrammingError):
+                yield from conn.tpc_commit(xid)
+            with self.assertRaises(psycopg2.ProgrammingError):
+                yield from conn.tpc_rollback(xid)
+            with self.assertRaises(psycopg2.ProgrammingError):
+                yield from conn.tpc_recover()
+
+        self.loop.run_until_complete(go())
+
+    def test_reset(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+
+            with self.assertRaises(psycopg2.ProgrammingError):
+                yield from conn.reset()
+
+        self.loop.run_until_complete(go())
+
+    def test_dsn(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            self.assertEqual(
+                'dbname=aiopg user=aiopg password=xxxxxx host=127.0.0.1',
+                conn.dsn)
+
+        self.loop.run_until_complete(go())
