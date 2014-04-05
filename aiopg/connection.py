@@ -274,4 +274,9 @@ class Connection:
         """XXX"""
         return self._impl.status
 
+    @asyncio.coroutine
+    def lobject(self, *args, **kwargs):
+        raise psycopg2.ProgrammingError(
+            "lobject cannot be used in asynchronous mode")
+
     # TODO: add __enter__ and __exit__ for transaction support
