@@ -76,11 +76,13 @@ class Connection:
                     self._loop.add_writer(self._fileno, self._ready)
                     self._writing = True
             elif state == POLL_ERROR:
-                self._fatal_error(psycopg2.OperationalError(
-                    "aiopg poll() returned {}".format(state)))
+                self._fatal_error("Fatal error on aiopg connection: "
+                                  "POLL_ERROR from underlying .poll() call")
             else:
                 self._fatal_error("Fatal error on aiopg connection: "
-                                  "unknown anser from underlying .poll()")
+                                  "unknown answer {} from underlying "
+                                  ".poll() call"
+                                  .format(state))
 
     def _fatal_error(self, message):
         # Should be called from exception handler only.
@@ -89,6 +91,8 @@ class Connection:
             'connection': self,
             })
         self._close()
+        if self._waiter:
+            self._waiter.set_exception(psycopg2.OperationalError(message))
 
     @asyncio.coroutine
     def _create_waiter(self, func_name):

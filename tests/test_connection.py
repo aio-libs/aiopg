@@ -44,6 +44,8 @@ class TestConnection(unittest.TestCase):
         def go():
             conn = yield from self.connect()
             self.assertIsInstance(conn, Connection)
+            self.assertFalse(conn._reading)
+            self.assertFalse(conn._writing)
 
         self.loop.run_until_complete(go())
 
@@ -408,3 +410,99 @@ class TestConnection(unittest.TestCase):
                 yield from cur.execute('SELECT * FROM unknown_table')
 
         self.loop.run_until_complete(go())
+
+    def test_ready_set_exception(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            impl = mock.Mock()
+            exc = psycopg2.ProgrammingError("something bad")
+            impl.poll.side_effect = exc
+            conn._conn = impl
+            conn._writing = True
+            waiter = yield from conn._create_waiter('test')
+
+            conn._ready()
+            self.assertFalse(conn._writing)
+            return waiter
+
+        waiter = self.loop.run_until_complete(go())
+
+        with self.assertRaises(psycopg2.ProgrammingError):
+            self.loop.run_until_complete(waiter)
+
+    def test_ready_OK_with_waiter(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            impl = mock.Mock()
+            impl.poll.return_value = psycopg2.extensions.POLL_OK
+            conn._conn = impl
+            conn._writing = True
+            waiter = yield from conn._create_waiter('test')
+
+            conn._ready()
+            self.assertFalse(conn._writing)
+            self.assertFalse(impl.close.called)
+            return waiter
+
+        waiter = self.loop.run_until_complete(go())
+
+        self.assertIsNone(self.loop.run_until_complete(waiter))
+
+    def test_ready_POLL_ERROR(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            impl = mock.Mock()
+            impl.poll.return_value = psycopg2.extensions.POLL_ERROR
+            conn._conn = impl
+            conn._writing = True
+            waiter = yield from conn._create_waiter('test')
+            handler = mock.Mock()
+            self.loop.set_exception_handler(handler)
+
+            conn._ready()
+            handler.assert_called_with(
+                self.loop,
+                {'connection': conn,
+                 'message': 'Fatal error on aiopg connection: '
+                            'POLL_ERROR from underlying .poll() call'})
+            self.assertFalse(conn._writing)
+            self.assertTrue(impl.close.called)
+            return waiter
+
+        waiter = self.loop.run_until_complete(go())
+        with self.assertRaises(psycopg2.OperationalError):
+            self.loop.run_until_complete(waiter)
+
+    def test_ready_unknown_answer(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            impl = mock.Mock()
+            impl.poll.return_value = 9999
+            conn._conn = impl
+            conn._writing = True
+            waiter = yield from conn._create_waiter('test')
+            handler = mock.Mock()
+            self.loop.set_exception_handler(handler)
+
+            conn._ready()
+            handler.assert_called_with(
+                self.loop,
+                {'connection': conn,
+                 'message': 'Fatal error on aiopg connection: '
+                            'unknown answer 9999 from underlying .poll() call'}
+                )
+            self.assertFalse(conn._writing)
+            self.assertTrue(impl.close.called)
+            return waiter
+
+        waiter = self.loop.run_until_complete(go())
+        with self.assertRaises(psycopg2.OperationalError):
+            self.loop.run_until_complete(waiter)
