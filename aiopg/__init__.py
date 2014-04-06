@@ -7,7 +7,7 @@ from .pool import create_pool
 
 __all__ = ('connect', 'create_pool')
 
-__version__ = '0.1.1'
+__version__ = '0.2.0a0'
 
 version = __version__ + ' , Python ' + sys.version
 
