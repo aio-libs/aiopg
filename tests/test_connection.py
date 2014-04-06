@@ -94,34 +94,24 @@ class TestConnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-    def xtest_op_on_closed(self):
-
-        @asyncio.coroutine
-        def go():
-            conn = yield from self.connect()
-            cur = yield from conn.cursor()
-            yield from conn.close()
-            with self.assertRaises(aiopg.ConnectionClosedError):
-                #TODO: use connection method, not cursor
-                yield from cur.execute('SELECT 1')
-
-        self.loop.run_until_complete(go())
-
     def xtest_execute_twice(self):
 
         @asyncio.coroutine
         def go():
             conn = yield from self.connect()
-            cur = yield from conn.cursor()
+            cur1 = yield from conn.cursor()
+            cur2 = yield from conn.cursor()
             #import ipdb;ipdb.set_trace()
-            coro1 = cur.execute('SELECT 1')
-            fut = next(coro1)
-            print(fut)
-            coro2 = cur.execute('SELECT 2')
+            coro1 = cur1.execute('SELECT 1')
+            fut1 = next(coro1)
+            self.assertIsInstance(fut1, asyncio.Future)
+            coro2 = cur2.execute('SELECT 2')
             with self.assertRaises(asyncio.TimeoutError):
                 print('aaaaaaaaaaaaaaaaaaaaaaaaaaaa')
-                yield from asyncio.wait_for(coro2, timeout=0.001,
-                                            loop=self.loop)
+                fut2 = asyncio.wait_for(coro2, timeout=0.001,
+                                        loop=self.loop)
+                fut2
+                yield from asyncio.sleep(0.002)
 
             print(1111111111111111111111)
             ret1 = yield from coro1
