@@ -38,7 +38,7 @@ class Connection:
 
     def _ready(self):
         if self._waiter is None:
-            self._fatal_error("Fatal error on aiopg connetion: "
+            self._fatal_error("Fatal error on aiopg connection: "
                               "bad state in _ready callback")
             return
 
@@ -79,7 +79,7 @@ class Connection:
                 self._fatal_error(psycopg2.OperationalError(
                     "aiopg poll() returned {}".format(state)))
             else:
-                self._fatal_error("Fatal error on aiopg connetion: "
+                self._fatal_error("Fatal error on aiopg connection: "
                                   "unknown anser from underlying .poll()")
 
     def _fatal_error(self, message):
@@ -131,8 +131,10 @@ class Connection:
     def _close(self):
         if self._reading:
             self._loop.remove_reader(self._fileno)
+            self._reading = False
         if self._writing:
             self._loop.remove_writer(self._fileno)
+            self._writing = False
         self._conn.close()
 
     @property
