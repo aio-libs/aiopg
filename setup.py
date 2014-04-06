@@ -13,7 +13,7 @@ if PY_VER >= (3, 4):
 elif PY_VER >= (3, 3):
     install_requires.append('asyncio')
 else:
-    raise RuntimeError("aiozmq doesn't suppport Python earllier than 3.3")
+    raise RuntimeError("aiopg doesn't suppport Python earllier than 3.3")
 
 def read(f):
     return open(os.path.join(os.path.dirname(__file__), f)).read().strip()
@@ -55,8 +55,8 @@ setup(name='aiopg',
       platforms=['POSIX'],
       author='Andrew Svetlov',
       author_email='andrew.svetlov@gmail.com',
-      url='http://aiozmq.readthedocs.org',
-      download_url='https://pypi.python.org/pypi/aiozmq',
+      url='http://aiopg.readthedocs.org',
+      download_url='https://pypi.python.org/pypi/aiopg',
       license='BSD',
       packages=find_packages(),
       install_requires = install_requires,
