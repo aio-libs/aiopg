@@ -10,7 +10,7 @@ install:
 before_script:
   - psql -c "create database aiopg;" -U postgres
   - psql -c "create user aiopg with password 'passwd';" -U postgres
-  - psql -c "grant all priveleges on database aiopg to aiopg;" -U postgres
+  - psql -c "grant all privileges on database aiopg to aiopg;" -U postgres
 
 script:
   - pyflakes .
