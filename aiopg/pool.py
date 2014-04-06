@@ -1,95 +1,145 @@
 import asyncio
-import psycopg2
 
-from pgtulip.connection import Connection
+from .connection import connect
+
+
+@asyncio.coroutine
+def create_pool(dsn=None, *, minsize=10, maxsize=10,
+                loop=None, **kwargs):
+    if loop is None:
+        loop = asyncio.get_event_loop()
+
+    pool = Pool(dsn, minsize, maxsize, loop, **kwargs)
+    yield from pool._fill_free_pool()
+    return pool
 
 
 class Pool:
-    """Simple connection pool for ``pgtulip.connection``s
+    """Connection pool"""
 
-    Used as drop in replacement for ``pgtulip.connection`` with the
-    same methods"""
+    def __init__(self, dsn, minsize, maxsize, loop, **kwargs):
+        self._dsn = dsn
+        self._minsize = minsize
+        self._loop = loop
+        self._conn_kwargs = kwargs
+        self._free = asyncio.queues.Queue(maxsize, loop=self._loop)
+        self._used = set()
 
-    def __init__(self, *args, **kwargs):
-        self.a = args
-        self.kw = kwargs
+    @property
+    def minsize(self):
+        return self._minsize
 
-        self.loop = kwargs.get("loop") or asyncio.get_event_loop()
-        self._maxsize = kwargs.get('maxsize', 5)
-        self._pool = asyncio.queues.Queue(loop=self.loop)
-        self._size = 0
+    @property
+    def maxsize(self):
+        return self._free.maxsize
 
-    def setup(self):
-        """Init connection in connection pool. You do not have to
-        call this function in case of LazyPool"""
-        conns = [Connection(*self.a, **self.kw) for i in range(self._maxsize)]
-        yield from asyncio.wait([c.connect() for c in conns])
-        [self._pool.put_nowait(c) for c in conns]
-        self.size = self._maxsize
+    @property
+    def size(self):
+        return self.freesize + len(self._used)
 
-    def close(self):
-        """Close all connections in pool."""
-        pool = self._pool
-        while pool.qsize() > 0:
-            conn = pool.get_nowait()
-            conn.close()
+    @property
+    def freesize(self):
+        return self._free.qsize()
 
     @asyncio.coroutine
-    def _acquire(self):
-        """Acquire connection from pool (or wait for free one).
+    def clear(self):
+        """Close all free connections in pool."""
+        while not self._free.empty():
+            conn = yield from self._free.get()
+            yield from conn.close()
 
-        :returns conn: connection object."""
-        conn = yield from self._pool.get()
+    @asyncio.coroutine
+    def acquire(self):
+        """Acquire free connection from the pool."""
+        yield from self._fill_free_pool()
+        if self.minsize > 0 or not self._free.empty():
+            conn = yield from self._free.get()
+        else:
+            conn = yield from connect(self._dsn, loop=self._loop,
+                                      **self._conn_kwargs)
+        assert not conn.closed, conn
+        assert conn not in self._used, (conn, self._used)
+        self._used.add(conn)
         return conn
 
-    def _release(self, conn):
+    @asyncio.coroutine
+    def _fill_free_pool(self):
+        while self.size < self.minsize:
+            conn = yield from connect(self._dsn, loop=self._loop,
+                                      **self._conn_kwargs)
+            yield from self._free.put(conn)
+
+    def release(self, conn):
         """Release free connection back to the connection pool.
 
-        :param conn: used pgconnection"""
-        if conn.is_closed:
-            raise psycopg2.extensions.OperationalError("""Connection is
-            closed: %r""" % (conn,))
-        self._pool.put_nowait(conn)
-
-    @asyncio.coroutine
-    def run_query(self, operation, parameters=()):
-        # TODO:
-        conn = yield from self._acquire()
-        data = yield from conn.run_qury(operation, parameters)
-        self._release(conn)
-        return data
-
-    @asyncio.coroutine
-    def morgify(self, sql_query, parameters=()):
-        conn = yield from self._acquire()
-        data = yield from conn.morgify(sql_query, parameters)
-        self._release(conn)
-        return data
-
-    @asyncio.coroutine
-    def run_transaction(self, sql_queries):
-        conn = yield from self._acquire()
-        data = yield from conn.run_transaction(sql_queries)
-        self._release(conn)
-        return data
-
-
-class LazyPool(Pool):
-    """Same thing as usual ``Pool`` but connections established in lazy way.
-    Connection instantiated only when it is needed"""
-
-    @asyncio.coroutine
-    def _acquire(self):
-        """Lazy version of acquire connection"""
-        pool = self._pool
-
-        if self._size >= self._maxsize or pool.qsize():
-            conn = yield from pool.get()
-        else:
-            self._size += 1
+        This is NOT a coroutine.
+        """
+        assert conn in self._used, (conn, self._used)
+        self._used.remove(conn)
+        if not conn.closed:
             try:
-                conn = yield from Connection(*self.a, **self.kw)
-            except:
-                self._size -= 1
-                raise
-        return conn
+                self._free.put_nowait(conn)
+            except asyncio.QueueFull:
+                # close the oldest connection in free pool.
+                # that can happen if we acuire multiple
+                # connections from parallel tasks
+                # when minsize == 0
+                conn2 = self._free.get_nowait()
+                conn2._close()
+                assert not self._free.full(), self._free
+                self._free.put_nowait(conn)
+
+    def __enter__(self):
+        raise RuntimeError(
+            '"yield from" should be used as context manager expression')
+
+    def __exit__(self, *args):
+        # This must exist because __enter__ exists, even though that
+        # always raises; that's how the with-statement works.
+        pass  # pragma: nocover
+
+    def __iter__(self):
+        # This is not a coroutine.  It is meant to enable the idiom:
+        #
+        #     with (yield from pool) as conn:
+        #         <block>
+        #
+        # as an alternative to:
+        #
+        #     conn = yield from pool.acquire()
+        #     try:
+        #         <block>
+        #     finally:
+        #         conn.release()
+        conn = yield from self.acquire()
+        return _ContextManager(self, conn)
+
+
+class _ContextManager:
+    """Context manager.
+
+    This enables the following idiom for acquiring and releasing a
+    lock around a block:
+
+        with (yield from pool) as conn:
+            cur = yield from conn.cursor()
+
+    while failing loudly when accidentally using:
+
+        with pool:
+            <block>
+    """
+
+    def __init__(self, pool, conn):
+        self._pool = pool
+        self._conn = conn
+
+    def __enter__(self):
+        return self._conn
+
+    def __exit__(self, *args):
+        try:
+            self._pool.release(self._conn)
+        finally:
+            self._pool = None
+            self._conn = None

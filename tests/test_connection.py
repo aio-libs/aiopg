@@ -70,6 +70,7 @@ class TestConnection(unittest.TestCase):
             yield from cur.execute('SELECT 1')
             ret = yield from cur.fetchone()
             self.assertEqual((1,), ret)
+            self.assertIs(conn._loop, self.loop)
 
         self.loop.run_until_complete(go())
 
