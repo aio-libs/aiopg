@@ -98,34 +98,6 @@ class TestConnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-    def xtest_execute_twice(self):
-
-        @asyncio.coroutine
-        def go():
-            conn = yield from self.connect()
-            cur1 = yield from conn.cursor()
-            cur2 = yield from conn.cursor()
-            #import ipdb;ipdb.set_trace()
-            coro1 = cur1.execute('SELECT 1')
-            fut1 = next(coro1)
-            self.assertIsInstance(fut1, asyncio.Future)
-            coro2 = cur2.execute('SELECT 2')
-            with self.assertRaises(asyncio.TimeoutError):
-                print('aaaaaaaaaaaaaaaaaaaaaaaaaaaa')
-                fut2 = asyncio.wait_for(coro2, timeout=0.001,
-                                        loop=self.loop)
-                fut2
-                yield from asyncio.sleep(0.002)
-
-            print(1111111111111111111111)
-            ret1 = yield from coro1
-            self.assertEqual((1,), ret1)
-
-            ret2 = yield from coro1
-            self.assertEqual((2,), ret2)
-
-        self.loop.run_until_complete(go())
-
     def test_with_cursor_factory(self):
 
         @asyncio.coroutine
@@ -421,7 +393,7 @@ class TestConnection(unittest.TestCase):
             impl.poll.side_effect = exc
             conn._conn = impl
             conn._writing = True
-            waiter = yield from conn._create_waiter('test')
+            waiter = conn._create_waiter('test')
 
             conn._ready()
             self.assertFalse(conn._writing)
@@ -441,7 +413,7 @@ class TestConnection(unittest.TestCase):
             impl.poll.return_value = psycopg2.extensions.POLL_OK
             conn._conn = impl
             conn._writing = True
-            waiter = yield from conn._create_waiter('test')
+            waiter = conn._create_waiter('test')
 
             conn._ready()
             self.assertFalse(conn._writing)
@@ -461,7 +433,7 @@ class TestConnection(unittest.TestCase):
             impl.poll.return_value = psycopg2.extensions.POLL_ERROR
             conn._conn = impl
             conn._writing = True
-            waiter = yield from conn._create_waiter('test')
+            waiter = conn._create_waiter('test')
             handler = mock.Mock()
             self.loop.set_exception_handler(handler)
 
@@ -488,7 +460,7 @@ class TestConnection(unittest.TestCase):
             impl.poll.return_value = 9999
             conn._conn = impl
             conn._writing = True
-            waiter = yield from conn._create_waiter('test')
+            waiter = conn._create_waiter('test')
             handler = mock.Mock()
             self.loop.set_exception_handler(handler)
 
@@ -506,3 +478,21 @@ class TestConnection(unittest.TestCase):
         waiter = self.loop.run_until_complete(go())
         with self.assertRaises(psycopg2.OperationalError):
             self.loop.run_until_complete(waiter)
+
+    def xtest_execute_twice(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            cur1 = yield from conn.cursor()
+            cur2 = yield from conn.cursor()
+            #import ipdb;ipdb.set_trace()
+            coro1 = cur1.execute('SELECT 1')
+            fut1 = next(coro1)
+            self.assertIsInstance(fut1, asyncio.Future)
+            coro2 = cur2.execute('SELECT 2')
+
+            with self.assertRaises(RuntimeError):
+                next(coro2)
+
+        self.loop.run_until_complete(go())

@@ -55,7 +55,7 @@ class Cursor:
     @asyncio.coroutine
     def execute(self, operation, parameters=()):
         """XXX"""
-        waiter = yield from self._conn._create_waiter('cursor.execute')
+        waiter = self._conn._create_waiter('cursor.execute')
         self._impl.execute(operation, parameters)
         yield from self._conn._poll(waiter)
 
@@ -68,7 +68,7 @@ class Cursor:
     @asyncio.coroutine
     def callproc(self, procname, parameters):
         """XXX"""
-        waiter = yield from self._conn._create_waiter('cursor.callproc')
+        waiter = self._conn._create_waiter('cursor.callproc')
         self._impl.callproc(procname, parameters)
         yield from self._conn._poll(waiter)
 

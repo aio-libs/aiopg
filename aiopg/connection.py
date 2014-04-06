@@ -94,10 +94,10 @@ class Connection:
         if self._waiter:
             self._waiter.set_exception(psycopg2.OperationalError(message))
 
-    @asyncio.coroutine
     def _create_waiter(self, func_name):
-        while self._waiter is not None:
-            yield from self._waiter
+        if self._waiter is not None:
+            raise RuntimeError('%s() called while another coroutine is '
+                               'already waiting for incoming data' % func_name)
         self._waiter = asyncio.Future(loop=self._loop)
         return self._waiter
 
@@ -192,7 +192,7 @@ class Connection:
 
     @asyncio.coroutine
     def cancel(self):
-        waiter = yield from self._create_waiter('cancel')
+        waiter = self._create_waiter('cancel')
         self._conn.cancel()
         yield from self._poll(waiter)
 
