@@ -7,9 +7,14 @@ aiopg
 =================================
 
 .. _GitHub: https://github.com/aio-libs/aiopg
+.. _PostgreSQL: http://www.postgresql.org/
+.. _asyncio: http://docs.python.org/3.4/library/asyncio.html
 
 
-The library is an adoptation of :mod:`psycopg2` for :mod:`asyncio`.
+**aiopg** is a library for accessing a PostgreSQL_ database
+from the asyncio_ (PEP-3156/tulip) framework. It wraps
+asynchronous features of the Psycopg database driver.
+
 
 It uses :mod:`psycopg2` connections in **asynchronous** mode internally.
 
@@ -55,8 +60,9 @@ Dependencies
 Authors and License
 -------------------
 
-The ``aiozmq`` package is initially written by Nikolay Kim, now
-maintained by Andrew Svetlov.  It's BSD licensed and freely available.
+The ``aiopg`` package is written by Andrew Svetlov.  It's BSD
+licensed and freely available.
+
 Feel free to improve this package and send a pull request to GitHub_.
 
 
@@ -65,7 +71,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-
+   reference
 
 Indices and tables
 ==================

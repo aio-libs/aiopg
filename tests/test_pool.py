@@ -234,3 +234,15 @@ class TestPool(unittest.TestCase):
             self.assertIs(pool._loop, self.loop)
 
         self.loop.run_until_complete(go())
+
+    def test_cursor(self):
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool()
+            with (yield from pool.cursor()) as cur:
+                yield from cur.execute('SELECT 1')
+                ret = yield from cur.fetchone()
+                self.assertEqual((1,), ret)
+            self.assertTrue(cur.closed)
+
+        self.loop.run_until_complete(go())

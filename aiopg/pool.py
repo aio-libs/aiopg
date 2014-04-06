@@ -89,6 +89,13 @@ class Pool:
                 assert not self._free.full(), self._free
                 self._free.put_nowait(conn)
 
+    @asyncio.coroutine
+    def cursor(self):
+        """XXX"""
+        conn = yield from self.acquire()
+        cur = yield from conn.cursor()
+        return _CursorContextManager(self, conn, cur)
+
     def __enter__(self):
         raise RuntimeError(
             '"yield from" should be used as context manager expression')
@@ -112,14 +119,14 @@ class Pool:
         #     finally:
         #         conn.release()
         conn = yield from self.acquire()
-        return _ContextManager(self, conn)
+        return _ConnectionContextManager(self, conn)
 
 
-class _ContextManager:
+class _ConnectionContextManager:
     """Context manager.
 
     This enables the following idiom for acquiring and releasing a
-    lock around a block:
+    connection around a block:
 
         with (yield from pool) as conn:
             cur = yield from conn.cursor()
@@ -143,3 +150,36 @@ class _ContextManager:
         finally:
             self._pool = None
             self._conn = None
+
+
+class _CursorContextManager:
+    """Context manager.
+
+    This enables the following idiom for acquiring and releasing a
+    cursor around a block:
+
+        with (yield from pool.cursor()) as cur:
+            yield from cur.execute("SELECT 1")
+
+    while failing loudly when accidentally using:
+
+        with pool:
+            <block>
+    """
+
+    def __init__(self, pool, conn, cur):
+        self._pool = pool
+        self._conn = conn
+        self._cur = cur
+
+    def __enter__(self):
+        return self._cur
+
+    def __exit__(self, *args):
+        try:
+            self._cur._impl.close()
+            self._pool.release(self._conn)
+        finally:
+            self._pool = None
+            self._conn = None
+            self._cur = None
