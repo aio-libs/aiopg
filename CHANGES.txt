@@ -1,6 +1,9 @@
 CHANGES
 -------
 
-0.1.0 (XXXX-XX-XX)
+0.1.0 (2014-04-06)
 ^^^^^^^^^^^^^^^^^^
 
+Implemented plain connections: connect, Connection, Cursor
+
+Implemented database pools: create_pool and Pool
