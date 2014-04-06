@@ -254,6 +254,9 @@ class TestConnection(unittest.TestCase):
             cur = yield from conn.cursor()
             yield from cur.execute("CREATE TABLE foo (id serial PRIMARY KEY);")
 
+            if not conn.notices:
+                self.skip("Notices are disabled")
+
             self.assertEqual(
                 ['NOTICE:  CREATE TABLE will create implicit sequence '
                  '"foo_id_seq" for serial column "foo.id"\n',
