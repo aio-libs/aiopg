@@ -479,7 +479,7 @@ class TestConnection(unittest.TestCase):
         with self.assertRaises(psycopg2.OperationalError):
             self.loop.run_until_complete(waiter)
 
-    def xtest_execute_twice(self):
+    def test_execute_twice(self):
 
         @asyncio.coroutine
         def go():
