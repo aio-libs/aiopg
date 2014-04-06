@@ -7,6 +7,17 @@ install:
   - python setup.py install
   - pip install pyflakes
 
+before_script:
+  - psql -c "create database aiopg;" -U postgres
+  - psql -c "create user aiopg with password 'passwd';" -U postgres
+  - psql -c "grant all priveleges on database aiopg to aiopg;" -U postgres
+
 script:
   - pyflakes .
   - python runtests.py -v
+
+addons:
+  postgresql:
+    - "9.1"
+    - "9.2"
+    - "9.3"
