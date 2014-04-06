@@ -6,11 +6,14 @@
 aiopg
 =================================
 
-The library is an adoptation of psycopg2 for asyncio.
+.. _GitHub: https://github.com/aio-libs/aiopg
 
-It uses psycopg2 connections in **asynchronous** mode internally.
 
-Literally it is an (almost) transparent wrapper for psycopg
+The library is an adoptation of :mod:`psycopg2` for :mod:`asyncio`.
+
+It uses :mod:`psycopg2` connections in **asynchronous** mode internally.
+
+Literally it is an (almost) transparent wrapper for psycopg2
 connection and cursor, but with only exception.
 
 You should to use ``yield from conn.f()`` instead of just call ``conn.f()`` for
@@ -22,11 +25,40 @@ Properties are unchanged, so ``conn.prop`` is correct as well as
 For documentation about connection and cursor methods/properties
 please go to psycopg docs: http://initd.org/psycopg/docs/
 
-The last part describes the **differences** from psycopg2.
-
-
 .. note:: psycopg2 creates new connections with ``autocommit=True``
           option in asynchronous mode. Autocommitting cannot be disabled.
+
+
+Installation
+--------------------
+
+   pip3 install aiozmq
+
+Source code
+-----------
+
+The project is hosted on GitHub_
+
+Please feel free to file an issue on `bug tracker
+<https://github.com/aio-libs/aiopg/issues>`_ if you have found a bug
+or have some suggestion for library improvement.
+
+The library uses `Travis <https://travis-ci.org/aio-libs/aiopg>`_ for
+Continious Integration.
+
+Dependencies
+------------
+
+- Python 3.3 and :mod:`asyncio` or Python 3.4+
+- psycopg2
+
+Authors and License
+-------------------
+
+The ``aiozmq`` package is initially written by Nikolay Kim, now
+maintained by Andrew Svetlov.  It's BSD licensed and freely available.
+Feel free to improve this package and send a pull request to GitHub_.
+
 
 Contents:
 
