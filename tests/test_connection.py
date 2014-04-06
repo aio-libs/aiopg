@@ -255,7 +255,7 @@ class TestConnection(unittest.TestCase):
             yield from cur.execute("CREATE TABLE foo (id serial PRIMARY KEY);")
 
             if not conn.notices:
-                self.skip("Notices are disabled")
+                raise unittest.SkipTest("Notices are disabled")
 
             self.assertEqual(
                 ['NOTICE:  CREATE TABLE will create implicit sequence '
