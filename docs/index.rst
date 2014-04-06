@@ -37,7 +37,7 @@ please go to psycopg docs: http://initd.org/psycopg/docs/
 Installation
 --------------------
 
-   pip3 install aiozmq
+   pip3 install aiopg
 
 Source code
 -----------
