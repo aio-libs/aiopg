@@ -1,0 +1,6 @@
+include LICENSE.txt
+include CHANGES.txt
+include README.rst
+graft aiopg
+global-exclude *.pyc
+exclude tests/**
