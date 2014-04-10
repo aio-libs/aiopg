@@ -1,11 +1,11 @@
 import asyncio
 
-from .connection import connect
+from .connection import connect, Connection
 
 
 @asyncio.coroutine
 def create_pool(dsn=None, *, minsize=10, maxsize=10,
-                loop=None, **kwargs):
+                loop=None, _connection_class=Connection, **kwargs):
     if loop is None:
         loop = asyncio.get_event_loop()
 
