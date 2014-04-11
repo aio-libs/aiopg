@@ -280,6 +280,6 @@ def connect(dsn=None, *, loop=None, _connection_class=Connection,
         loop = asyncio.get_event_loop()
 
     waiter = asyncio.Future(loop=loop)
-    conn = Connection(dsn, loop, waiter, **kwargs)
+    conn = _connection_class(dsn, loop, waiter, **kwargs)
     yield from conn._poll(waiter)
     return conn

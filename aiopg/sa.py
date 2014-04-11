@@ -2,7 +2,7 @@
 
 import asyncio
 from collections import Sequence, Mapping
-from sqlalchemy.dialects.postgresql.psycopg2 import PGCompiler_psycopg2
+from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
 from sqlalchemy.sql import ClauseElement
 
 
@@ -11,7 +11,7 @@ from .cursor import Cursor
 from .pool import create_pool as base_create_pool
 
 
-dialect = PGCompiler_psycopg2()
+dialect = PGDialect_psycopg2()
 
 
 @asyncio.coroutine
