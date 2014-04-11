@@ -46,7 +46,10 @@ class SACursor(Cursor):
 
     @asyncio.coroutine
     def scalar(self, operation):
-        ret = yield from self.execute(operation)
+        yield from self.execute(operation)
+        if self.rowcount != 1:
+            raise ValueError("the result of operation execution is not scalar")
+        ret = yield from self.fetchone()
         if isinstance(ret, Sequence):
             assert len(ret) == 1, "Bad SQL {!r}".format(operation)
             return ret[0]
@@ -55,7 +58,7 @@ class SACursor(Cursor):
             return ret[next(iter(ret))]  # return the value for single key
         else:
             raise ValueError("the result of SQL execution is "
-                             "something terrible")
+                             "something terrible ({!r})".format(ret))
         return ret
 
 
