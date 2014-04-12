@@ -71,3 +71,13 @@ class TestSA(unittest.TestCase):
                 self.assertEqual((1, 'a'), row)
 
         self.loop.run_until_complete(go())
+
+    def test_dialect(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            cur = yield from conn.cursor()
+            self.assertIs(sa.dialect, conn.dialect)
+            self.assertIs(sa.dialect, cur.dialect)
+
+        self.loop.run_until_complete(go())
