@@ -73,7 +73,6 @@ class SACursor(Cursor):
         else:
             raise ValueError("the result of SQL execution is "
                              "something terrible ({!r})")
-        return ret
 
 
 class SAConnection(Connection):
