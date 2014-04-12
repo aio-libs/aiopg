@@ -81,3 +81,17 @@ class TestSA(unittest.TestCase):
             self.assertIs(sa.dialect, cur.dialect)
 
         self.loop.run_until_complete(go())
+
+    def test_sclar(self):
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool()
+            with (yield from pool.cursor()) as cur:
+                ret = yield from cur.scalar(tbl.count())
+                self.assertEqual(0, ret)
+
+                yield from cur.execute(tbl.insert().values(id=1, name='a'))
+                ret = yield from cur.scalar(tbl.count())
+                self.assertEqual(1, ret)
+
+        self.loop.run_until_complete(go())
