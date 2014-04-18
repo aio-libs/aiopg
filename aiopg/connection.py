@@ -13,8 +13,6 @@ __all__ = ('connect',)
 class Connection:
     """XXX"""
 
-    _aiopg_cursor_factory = Cursor
-
     def __init__(self, dsn, loop, waiter, **kwargs):
         self._loop = loop
         self._conn = psycopg2.connect(dsn, async=True, **kwargs)
@@ -107,13 +105,22 @@ class Connection:
     def cursor(self, name=None, cursor_factory=None,
                scrollable=None, withhold=False):
         """XXX"""
+        impl = yield from self._cursor(name=name,
+                                       cursor_factory=cursor_factory,
+                                       scrollable=scrollable,
+                                       withhold=withhold)
+        return Cursor(self, impl)
+
+    @asyncio.coroutine
+    def _cursor(self, name=None, cursor_factory=None,
+                scrollable=None, withhold=False):
         if cursor_factory is None:
             impl = self._conn.cursor(name=name,
                                      scrollable=scrollable, withhold=withhold)
         else:
             impl = self._conn.cursor(name=name, cursor_factory=cursor_factory,
                                      scrollable=scrollable, withhold=withhold)
-        return self._aiopg_cursor_factory(self, impl)
+        return impl
 
     @asyncio.coroutine
     def close(self):
@@ -273,13 +280,13 @@ class Connection:
 
 
 @asyncio.coroutine
-def connect(dsn=None, *, loop=None, _connection_class=Connection,
+def connect(dsn=None, *, loop=None, _connection_factory=Connection,
             **kwargs):
     """XXX"""
     if loop is None:
         loop = asyncio.get_event_loop()
 
     waiter = asyncio.Future(loop=loop)
-    conn = _connection_class(dsn, loop, waiter, **kwargs)
+    conn = _connection_factory(dsn, loop, waiter, **kwargs)
     yield from conn._poll(waiter)
     return conn
