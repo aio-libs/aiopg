@@ -104,6 +104,7 @@ class SAConnection:
     def connection(self):
         return self._connection
 
+    @asyncio.coroutine
     def begin(self):
         """Begin a transaction and return a transaction handle.
 
@@ -140,10 +141,20 @@ class SAConnection:
         """
         if self._transaction is None:
             self._transaction = RootTransaction(self)
+            yield from self._begin_impl()
             return self._transaction
         else:
             return Transaction(self, self._transaction)
 
+    @asyncio.coroutine
+    def _begin_impl(self):
+        cur = yield from self._connection.cursor()
+        try:
+            yield from cur.execute('BEGIN')
+        finally:
+            cur.close()
+
+    @asyncio.coroutine
     def begin_nested(self):
         """Begin a nested transaction and return a transaction handle.
 
@@ -160,10 +171,43 @@ class SAConnection:
         """
         if self._transaction is None:
             self._transaction = RootTransaction(self)
+            yield from self._begin_impl()
         else:
             self._transaction = NestedTransaction(self, self._transaction)
+            self._transaction._savepoint = yield from self._savepoing_impl()
         return self._transaction
 
+    @asyncio.coroutine
+    def _savepoint_impl(self, name=None):
+        self._savepoint_seq += 1
+        name = 'aiopg_sa_savepoint_%s' % self._savepoint_seq
+
+        cur = yield from self._connection.cursor()
+        try:
+            yield from cur.execute('SAVEPOINT ' + name)
+            return name
+        finally:
+            cur.close()
+
+    @asyncio.coroutine
+    def _rollback_to_savepoint_impl(self, name, parent):
+        cur = yield from self._connection.cursor()
+        try:
+            yield from cur.execute('ROLLBACK TO SAVEPOINT ' + name)
+        finally:
+            cur.close()
+        self._transaction = parent
+
+    @asyncio.coroutine
+    def _release_savepoint_impl(self, name):
+        cur = yield from self._connection.cursor()
+        try:
+            yield from cur.execute('RELEASE SAVEPOINT ' + name)
+        finally:
+            cur.close()
+        self._transaction = parent
+
+    @asyncio.coroutine
     def begin_twophase(self, xid=None):
         """Begin a two-phase or XA transaction and return a transaction
         handle.
@@ -190,12 +234,15 @@ class SAConnection:
         self._transaction = TwoPhaseTransaction(self, xid)
         return self._transaction
 
+    @asyncio.coroutine
     def recover_twophase(self):
         return self.engine.dialect.do_recover_twophase(self)
 
+    @asyncio.coroutine
     def rollback_prepared(self, xid, recover=False):
         self.engine.dialect.do_rollback_twophase(self, xid, recover=recover)
 
+    @asyncio.coroutine
     def commit_prepared(self, xid, recover=False):
         self.engine.dialect.do_commit_twophase(self, xid, recover=recover)
 
@@ -204,6 +251,7 @@ class SAConnection:
 
         return self._transaction is not None
 
+    @asyncio.coroutine
     def close(self):
         """Close this :class:`.Connection`.
 

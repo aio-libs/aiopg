@@ -1,3 +1,7 @@
+import asyncio
+from . import exc
+
+
 class Transaction(object):
     """Represent a database transaction in progress.
 
@@ -31,10 +35,19 @@ class Transaction(object):
     """
 
     def __init__(self, connection, parent):
-        self.connection = connection
+        self._connection = connection
         self._parent = parent or self
-        self.is_active = True
+        self._is_active = True
 
+    @property
+    def is_active(self):
+        return self._is_active
+
+    @property
+    def connection(self):
+        return self._connection
+
+    @asyncio.coroutine
     def close(self):
         """Close this :class:`.Transaction`.
 
@@ -46,60 +59,61 @@ class Transaction(object):
         an enclosing transaction.
 
         """
-        if not self._parent.is_active:
+        if not self._parent._is_active:
             return
         if self._parent is self:
-            self.rollback()
+            yield from self.rollback()
 
+    @asyncio.coroutine
     def rollback(self):
         """Roll back this :class:`.Transaction`.
 
         """
-        if not self._parent.is_active:
+        if not self._parent._is_active:
             return
-        self._do_rollback()
-        self.is_active = False
+        yield from self._do_rollback()
+        self._is_active = False
 
+    @asyncio.coroutine
     def _do_rollback(self):
-        self._parent.rollback()
+        yield from self._parent.rollback()
 
+    @asyncio.coroutine
     def commit(self):
         """Commit this :class:`.Transaction`."""
 
-        if not self._parent.is_active:
+        if not self._parent._is_active:
             raise exc.InvalidRequestError("This transaction is inactive")
-        self._do_commit()
-        self.is_active = False
+        yield from self._do_commit()
+        self._is_active = False
 
+    @asyncio.coroutine
     def _do_commit(self):
         pass
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type, value, traceback):
-        if type is None and self.is_active:
-            try:
-                self.commit()
-            except:
-                with util.safe_reraise():
-                    self.rollback()
-        else:
-            self.rollback()
-
 
 class RootTransaction(Transaction):
+
     def __init__(self, connection):
-        super(RootTransaction, self).__init__(connection, None)
-        self.connection._begin_impl(self)
+        super().__init__(connection, None)
 
+    @asyncio.coroutine
     def _do_rollback(self):
-        if self.is_active:
-            self.connection._rollback_impl()
+        if self._is_active:
+            cur = yield from self._connection.cursor()
+            try:
+                yield from cur.execute('ROLLBACK')
+            finally:
+                cur.close()
 
+    @asyncio.coroutine
     def _do_commit(self):
-        if self.is_active:
-            self.connection._commit_impl()
+        if self._is_active:
+            cur = yield from self._connection.cursor()
+            try:
+                yield from cur.execute('COMMIT')
+            finally:
+                cur.close()
 
 
 class NestedTransaction(Transaction):
@@ -111,19 +125,26 @@ class NestedTransaction(Transaction):
     The interface is the same as that of :class:`.Transaction`.
 
     """
+
+    _savepoint = None
+
     def __init__(self, connection, parent):
         super(NestedTransaction, self).__init__(connection, parent)
         self._savepoint = self.connection._savepoint_impl()
 
+    @asyncio.coroutine
     def _do_rollback(self):
-        if self.is_active:
-            self.connection._rollback_to_savepoint_impl(
-                                    self._savepoint, self._parent)
+        assert self._savepoint is not None, "Broken transaction logic"
+        if self._is_active:
+            yield from self._connection._rollback_to_savepoint_impl(
+                self._savepoint, self._parent)
 
+    @asyncio.coroutine
     def _do_commit(self):
-        if self.is_active:
-            self.connection._release_savepoint_impl(
-                                    self._savepoint, self._parent)
+        assert self._savepoint is not None, "Broken transaction logic"
+        if self._is_active:
+            yield from self._connection._release_savepoint_impl(
+                self._savepoint, self._parent)
 
 
 class TwoPhaseTransaction(Transaction):
@@ -137,11 +158,16 @@ class TwoPhaseTransaction(Transaction):
 
     """
     def __init__(self, connection, xid):
-        super(TwoPhaseTransaction, self).__init__(connection, None)
+        super().__init__(connection, None)
         self._is_prepared = False
-        self.xid = xid
+        self._xid = xid
         self.connection._begin_twophase_impl(self)
 
+    @property
+    def xid(self):
+        return self._xid
+
+    @asyncio.coroutine
     def prepare(self):
         """Prepare this :class:`.TwoPhaseTransaction`.
 
@@ -150,11 +176,15 @@ class TwoPhaseTransaction(Transaction):
         """
         if not self._parent.is_active:
             raise exc.InvalidRequestError("This transaction is inactive")
-        self.connection._prepare_twophase_impl(self.xid)
+        yield from self._connection._prepare_twophase_impl(self._xid)
         self._is_prepared = True
 
+    @asyncio.coroutine
     def _do_rollback(self):
-        self.connection._rollback_twophase_impl(self.xid, self._is_prepared)
+        yield from self._connection._rollback_twophase_impl(
+            self._xid, self._is_prepared)
 
+    @asyncio.coroutine
     def _do_commit(self):
-        self.connection._commit_twophase_impl(self.xid, self._is_prepared)
+        yield from self._connection._commit_twophase_impl(
+            self._xid, self._is_prepared)
