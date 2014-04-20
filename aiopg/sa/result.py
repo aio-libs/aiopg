@@ -28,20 +28,21 @@ class RowProxy(Mapping):
             processor, obj, index = self._keymap[key]
         except KeyError:
             processor, obj, index = self._result_proxy._key_fallback(key)
-        except TypeError:
-            if isinstance(key, slice):
-                l = []
-                for processor, value in zip(self._processors[key],
-                                            self._row[key]):
-                    if processor is None:
-                        l.append(value)
-                    else:
-                        l.append(processor(value))
-                return tuple(l)
-            else:
-                raise
+        ## Do we need slicing at all? RowProxy now is Mapping not Sequence
+        ## except TypeError:
+        ##     if isinstance(key, slice):
+        ##         l = []
+        ##         for processor, value in zip(self._processors[key],
+        ##                                     self._row[key]):
+        ##             if processor is None:
+        ##                 l.append(value)
+        ##             else:
+        ##                 l.append(processor(value))
+        ##         return tuple(l)
+        ##     else:
+        ##         raise
         if index is None:
-            raise InvalidRequestError(
+            raise exc.InvalidRequestError(
                 "Ambiguous column name '%s' in result set! "
                 "try 'use_labels' option on select statement." % key)
         if processor is not None:

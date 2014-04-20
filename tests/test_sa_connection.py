@@ -105,6 +105,7 @@ class TestSACnnection(unittest.TestCase):
             self.assertIn('id', row)
             self.assertNotIn('unknown', row)
             self.assertEqual('first', row.name)
+            self.assertEqual('first', row[tbl.c.name])
             with self.assertRaises(AttributeError):
                 row.unknown
             self.assertEqual("(1, 'first')", repr(row))
