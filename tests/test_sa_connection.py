@@ -137,3 +137,17 @@ class TestSACnnection(unittest.TestCase):
             self.assertIsNone(res.cursor)
 
         self.loop.run_until_complete(go())
+
+    def test_double_close(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            res = yield from conn.execute("SELECT 1")
+            res.close()
+            self.assertTrue(res.closed)
+            self.assertIsNone(res.cursor)
+            res.close()
+            self.assertTrue(res.closed)
+            self.assertIsNone(res.cursor)
+
+        self.loop.run_until_complete(go())
