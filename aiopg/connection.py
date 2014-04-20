@@ -10,6 +10,18 @@ from .cursor import Cursor
 __all__ = ('connect',)
 
 
+@asyncio.coroutine
+def connect(dsn=None, *, loop=None, **kwargs):
+    """XXX"""
+    if loop is None:
+        loop = asyncio.get_event_loop()
+
+    waiter = asyncio.Future(loop=loop)
+    conn = Connection(dsn, loop, waiter, **kwargs)
+    yield from conn._poll(waiter)
+    return conn
+
+
 class Connection:
     """XXX"""
 
@@ -277,16 +289,3 @@ class Connection:
     def lobject(self, *args, **kwargs):
         raise psycopg2.ProgrammingError(
             "lobject cannot be used in asynchronous mode")
-
-
-@asyncio.coroutine
-def connect(dsn=None, *, loop=None, _connection_factory=Connection,
-            **kwargs):
-    """XXX"""
-    if loop is None:
-        loop = asyncio.get_event_loop()
-
-    waiter = asyncio.Future(loop=loop)
-    conn = _connection_factory(dsn, loop, waiter, **kwargs)
-    yield from conn._poll(waiter)
-    return conn

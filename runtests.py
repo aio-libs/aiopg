@@ -206,19 +206,8 @@ def runtests():
     args = ARGS.parse_args()
 
     if args.coverage and coverage is None:
-        URL = "bitbucket.org/pypa/setuptools/raw/bootstrap/ez_setup.py"
-        print(textwrap.dedent("""
-            coverage package is not installed.
-
-            To install coverage3 for Python 3, you need:
-              - Setuptools (https://pypi.python.org/pypi/setuptools)
-
-              What worked for me:
-              - download {0}
-                 * curl -O https://{0}
-              - python3 ez_setup.py
-              - python3 -m easy_install coverage
-        """.format(URL)).strip())
+        print("Coverage package is not installed.")
+        print("Please execute 'pip3 install coverage'")
         sys.exit(1)
 
     testsdir = os.path.abspath(args.testsdir)

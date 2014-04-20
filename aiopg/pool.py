@@ -5,11 +5,11 @@ from .connection import connect, Connection
 
 @asyncio.coroutine
 def create_pool(dsn=None, *, minsize=10, maxsize=10,
-                loop=None, _connection_factory=Connection, **kwargs):
+                loop=None, **kwargs):
     if loop is None:
         loop = asyncio.get_event_loop()
 
-    pool = Pool(dsn, minsize, maxsize, loop, _connection_factory, **kwargs)
+    pool = Pool(dsn, minsize, maxsize, loop, **kwargs)
     yield from pool._fill_free_pool()
     return pool
 
@@ -17,12 +17,10 @@ def create_pool(dsn=None, *, minsize=10, maxsize=10,
 class Pool:
     """Connection pool"""
 
-    def __init__(self, dsn, minsize, maxsize, loop,
-                 _connection_factory, **kwargs):
+    def __init__(self, dsn, minsize, maxsize, loop, **kwargs):
         self._dsn = dsn
         self._minsize = minsize
         self._loop = loop
-        self._connection_factory = _connection_factory
         self._conn_kwargs = kwargs
         self._free = asyncio.queues.Queue(maxsize, loop=self._loop)
         self._used = set()
@@ -59,7 +57,6 @@ class Pool:
         else:
             conn = yield from connect(
                 self._dsn, loop=self._loop,
-                _connection_factory=self._connection_factory,
                 **self._conn_kwargs)
         assert not conn.closed, conn
         assert conn not in self._used, (conn, self._used)
@@ -71,7 +68,6 @@ class Pool:
         while self.size < self.minsize:
             conn = yield from connect(
                 self._dsn, loop=self._loop,
-                _connection_factory=self._connection_factory,
                 **self._conn_kwargs)
             yield from self._free.put(conn)
 
