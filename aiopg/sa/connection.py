@@ -1,4 +1,6 @@
 import asyncio
+import weakref
+
 from sqlalchemy.sql import ClauseElement
 from .result import ResultProxy
 from . import exc
@@ -51,6 +53,7 @@ class SAConnection:
         self._connection = connection
         self._transaction = None
         self._savepoint_seq = 0
+        self._weak_results = weakref.WeakSet()
 
     @asyncio.coroutine
     def execute(self, obj, *multiparams, **params):
@@ -74,7 +77,9 @@ class SAConnection:
                                     "selection/modification clause")
 
         # TODO: add weakref to ResultProxy to close cursor on decref
-        return ResultProxy(self, cursor, self._dialect, result_map)
+        ret = ResultProxy(self, cursor, self._dialect, result_map)
+        self._weak_results.add(ret)
+        return ret
 
     @asyncio.coroutine
     def scalar(self, obj, *multiparams, **params):
