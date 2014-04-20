@@ -107,6 +107,7 @@ class TestSACnnection(unittest.TestCase):
             self.assertEqual('first', row.name)
             with self.assertRaises(AttributeError):
                 row.unknown
+            self.assertEqual("(1, 'first')", repr(row))
 
         self.loop.run_until_complete(go())
 

@@ -61,7 +61,7 @@ class RowProxy(Mapping):
     __hash__ = None
 
     def __repr__(self):
-        return repr(tuple(self))
+        return repr(tuple(self[k] for k in self))
 
 
 class ResultMetaData(object):
