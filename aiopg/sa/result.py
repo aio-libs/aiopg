@@ -79,25 +79,26 @@ class ResultMetaData(object):
         self.keys = []
         dialect = result_proxy.dialect
         typemap = dialect.dbapi_type_map
-        self.case_sensitive = dialect.case_sensitive
+        assert dialect.case_sensitive, \
+          "Doesn't support case insensitive database connection"
 
         # high precedence key values.
         primary_keymap = {}
+
+        assert not dialect.description_encoding, \
+          "psycopg in py3k should not use this"
 
         for i, rec in enumerate(metadata):
             colname = rec[0]
             coltype = rec[1]
 
-            if dialect.description_encoding:
-                colname = dialect._description_decoder(colname)
-
-            if dialect.requires_name_normalize:
-                colname = dialect.normalize_name(colname)
+            ## PostgreSQL doesn't require this.
+            ## if dialect.requires_name_normalize:
+            ##     colname = dialect.normalize_name(colname)
 
             if result_proxy._result_map:
                 try:
-                    name, obj, type_ = result_proxy._result_map[
-                        colname if self.case_sensitive else colname.lower()]
+                    name, obj, type_ = result_proxy._result_map[colname]
                 except KeyError:
                     name, obj, type_ = \
                         colname, None, typemap.get(coltype, sqltypes.NULLTYPE)
@@ -115,18 +116,14 @@ class ResultMetaData(object):
             primary_keymap[i] = rec
 
             # populate primary keymap, looking for conflicts.
-            if primary_keymap.setdefault(name if self.case_sensitive
-                                         else name.lower(),
-                                         rec) is not rec:
+            if primary_keymap.setdefault(name, rec) is not rec:
                 # place a record that doesn't have the "index" - this
                 # is interpreted later as an AmbiguousColumnError,
                 # but only when actually accessed.   Columns
                 # colliding by name is not a problem if those names
                 # aren't used; integer access is always
                 # unambiguous.
-                primary_keymap[name
-                               if self.case_sensitive
-                               else name.lower()] = rec = (None, obj, None)
+                primary_keymap[name] = rec = (None, obj, None)
 
             self.keys.append(colname)
             if obj:
@@ -145,25 +142,17 @@ class ResultMetaData(object):
         map = self._keymap
         result = None
         if isinstance(key, str):
-            result = map.get(key if self.case_sensitive else key.lower())
+            result = map.get(key)
         # fallback for targeting a ColumnElement to a textual expression
         # this is a rare use case which only occurs when matching text()
         # or colummn('name') constructs to ColumnElements, or after a
         # pickle/unpickle roundtrip
         elif isinstance(key, expression.ColumnElement):
-            if (key._label and (key._label
-                               if self.case_sensitive
-                               else key._label.lower()) in map):
-                result = map[key._label
-                            if self.case_sensitive
-                            else key._label.lower()]
-            elif (hasattr(key, 'name') and (key.name
-                                            if self.case_sensitive
-                                            else key.name.lower()) in map):
+            if (key._label and key._label in map):
+                result = map[key._label]
+            elif (hasattr(key, 'name') and key.name in map):
                 # match is only on name.
-                result = map[key.name
-                             if self.case_sensitive
-                             else key.name.lower()]
+                result = map[key.name]
             # search extra hard to make sure this
             # isn't a column/label name overlap.
             # this check isn't currently available if the row
