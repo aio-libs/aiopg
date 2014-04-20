@@ -12,3 +12,8 @@ from .connection import SAConnection
 
 
 dialect = PGDialect_psycopg2()
+dialect.implicit_returning = True
+dialect.supports_native_enum = True
+dialect.supports_smallserial = True  # 9.2+
+dialect._backslash_escapes = False
+dialect.supports_sane_multi_rowcount = True  # psycopg 2.0.9+

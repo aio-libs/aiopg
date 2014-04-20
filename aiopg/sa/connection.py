@@ -95,9 +95,6 @@ class SAConnection:
     def info(self):
         return self._connection.info
 
-    def connect(self):
-        return self._branch()  # ???
-
     @property
     def connection(self):
         return self._connection

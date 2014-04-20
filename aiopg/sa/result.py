@@ -217,11 +217,13 @@ class ResultProxy:
         self._cursor = cursor
         self._connection = connection
         self._result_map = result_map
+        self._rowcount = cursor.rowcount
 
         if cursor.description is not None:
             self._metadata = ResultMetaData(self, cursor.description)
         else:
             self._metadata = None
+            self.close()
 
     @property
     def dialect(self):
@@ -234,9 +236,9 @@ class ResultProxy:
     def keys(self):
         """Return the current set of string keys for rows."""
         if self._metadata:
-            return self._metadata.keys
+            return tuple(self._metadata.keys)
         else:
-            return []
+            return ()
 
     @property
     def rowcount(self):
@@ -279,25 +281,7 @@ class ResultProxy:
              rowcount.
 
         """
-        return self._cursor.rowcount
-
-    @property
-    def lastrowid(self):
-        """return the 'lastrowid' accessor on the DBAPI cursor.
-
-        This is a DBAPI specific method and is only functional
-        for those backends which support it, for statements
-        where it is appropriate.  It's behavior is not
-        consistent across backends.
-
-        Usage of this method is normally unnecessary when
-        using insert() expression constructs; the
-        :attr:`~ResultProxy.inserted_primary_key` attribute provides a
-        tuple of primary key values for a newly inserted row,
-        regardless of database backend.
-
-        """
-        return self._cursor.lastrowid
+        return self._rowcount
 
     @property
     def returns_rows(self):

@@ -4,12 +4,14 @@ from aiopg import connect, sa, Cursor
 import unittest
 import sqlalchemy
 
-from sqlalchemy import MetaData, Table, Column, Integer, String
+from sqlalchemy import MetaData, Table, Column, Integer, String, Sequence
 
 
 meta = MetaData()
-tbl = Table('tbl', meta,
-            Column('id', Integer, primary_key=True),
+tbl = Table('sa_tbl', meta,
+#FetchedValue()
+            Column('id', Integer, Sequence('sa_tbl_id_seq'), nullable=False,
+                   primary_key=True),
             Column('name', String(255)))
 
 
@@ -30,22 +32,21 @@ class TestSACnnection(unittest.TestCase):
                                      loop=self.loop,
                                      **kwargs)
         cur = yield from conn.cursor()
-        yield from cur.execute("DROP TABLE IF EXISTS tbl")
-        yield from cur.execute("CREATE TABLE tbl "
+        yield from cur.execute("DROP TABLE IF EXISTS sa_tbl")
+        yield from cur.execute("CREATE TABLE sa_tbl "
                                "(id serial, name varchar(255))")
-        yield from cur.execute("INSERT INTO tbl (name)"
+        yield from cur.execute("INSERT INTO sa_tbl (name)"
                                "VALUES ('first')")
         cur.close()
-        return conn
-
+        return sa.SAConnection(conn, sa.dialect)
 
     def test_execute_text_select(self):
         @asyncio.coroutine
         def go():
-            conn_impl = yield from self.connect()
-            conn = sa.SAConnection(conn_impl, sa.dialect)
-            res = yield from conn.execute("SELECT * FROM tbl;")
+            conn = yield from self.connect()
+            res = yield from conn.execute("SELECT * FROM sa_tbl;")
             self.assertIsInstance(res.cursor, Cursor)
+            self.assertEqual(('id', 'name'), res.keys())
             rows = [r for r in res]
             self.assertTrue(res.closed)
             self.assertIsNone(res.cursor)
@@ -63,13 +64,14 @@ class TestSACnnection(unittest.TestCase):
     def test_execute_sa_select(self):
         @asyncio.coroutine
         def go():
-            conn_impl = yield from self.connect()
-            conn = sa.SAConnection(conn_impl, sa.dialect)
+            conn = yield from self.connect()
             res = yield from conn.execute(tbl.select())
             self.assertIsInstance(res.cursor, Cursor)
+            self.assertEqual(('id', 'name'), res.keys())
             rows = [r for r in res]
             self.assertTrue(res.closed)
             self.assertIsNone(res.cursor)
+            self.assertTrue(res.returns_rows)
 
             self.assertEqual(1, len(rows))
             row = rows[0]
@@ -85,9 +87,53 @@ class TestSACnnection(unittest.TestCase):
     def test_scalar(self):
         @asyncio.coroutine
         def go():
-            conn_impl = yield from self.connect()
-            conn = sa.SAConnection(conn_impl, sa.dialect)
+            conn = yield from self.connect()
             res = yield from conn.scalar(tbl.count())
             self.assertEqual(1, res)
+
+        self.loop.run_until_complete(go())
+
+    def test_row_proxy(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            res = yield from conn.execute(tbl.select())
+            rows = [r for r in res]
+            row = rows[0]
+            self.assertEqual(2, len(row))
+            self.assertEqual(['id', 'name'], list(row))
+            self.assertIn('id', row)
+            self.assertNotIn('unknown', row)
+            self.assertEqual('first', row.name)
+            with self.assertRaises(AttributeError):
+                row.unknown
+
+        self.loop.run_until_complete(go())
+
+    def test_insert(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            res = yield from conn.execute(tbl.insert().values(name='second'))
+            self.assertEqual(('id',), res.keys())
+            self.assertEqual(1, res.rowcount)
+            self.assertTrue(res.returns_rows)
+
+            rows = [r for r in res]
+            self.assertEqual(1, len(rows))
+            self.assertEqual(2, rows[0].id)
+
+        self.loop.run_until_complete(go())
+
+    def test_delete(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            res = yield from conn.execute(tbl.delete().where(tbl.c.id==1))
+            self.assertEqual((), res.keys())
+            self.assertEqual(1, res.rowcount)
+            self.assertFalse(res.returns_rows)
+            self.assertTrue(res.closed)
+            self.assertIsNone(res.cursor)
 
         self.loop.run_until_complete(go())
