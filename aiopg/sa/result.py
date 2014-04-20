@@ -1,4 +1,5 @@
 import asyncio
+import weakref
 from collections.abc import Mapping
 from . import exc
 
@@ -221,9 +222,11 @@ class ResultProxy:
 
         if cursor.description is not None:
             self._metadata = ResultMetaData(self, cursor.description)
+            self._weak = weakref.ref(self, lambda wr: cursor.close())
         else:
             self._metadata = None
             self.close()
+            self._weak = None
 
     @property
     def dialect(self):
@@ -323,6 +326,7 @@ class ResultProxy:
             self._cursor.close()
             # allow consistent errors
             self._cursor = None
+            self._weak = None
 
     def __iter__(self):
         while True:

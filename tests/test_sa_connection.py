@@ -151,3 +151,16 @@ class TestSACnnection(unittest.TestCase):
             self.assertIsNone(res.cursor)
 
         self.loop.run_until_complete(go())
+
+
+    def test_weakrefs(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            res = yield from conn.execute("SELECT 1")
+            cur = res.cursor
+            self.assertFalse(cur.closed)
+            del res
+            self.assertTrue(cur.closed)
+
+        self.loop.run_until_complete(go())
