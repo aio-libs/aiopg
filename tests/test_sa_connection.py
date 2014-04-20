@@ -3,11 +3,11 @@ from aiopg import connect, sa, Cursor
 
 import unittest
 
-from sqlalchemy import MetaData, Table, Column, Integer, String, FetchedValue
+from sqlalchemy import MetaData, Table, Column, Integer, String
 
 meta = MetaData()
 tbl = Table('sa_tbl', meta,
-            Column('id', Integer, FetchedValue(), nullable=False,
+            Column('id', Integer, nullable=False,
                    primary_key=True),
             Column('name', String(255)))
 

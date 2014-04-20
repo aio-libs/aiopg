@@ -3,12 +3,11 @@ from aiopg import connect, sa
 
 import unittest
 
-from sqlalchemy import MetaData, Table, Column, Integer, String, Sequence
+from sqlalchemy import MetaData, Table, Column, Integer, String
 
-# TODO: use FetchedValue() instead of Sequence
 meta = MetaData()
 tbl = Table('sa_tbl', meta,
-            Column('id', Integer, Sequence('sa_tbl_id_seq'), nullable=False,
+            Column('id', Integer, nullable=False,
                    primary_key=True),
             Column('name', String(255)))
 
