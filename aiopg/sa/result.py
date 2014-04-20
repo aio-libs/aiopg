@@ -94,13 +94,13 @@ class ResultMetaData(object):
         dialect = result_proxy.dialect
         typemap = dialect.dbapi_type_map
         assert dialect.case_sensitive, \
-          "Doesn't support case insensitive database connection"
+            "Doesn't support case insensitive database connection"
 
         # high precedence key values.
         primary_keymap = {}
 
         assert not dialect.description_encoding, \
-          "psycopg in py3k should not use this"
+            "psycopg in py3k should not use this"
 
         for i, rec in enumerate(metadata):
             colname = rec[0]

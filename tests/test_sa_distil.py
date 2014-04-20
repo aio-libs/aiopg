@@ -1,6 +1,7 @@
 import unittest
 from aiopg.sa.connection import _distill_params
 
+
 class _DistillArgsTest(unittest.TestCase):
     def test_distill_none(self):
         self.assertEqual(

@@ -4,6 +4,8 @@ import weakref
 from sqlalchemy.sql import ClauseElement
 from .result import ResultProxy
 from . import exc
+from .transaction import (RootTransaction, Transaction,
+                          NestedTransaction, TwoPhaseTransaction)
 
 
 def _distill_params(multiparams, params):
@@ -199,7 +201,7 @@ class SAConnection:
         self._transaction = parent
 
     @asyncio.coroutine
-    def _release_savepoint_impl(self, name):
+    def _release_savepoint_impl(self, name, parent):
         cur = yield from self._connection.cursor()
         try:
             yield from cur.execute('RELEASE SAVEPOINT ' + name)

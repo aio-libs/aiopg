@@ -28,7 +28,6 @@ import shutil
 import sys
 import unittest
 import traceback
-import textwrap
 import importlib.machinery
 try:
     import coverage

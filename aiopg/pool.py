@@ -1,6 +1,6 @@
 import asyncio
 
-from .connection import connect, Connection
+from .connection import connect
 
 
 @asyncio.coroutine

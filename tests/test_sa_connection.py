@@ -2,14 +2,12 @@ import asyncio
 from aiopg import connect, sa, Cursor
 
 import unittest
-import sqlalchemy
 
 from sqlalchemy import MetaData, Table, Column, Integer, String, Sequence
 
-
+# TODO: use FetchedValue() instead of Sequence
 meta = MetaData()
 tbl = Table('sa_tbl', meta,
-#FetchedValue()
             Column('id', Integer, Sequence('sa_tbl_id_seq'), nullable=False,
                    primary_key=True),
             Column('name', String(255)))
@@ -26,11 +24,11 @@ class TestSACnnection(unittest.TestCase):
     @asyncio.coroutine
     def connect(self, **kwargs):
         conn = yield from connect(database='aiopg',
-                                     user='aiopg',
-                                     password='passwd',
-                                     host='127.0.0.1',
-                                     loop=self.loop,
-                                     **kwargs)
+                                  user='aiopg',
+                                  password='passwd',
+                                  host='127.0.0.1',
+                                  loop=self.loop,
+                                  **kwargs)
         cur = yield from conn.cursor()
         yield from cur.execute("DROP TABLE IF EXISTS sa_tbl")
         yield from cur.execute("CREATE TABLE sa_tbl "
@@ -147,7 +145,7 @@ class TestSACnnection(unittest.TestCase):
         @asyncio.coroutine
         def go():
             conn = yield from self.connect()
-            res = yield from conn.execute(tbl.delete().where(tbl.c.id==1))
+            res = yield from conn.execute(tbl.delete().where(tbl.c.id == 1))
             self.assertEqual((), res.keys())
             self.assertEqual(1, res.rowcount)
             self.assertFalse(res.returns_rows)
