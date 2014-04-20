@@ -9,6 +9,8 @@ except ImportError:  # pragma: no cover
 
 
 from .connection import SAConnection
+from .exc import (Error, ArgumentError, InvalidRequestError,
+                  NoSuchColumnError, ResourceClosedError)
 
 
 dialect = PGDialect_psycopg2()

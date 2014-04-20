@@ -93,6 +93,16 @@ class TestSACnnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
+    def test_scalar_None(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            yield from conn.execute(tbl.delete())
+            res = yield from conn.scalar(tbl.select())
+            self.assertIsNone(res)
+
+        self.loop.run_until_complete(go())
+
     def test_row_proxy(self):
         @asyncio.coroutine
         def go():
@@ -100,6 +110,7 @@ class TestSACnnection(unittest.TestCase):
             res = yield from conn.execute(tbl.select())
             rows = [r for r in res]
             row = rows[0]
+            row2 = yield from (yield from conn.execute(tbl.select())).first()
             self.assertEqual(2, len(row))
             self.assertEqual(['id', 'name'], list(row))
             self.assertIn('id', row)
@@ -109,6 +120,11 @@ class TestSACnnection(unittest.TestCase):
             with self.assertRaises(AttributeError):
                 row.unknown
             self.assertEqual("(1, 'first')", repr(row))
+            self.assertEqual((1, 'first'), row.as_tuple())
+            self.assertNotEqual((555, 'other'), row.as_tuple())
+            self.assertEqual(row2, row)
+            self.assertFalse(row2 != row)
+            self.assertNotEqual(5, row)
 
         self.loop.run_until_complete(go())
 
@@ -154,7 +170,6 @@ class TestSACnnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-
     def test_weakrefs(self):
         @asyncio.coroutine
         def go():
@@ -167,5 +182,149 @@ class TestSACnnection(unittest.TestCase):
             del res
             self.assertTrue(cur.closed)
             self.assertEqual(0, len(conn._weak_results))
+
+        self.loop.run_until_complete(go())
+
+    def test_fetchall(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            yield from conn.execute(tbl.insert().values(name='second'))
+
+            res = yield from conn.execute(tbl.select())
+            rows = yield from res.fetchall()
+            self.assertEqual(2, len(rows))
+            self.assertTrue(res.closed)
+            self.assertTrue(res.returns_rows)
+            self.assertEqual([(1, 'first'), (2, 'second')], rows)
+
+        self.loop.run_until_complete(go())
+
+    def test_fetchall_closed(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            yield from conn.execute(tbl.insert().values(name='second'))
+
+            res = yield from conn.execute(tbl.select())
+            res.close()
+            with self.assertRaises(sa.ResourceClosedError):
+                yield from res.fetchall()
+
+        self.loop.run_until_complete(go())
+
+    def test_fetchall_not_returns_rows(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            res = yield from conn.execute(tbl.delete())
+            with self.assertRaises(sa.ResourceClosedError):
+                yield from res.fetchall()
+
+        self.loop.run_until_complete(go())
+
+    def test_fetchone_closed(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            yield from conn.execute(tbl.insert().values(name='second'))
+
+            res = yield from conn.execute(tbl.select())
+            res.close()
+            with self.assertRaises(sa.ResourceClosedError):
+                yield from res.fetchone()
+
+        self.loop.run_until_complete(go())
+
+    def test_first_not_returns_rows(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            res = yield from conn.execute(tbl.delete())
+            with self.assertRaises(sa.ResourceClosedError):
+                yield from res.first()
+
+        self.loop.run_until_complete(go())
+
+    def test_fetchmany(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            yield from conn.execute(tbl.insert().values(name='second'))
+
+            res = yield from conn.execute(tbl.select())
+            rows = yield from res.fetchmany()
+            self.assertEqual(1, len(rows))
+            self.assertFalse(res.closed)
+            self.assertTrue(res.returns_rows)
+            self.assertEqual([(1, 'first')], rows)
+
+        self.loop.run_until_complete(go())
+
+    def test_fetchmany_with_size(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            yield from conn.execute(tbl.insert().values(name='second'))
+
+            res = yield from conn.execute(tbl.select())
+            rows = yield from res.fetchmany(100)
+            self.assertEqual(2, len(rows))
+            self.assertFalse(res.closed)
+            self.assertTrue(res.returns_rows)
+            self.assertEqual([(1, 'first'), (2, 'second')], rows)
+
+        self.loop.run_until_complete(go())
+
+    def test_fetchmany_closed(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            yield from conn.execute(tbl.insert().values(name='second'))
+
+            res = yield from conn.execute(tbl.select())
+            res.close()
+            with self.assertRaises(sa.ResourceClosedError):
+                yield from res.fetchmany()
+
+        self.loop.run_until_complete(go())
+
+    def test_fetchmany_with_size_closed(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            yield from conn.execute(tbl.insert().values(name='second'))
+
+            res = yield from conn.execute(tbl.select())
+            res.close()
+            with self.assertRaises(sa.ResourceClosedError):
+                yield from res.fetchmany(5555)
+
+        self.loop.run_until_complete(go())
+
+    def test_fetchmany_not_returns_rows(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            res = yield from conn.execute(tbl.delete())
+            with self.assertRaises(sa.ResourceClosedError):
+                yield from res.fetchmany()
+
+        self.loop.run_until_complete(go())
+
+    def test_fetchmany_close_after_last_read(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+
+            res = yield from conn.execute(tbl.select())
+            rows = yield from res.fetchmany()
+            self.assertEqual(1, len(rows))
+            self.assertFalse(res.closed)
+            self.assertTrue(res.returns_rows)
+            self.assertEqual([(1, 'first')], rows)
+            rows2 = yield from res.fetchmany()
+            self.assertEqual(0, len(rows2))
+            self.assertTrue(res.closed)
 
         self.loop.run_until_complete(go())
