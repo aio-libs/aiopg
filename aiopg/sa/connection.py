@@ -88,15 +88,9 @@ class SAConnection:
         res = yield from self.execute(obj, *multiparams, **params)
         return (yield from res.scalar())
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_vzl, exc_tb):
-        self.close()
-
     @property
     def closed(self):
-        pass
+        return self._connection is None
 
     @property
     def info(self):
@@ -153,6 +147,22 @@ class SAConnection:
         cur = yield from self._connection.cursor()
         try:
             yield from cur.execute('BEGIN')
+        finally:
+            cur.close()
+
+    @asyncio.coroutine
+    def _commit_impl(self):
+        cur = yield from self._connection.cursor()
+        try:
+            yield from cur.execute('COMMIT')
+        finally:
+            cur.close()
+
+    @asyncio.coroutine
+    def _rollback_impl(self):
+        cur = yield from self._connection.cursor()
+        try:
+            yield from cur.execute('ROLLBACK')
         finally:
             cur.close()
 
@@ -278,6 +288,8 @@ class SAConnection:
         except AttributeError:
             pass
         else:
+            if self._transaction is not None:
+                yield from self._transaction.rollback()
             conn.close()
             del self._connection
         self._can_reconnect = False

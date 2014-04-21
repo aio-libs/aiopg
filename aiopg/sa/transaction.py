@@ -99,21 +99,11 @@ class RootTransaction(Transaction):
 
     @asyncio.coroutine
     def _do_rollback(self):
-        if self._is_active:
-            cur = yield from self._connection.cursor()
-            try:
-                yield from cur.execute('ROLLBACK')
-            finally:
-                cur.close()
+        yield from self._connection._rollback_impl()
 
     @asyncio.coroutine
     def _do_commit(self):
-        if self._is_active:
-            cur = yield from self._connection.cursor()
-            try:
-                yield from cur.execute('COMMIT')
-            finally:
-                cur.close()
+        yield from self._connection._commit_impl()
 
 
 class NestedTransaction(Transaction):
