@@ -519,3 +519,21 @@ class TestConnection(unittest.TestCase):
                                          port=port,
                                          loop=self.loop)
         self.loop.run_until_complete(go())
+
+    def test_binary_protocol_error(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from aiopg.connect(database='aiopg',
+                                            user='aiopg',
+                                            password='passwd',
+                                            host='127.0.0.1',
+                                            loop=self.loop)
+            s = socket.fromfd(conn._fileno, socket.AF_INET, socket.SOCK_STREAM)
+            s.send(b'garbage')
+            s.detach()
+            cur = yield from conn.cursor()
+            with self.assertRaises(psycopg2.OperationalError):
+                yield from cur.execute('SELECT 1')
+
+        self.loop.run_until_complete(go())
