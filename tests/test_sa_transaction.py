@@ -343,3 +343,37 @@ class TestTransaction(unittest.TestCase):
             self.assertEqual(1, res)
 
         self.loop.run_until_complete(go())
+
+    # TODO: add skip is twophase transactions disabled
+
+    def xtest_twophase_transaction_commit(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            tr = yield from conn.begin_twophase()
+            yield from conn.execute(tbl.insert().values(name='aaaa'))
+
+            yield from tr.prepare()
+            self.assertTrue(tr.is_active)
+
+            yield from tr.commit()
+            self.assertFalse(tr.is_active)
+
+            res = yield from conn.scalar(tbl.count())
+            self.assertEqual(2, res)
+
+        self.loop.run_until_complete(go())
+
+    def xtest_twophase_transaction_twice(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            tr = yield from conn.begin_twophase()
+            with self.assertRaises(sa.InvalidRequestError):
+                yield from conn.begin_twophase()
+
+            self.assertTrue(tr.is_active)
+            yield from tr.prepare()
+            yield from tr.commit()
+
+        self.loop.run_until_complete(go())

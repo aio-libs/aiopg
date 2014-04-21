@@ -257,28 +257,16 @@ class SAConnection:
         return [row[0] for row in result]
 
     @asyncio.coroutine
-    def rollback_prepared(self, xid, *, is_prepared=True, recover=False):
+    def rollback_prepared(self, xid, *, is_prepared=True):
         if is_prepared:
-            if recover:
-                #FIXME: ugly hack to get out of transaction
-                # context when committing recoverable transactions
-                # Must find out a way how to make the dbapi not
-                # open a transaction.
-                yield from self.execute("ROLLBACK")
             yield from self.execute("ROLLBACK PREPARED '%s'" % xid)
-            yield from self.execute("BEGIN")
-            yield from self._rollback_impl()
         else:
             yield from self._rollback_impl()
 
     @asyncio.coroutine
-    def commit_prepared(self, xid, *, is_prepared=True, recover=False):
+    def commit_prepared(self, xid, *, is_prepared=True):
         if is_prepared:
-            if recover:
-                self.execute("ROLLBACK")
             self.execute("COMMIT PREPARED '%s'" % xid)
-            self.execute("BEGIN")
-            yield from self._rollback_impl()
         else:
             yield from self._commit_impl()
 
