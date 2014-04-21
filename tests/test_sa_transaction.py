@@ -16,6 +16,7 @@ class TestTransaction(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
+        self.loop.run_until_complete(self.start())
 
     def tearDown(self):
         self.loop.close()
@@ -43,8 +44,6 @@ class TestTransaction(unittest.TestCase):
     def test_without_transactions(self):
         @asyncio.coroutine
         def go():
-            yield from self.start()
-
             conn1 = yield from self.connect()
             conn2 = yield from self.connect()
             res1 = yield from conn1.scalar(tbl.count())
@@ -69,8 +68,6 @@ class TestTransaction(unittest.TestCase):
     def test_root_transaction(self):
         @asyncio.coroutine
         def go():
-            yield from self.start()
-
             conn1 = yield from self.connect()
             conn2 = yield from self.connect()
 
@@ -92,8 +89,6 @@ class TestTransaction(unittest.TestCase):
     def test_root_transaction_rollback(self):
         @asyncio.coroutine
         def go():
-            yield from self.start()
-
             conn1 = yield from self.connect()
             conn2 = yield from self.connect()
 
@@ -115,8 +110,6 @@ class TestTransaction(unittest.TestCase):
     def test_root_transaction_close(self):
         @asyncio.coroutine
         def go():
-            yield from self.start()
-
             conn1 = yield from self.connect()
             conn2 = yield from self.connect()
 
@@ -138,8 +131,6 @@ class TestTransaction(unittest.TestCase):
     def test_rollback_on_connection_close(self):
         @asyncio.coroutine
         def go():
-            yield from self.start()
-
             conn1 = yield from self.connect()
             conn2 = yield from self.connect()
 
@@ -216,7 +207,6 @@ class TestTransaction(unittest.TestCase):
     def test_inner_transaction_rollback(self):
         @asyncio.coroutine
         def go():
-            yield from self.start()
             conn = yield from self.connect()
             tr1 = yield from conn.begin()
             tr2 = yield from conn.begin()
@@ -235,8 +225,6 @@ class TestTransaction(unittest.TestCase):
     def test_inner_transaction_close(self):
         @asyncio.coroutine
         def go():
-            yield from self.start()
-
             conn = yield from self.connect()
             tr1 = yield from conn.begin()
             tr2 = yield from conn.begin()
@@ -250,5 +238,23 @@ class TestTransaction(unittest.TestCase):
 
             res = yield from conn.scalar(tbl.count())
             self.assertEqual(2, res)
+
+        self.loop.run_until_complete(go())
+
+    def test_nested_transaction_commit(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            tr1 = yield from conn.begin()
+            tr2 = yield from conn.begin()
+            self.assertTrue(tr2.is_active)
+
+            yield from tr2.commit()
+            self.assertFalse(tr2.is_active)
+            self.assertTrue(tr1.is_active)
+
+            yield from tr1.commit()
+            self.assertFalse(tr2.is_active)
+            self.assertFalse(tr1.is_active)
 
         self.loop.run_until_complete(go())
