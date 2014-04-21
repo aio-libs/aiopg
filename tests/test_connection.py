@@ -505,6 +505,7 @@ class TestConnection(unittest.TestCase):
             port = random.randint(1024, 65535)
             try:
                 s.bind(('127.0.0.1', port))
+                s.close()
                 break
             except ConnectionError:
                 pass
