@@ -194,3 +194,61 @@ class TestTransaction(unittest.TestCase):
             self.assertFalse(tr.is_active)
 
         self.loop.run_until_complete(go())
+
+    def test_inner_transaction_commit(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            tr1 = yield from conn.begin()
+            tr2 = yield from conn.begin()
+            self.assertTrue(tr2.is_active)
+
+            yield from tr2.commit()
+            self.assertFalse(tr2.is_active)
+            self.assertTrue(tr1.is_active)
+
+            yield from tr1.commit()
+            self.assertFalse(tr2.is_active)
+            self.assertFalse(tr1.is_active)
+
+        self.loop.run_until_complete(go())
+
+    def test_inner_transaction_rollback(self):
+        @asyncio.coroutine
+        def go():
+            yield from self.start()
+            conn = yield from self.connect()
+            tr1 = yield from conn.begin()
+            tr2 = yield from conn.begin()
+            self.assertTrue(tr2.is_active)
+            yield from conn.execute(tbl.insert().values(name='aaaa'))
+
+            yield from tr2.rollback()
+            self.assertFalse(tr2.is_active)
+            self.assertFalse(tr1.is_active)
+
+            res = yield from conn.scalar(tbl.count())
+            self.assertEqual(1, res)
+
+        self.loop.run_until_complete(go())
+
+    def test_inner_transaction_close(self):
+        @asyncio.coroutine
+        def go():
+            yield from self.start()
+
+            conn = yield from self.connect()
+            tr1 = yield from conn.begin()
+            tr2 = yield from conn.begin()
+            self.assertTrue(tr2.is_active)
+            yield from conn.execute(tbl.insert().values(name='aaaa'))
+
+            yield from tr2.close()
+            self.assertFalse(tr2.is_active)
+            self.assertTrue(tr1.is_active)
+            yield from tr1.commit()
+
+            res = yield from conn.scalar(tbl.count())
+            self.assertEqual(2, res)
+
+        self.loop.run_until_complete(go())

@@ -63,6 +63,8 @@ class Transaction(object):
             return
         if self._parent is self:
             yield from self.rollback()
+        else:
+            self._is_active = False
 
     @asyncio.coroutine
     def rollback(self):
