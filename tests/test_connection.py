@@ -2,6 +2,8 @@ import asyncio
 import aiopg
 import psycopg2
 import psycopg2.extras
+import socket
+import random
 import unittest
 
 from aiopg.connection import Connection
@@ -494,5 +496,44 @@ class TestConnection(unittest.TestCase):
 
             with self.assertRaises(RuntimeError):
                 next(coro2)
+
+        self.loop.run_until_complete(go())
+
+    def test_connect_to_unsupported_port(self):
+        while True:
+            s = socket.socket(socket.AF_INET)
+            port = random.randint(1024, 65535)
+            try:
+                s.bind(('127.0.0.1', port))
+                break
+            except ConnectionError:
+                pass
+
+        @asyncio.coroutine
+        def go():
+            with self.assertRaises(psycopg2.OperationalError):
+                yield from aiopg.connect(database='aiopg',
+                                         user='aiopg',
+                                         password='passwd',
+                                         host='127.0.0.1',
+                                         port=port,
+                                         loop=self.loop)
+        self.loop.run_until_complete(go())
+
+    def test_binary_protocol_error(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from aiopg.connect(database='aiopg',
+                                            user='aiopg',
+                                            password='passwd',
+                                            host='127.0.0.1',
+                                            loop=self.loop)
+            s = socket.fromfd(conn._fileno, socket.AF_INET, socket.SOCK_STREAM)
+            s.send(b'garbage')
+            s.detach()
+            cur = yield from conn.cursor()
+            with self.assertRaises(psycopg2.OperationalError):
+                yield from cur.execute('SELECT 1')
 
         self.loop.run_until_complete(go())
