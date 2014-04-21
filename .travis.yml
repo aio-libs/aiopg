@@ -6,6 +6,7 @@ python:
 install:
   - python setup.py install
   - pip install pyflakes
+  - test $USE_SA == 1 && pip install sqlalchemy || true
 
 before_script:
   - psql -c "create database aiopg;" -U postgres
@@ -13,8 +14,18 @@ before_script:
   - psql -c "grant all privileges on database aiopg to aiopg;" -U postgres
 
 script:
+  - pep8 aiopg examples tests
   - pyflakes .
   - python runtests.py -v
 
 addons:
   postgresql: "9.3"
+
+env:
+  global:
+    - PYTHON=python
+  matrix:
+    - USE_SA=1
+    - USE_SA=0
+
+cache: apt
