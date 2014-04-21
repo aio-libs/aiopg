@@ -6,6 +6,7 @@ python:
 install:
   - python setup.py install
   - pip install pyflakes
+  - pip install pep8
   - test $USE_SA == 1 && pip install sqlalchemy || true
 
 before_script:
