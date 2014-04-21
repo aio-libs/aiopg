@@ -122,7 +122,6 @@ class NestedTransaction(Transaction):
 
     def __init__(self, connection, parent):
         super(NestedTransaction, self).__init__(connection, parent)
-        self._savepoint = self.connection._savepoint_impl()
 
     @asyncio.coroutine
     def _do_rollback(self):

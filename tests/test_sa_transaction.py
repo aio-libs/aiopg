@@ -16,9 +16,12 @@ class TestTransaction(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
+        self.connections = set()
         self.loop.run_until_complete(self.start())
 
     def tearDown(self):
+        for conn in self.connections:
+            conn.close()
         self.loop.close()
 
     @asyncio.coroutine
@@ -29,7 +32,7 @@ class TestTransaction(unittest.TestCase):
                                 "(id serial, name varchar(255))")
         yield from conn.execute("INSERT INTO sa_tbl2 (name)"
                                 "VALUES ('first')")
-        return (yield from self.connect(**kwargs))
+        yield from self.connect(**kwargs)
 
     @asyncio.coroutine
     def connect(self, **kwargs):
@@ -39,7 +42,9 @@ class TestTransaction(unittest.TestCase):
                                   host='127.0.0.1',
                                   loop=self.loop,
                                   **kwargs)
-        return sa.SAConnection(conn, sa.dialect)
+        ret = sa.SAConnection(conn, sa.dialect)
+        self.connections.add(ret)
+        return ret
 
     def test_without_transactions(self):
         @asyncio.coroutine
@@ -245,16 +250,95 @@ class TestTransaction(unittest.TestCase):
         @asyncio.coroutine
         def go():
             conn = yield from self.connect()
-            tr1 = yield from conn.begin()
-            tr2 = yield from conn.begin()
+            tr1 = yield from conn.begin_nested()
+            tr2 = yield from conn.begin_nested()
+            self.assertTrue(tr1.is_active)
             self.assertTrue(tr2.is_active)
+
+            yield from conn.execute(tbl.insert().values(name='aaaa'))
+            yield from tr2.commit()
+            self.assertFalse(tr2.is_active)
+            self.assertTrue(tr1.is_active)
+
+            res = yield from conn.scalar(tbl.count())
+            self.assertEqual(2, res)
+
+            yield from tr1.commit()
+            self.assertFalse(tr2.is_active)
+            self.assertFalse(tr1.is_active)
+
+            res = yield from conn.scalar(tbl.count())
+            self.assertEqual(2, res)
+
+        self.loop.run_until_complete(go())
+
+    def test_nested_transaction_commit_twice(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            tr1 = yield from conn.begin_nested()
+            tr2 = yield from conn.begin_nested()
+
+            yield from conn.execute(tbl.insert().values(name='aaaa'))
+            yield from tr2.commit()
+            self.assertFalse(tr2.is_active)
+            self.assertTrue(tr1.is_active)
 
             yield from tr2.commit()
             self.assertFalse(tr2.is_active)
             self.assertTrue(tr1.is_active)
 
+            res = yield from conn.scalar(tbl.count())
+            self.assertEqual(2, res)
+
+            yield from tr1.close()
+
+        self.loop.run_until_complete(go())
+
+    def test_nested_transaction_rollback(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            tr1 = yield from conn.begin_nested()
+            tr2 = yield from conn.begin_nested()
+            self.assertTrue(tr1.is_active)
+            self.assertTrue(tr2.is_active)
+
+            yield from conn.execute(tbl.insert().values(name='aaaa'))
+            yield from tr2.rollback()
+            self.assertFalse(tr2.is_active)
+            self.assertTrue(tr1.is_active)
+
+            res = yield from conn.scalar(tbl.count())
+            self.assertEqual(1, res)
+
             yield from tr1.commit()
             self.assertFalse(tr2.is_active)
             self.assertFalse(tr1.is_active)
+
+            res = yield from conn.scalar(tbl.count())
+            self.assertEqual(1, res)
+
+        self.loop.run_until_complete(go())
+
+    def test_nested_transaction_rollback_twice(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            tr1 = yield from conn.begin_nested()
+            tr2 = yield from conn.begin_nested()
+
+            yield from conn.execute(tbl.insert().values(name='aaaa'))
+            yield from tr2.rollback()
+            self.assertFalse(tr2.is_active)
+            self.assertTrue(tr1.is_active)
+
+            yield from tr2.rollback()
+            self.assertFalse(tr2.is_active)
+            self.assertTrue(tr1.is_active)
+
+            yield from tr1.commit()
+            res = yield from conn.scalar(tbl.count())
+            self.assertEqual(1, res)
 
         self.loop.run_until_complete(go())

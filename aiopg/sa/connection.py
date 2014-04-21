@@ -186,7 +186,7 @@ class SAConnection:
             yield from self._begin_impl()
         else:
             self._transaction = NestedTransaction(self, self._transaction)
-            self._transaction._savepoint = yield from self._savepoing_impl()
+            self._transaction._savepoint = yield from self._savepoint_impl()
         return self._transaction
 
     @asyncio.coroutine
