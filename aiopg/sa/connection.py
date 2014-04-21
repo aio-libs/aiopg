@@ -242,21 +242,45 @@ class SAConnection:
                 "Cannot start a two phase transaction when a transaction "
                 "is already in progress.")
         if xid is None:
-            xid = self.engine.dialect.create_xid()
+            xid = self._dialect.create_xid()
         self._transaction = TwoPhaseTransaction(self, xid)
+        yield from self._begin_impl()
         return self._transaction
 
     @asyncio.coroutine
+    def _prepare_twophase_impl(self, xid):
+        yield from self.execute("PREPARE TRANSACTION '%s'" % xid)
+
+    @asyncio.coroutine
     def recover_twophase(self):
-        return self.engine.dialect.do_recover_twophase(self)
+        result = yield from self.execute("SELECT gid FROM pg_prepared_xacts")
+        return [row[0] for row in result]
 
     @asyncio.coroutine
-    def rollback_prepared(self, xid, recover=False):
-        self.engine.dialect.do_rollback_twophase(self, xid, recover=recover)
+    def rollback_prepared(self, xid, *, is_prepared=True, recover=False):
+        if is_prepared:
+            if recover:
+                #FIXME: ugly hack to get out of transaction
+                # context when committing recoverable transactions
+                # Must find out a way how to make the dbapi not
+                # open a transaction.
+                yield from self.execute("ROLLBACK")
+            yield from self.execute("ROLLBACK PREPARED '%s'" % xid)
+            yield from self.execute("BEGIN")
+            yield from self._rollback_impl()
+        else:
+            yield from self._rollback_impl()
 
     @asyncio.coroutine
-    def commit_prepared(self, xid, recover=False):
-        self.engine.dialect.do_commit_twophase(self, xid, recover=recover)
+    def commit_prepared(self, xid, *, is_prepared=True, recover=False):
+        if is_prepared:
+            if recover:
+                self.execute("ROLLBACK")
+            self.execute("COMMIT PREPARED '%s'" % xid)
+            self.execute("BEGIN")
+            yield from self._rollback_impl()
+        else:
+            yield from self._commit_impl()
 
     def in_transaction(self):
         """Return True if a transaction is in progress."""

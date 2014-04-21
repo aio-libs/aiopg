@@ -152,7 +152,6 @@ class TwoPhaseTransaction(Transaction):
         super().__init__(connection, None)
         self._is_prepared = False
         self._xid = xid
-        self.connection._begin_twophase_impl(self)
 
     @property
     def xid(self):
@@ -173,9 +172,9 @@ class TwoPhaseTransaction(Transaction):
     @asyncio.coroutine
     def _do_rollback(self):
         yield from self._connection._rollback_twophase_impl(
-            self._xid, self._is_prepared)
+            self._xid, is_prepared=self._is_prepared)
 
     @asyncio.coroutine
     def _do_commit(self):
         yield from self._connection._commit_twophase_impl(
-            self._xid, self._is_prepared)
+            self._xid, is_prepared=self._is_prepared)

@@ -149,6 +149,7 @@ class TestTransaction(unittest.TestCase):
 
             res2 = yield from conn2.scalar(tbl.count())
             self.assertEqual(1, res2)
+            del tr
 
         self.loop.run_until_complete(go())
 
