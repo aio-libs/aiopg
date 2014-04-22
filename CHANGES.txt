@@ -4,7 +4,7 @@ CHANGES
 0.2.0 (XXXX-XX-XX)
 ^^^^^^^^^^^^^^^^^^
 
-* Implemented optional support for sqlalchemy sql generators.
+* Implemented optional support for sqlalchemy functional sql layer.
 
 0.1.0 (2014-04-06)
 ^^^^^^^^^^^^^^^^^^
