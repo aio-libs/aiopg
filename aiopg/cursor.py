@@ -152,12 +152,12 @@ class Cursor:
     def statusmessage(self):
         return self._impl.statusmessage
 
-    ## @asyncio.coroutine
-    ## def cast(self, old, s):
-    ##     ret = self._impl.cast(old, s)
-    ##     assert not self._conn._isexecuting(), ("Don't support server side "
-    ##                                            "cast")
-    ##     return ret
+    # @asyncio.coroutine
+    # def cast(self, old, s):
+    #     ret = self._impl.cast(old, s)
+    #     assert not self._conn._isexecuting(), ("Don't support server side "
+    #                                            "cast")
+    #     return ret
 
     @property
     def tzinfo_factory(self):

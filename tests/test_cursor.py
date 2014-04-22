@@ -201,7 +201,6 @@ class TestCursor(unittest.TestCase):
             conn = yield from self.connect()
             cur = yield from conn.cursor()
             yield from cur.execute('SELECT * from tbl;')
-            #with self.assertRaises(psycopg2.ProgrammingError):
             yield from cur.scroll(1)
             ret = yield from cur.fetchone()
             self.assertEqual((2, 'b'), ret)

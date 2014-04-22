@@ -488,7 +488,6 @@ class TestConnection(unittest.TestCase):
             conn = yield from self.connect()
             cur1 = yield from conn.cursor()
             cur2 = yield from conn.cursor()
-            #import ipdb;ipdb.set_trace()
             coro1 = cur1.execute('SELECT 1')
             fut1 = next(coro1)
             self.assertIsInstance(fut1, asyncio.Future)

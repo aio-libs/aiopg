@@ -1,6 +1,5 @@
 import asyncio
 import aiopg
-#import psycopg2
 import unittest
 
 from aiopg.connection import Connection

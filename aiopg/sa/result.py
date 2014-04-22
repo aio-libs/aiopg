@@ -28,19 +28,19 @@ class RowProxy(Mapping):
             processor, obj, index = self._keymap[key]
         except KeyError:
             processor, obj, index = self._result_proxy._key_fallback(key)
-        ## Do we need slicing at all? RowProxy now is Mapping not Sequence
-        ## except TypeError:
-        ##     if isinstance(key, slice):
-        ##         l = []
-        ##         for processor, value in zip(self._processors[key],
-        ##                                     self._row[key]):
-        ##             if processor is None:
-        ##                 l.append(value)
-        ##             else:
-        ##                 l.append(processor(value))
-        ##         return tuple(l)
-        ##     else:
-        ##         raise
+        # Do we need slicing at all? RowProxy now is Mapping not Sequence
+        # except TypeError:
+        #     if isinstance(key, slice):
+        #         l = []
+        #         for processor, value in zip(self._processors[key],
+        #                                     self._row[key]):
+        #             if processor is None:
+        #                 l.append(value)
+        #             else:
+        #                 l.append(processor(value))
+        #         return tuple(l)
+        #     else:
+        #         raise
         if index is None:
             raise exc.InvalidRequestError(
                 "Ambiguous column name '%s' in result set! "
@@ -106,9 +106,9 @@ class ResultMetaData(object):
             colname = rec[0]
             coltype = rec[1]
 
-            ## PostgreSQL doesn't require this.
-            ## if dialect.requires_name_normalize:
-            ##     colname = dialect.normalize_name(colname)
+            # PostgreSQL doesn't require this.
+            # if dialect.requires_name_normalize:
+            #     colname = dialect.normalize_name(colname)
 
             if result_proxy._result_map:
                 try:
