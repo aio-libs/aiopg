@@ -1,5 +1,6 @@
 import asyncio
 from aiopg import connect, sa
+import functools
 
 import unittest
 
@@ -12,16 +13,27 @@ tbl = Table('sa_tbl2', meta,
             Column('name', String(255)))
 
 
+def check_prepared_transactions(func):
+    @functools.wraps(func)
+    def wrapper(self):
+        conn = yield from self.loop.run_until_complete(self.connect())
+        val = yield from conn.scalar('show max_prepared_transactions')
+        if not val:
+            raise unittest.SkipTest('Twophase transacions are not supported. '
+                                    'Set max_prepared_transactions to '
+                                    'a nonzero value')
+        return func(self)
+    return wrapper
+
+
+
 class TestTransaction(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
-        self.connections = set()
         self.loop.run_until_complete(self.start())
 
     def tearDown(self):
-        for conn in self.connections:
-            conn.close()
         self.loop.close()
 
     @asyncio.coroutine
@@ -43,7 +55,6 @@ class TestTransaction(unittest.TestCase):
                                   loop=self.loop,
                                   **kwargs)
         ret = sa.SAConnection(conn, sa.dialect)
-        self.connections.add(ret)
         return ret
 
     def test_without_transactions(self):
@@ -346,7 +357,8 @@ class TestTransaction(unittest.TestCase):
 
     # TODO: add skip is twophase transactions disabled
 
-    def xtest_twophase_transaction_commit(self):
+    @check_prepared_transactions
+    def test_twophase_transaction_commit(self):
         @asyncio.coroutine
         def go():
             conn = yield from self.connect()
@@ -364,7 +376,8 @@ class TestTransaction(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-    def xtest_twophase_transaction_twice(self):
+    @check_prepared_transactions
+    def test_twophase_transaction_twice(self):
         @asyncio.coroutine
         def go():
             conn = yield from self.connect()
