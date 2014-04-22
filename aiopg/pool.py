@@ -139,6 +139,8 @@ class _ConnectionContextManager:
             <block>
     """
 
+    __slots__ = ('_pool', '_conn')
+
     def __init__(self, pool, conn):
         self._pool = pool
         self._conn = conn
@@ -168,6 +170,8 @@ class _CursorContextManager:
         with pool:
             <block>
     """
+
+    __slots__ = ('_pool', '_conn', '_cur')
 
     def __init__(self, pool, conn, cur):
         self._pool = pool

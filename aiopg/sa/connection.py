@@ -296,13 +296,14 @@ class SAConnection:
 
         """
         try:
-            conn = self._connection
+            self._connection
         except AttributeError:
             pass
         else:
             if self._transaction is not None:
                 yield from self._transaction.rollback()
-            conn.close()
+            # don't close underlying connection, it can be reused by pool
+            # conn.close()
             del self._connection
         self._can_reconnect = False
         self._transaction = None

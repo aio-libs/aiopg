@@ -1,26 +1,15 @@
 """Optional support for sqlalchemy.sql dynamic query generation."""
 
-try:
-    from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
-except ImportError:  # pragma: no cover
-    raise ImportError('aiopg.sa requires sqlalchemy')
-
-
+from .engine import create_engine, dialect
 from .connection import SAConnection
 from .exc import (Error, ArgumentError, InvalidRequestError,
                   NoSuchColumnError, ResourceClosedError)
 
 
-__all__ = ('dialect', 'SAConnection', 'Error', 'ArgumentError',
-           'InvalidRequestError', 'NoSuchColumnError', 'ResourceClosedError')
+__all__ = ('dialect', 'create_engine', 'SAConnection', 'Error',
+           'ArgumentError', 'InvalidRequestError', 'NoSuchColumnError',
+           'ResourceClosedError')
 
-
-dialect = PGDialect_psycopg2()
-dialect.implicit_returning = True
-dialect.supports_native_enum = True
-dialect.supports_smallserial = True  # 9.2+
-dialect._backslash_escapes = False
-dialect.supports_sane_multi_rowcount = True  # psycopg 2.0.9+
 
 (SAConnection, Error, ArgumentError, InvalidRequestError,
- NoSuchColumnError, ResourceClosedError)
+ NoSuchColumnError, ResourceClosedError, create_engine, dialect)
