@@ -26,7 +26,6 @@ def check_prepared_transactions(func):
     return wrapper
 
 
-
 class TestTransaction(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
