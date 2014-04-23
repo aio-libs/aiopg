@@ -1,7 +1,7 @@
 import asyncio
 import aiopg
 
-dsn = 'dbname=jetty user=nick password=1234 host=localhost'
+dsn = 'dbname=aiopg user=aiopg password=passwd host=localhost'
 
 
 @asyncio.coroutine

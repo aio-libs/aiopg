@@ -96,6 +96,7 @@ class TestTransaction(unittest.TestCase):
             yield from tr.commit()
 
             self.assertFalse(tr.is_active)
+            self.assertFalse(conn1.in_transaction)
             res2 = yield from conn2.scalar(tbl.count())
             self.assertEqual(0, res2)
 

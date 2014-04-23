@@ -18,6 +18,8 @@ else:
 def read(f):
     return open(os.path.join(os.path.dirname(__file__), f)).read().strip()
 
+extras_require = {'sa': ['sqlalchemy>=0.9'],}
+
 
 def read_version():
     regexp = re.compile(r"^__version__\W*=\W*'([\d.abrc]+)'")
@@ -54,7 +56,8 @@ setup(name='aiopg',
       download_url='https://pypi.python.org/pypi/aiopg',
       license='BSD',
       packages=find_packages(),
-      install_requires = install_requires,
-      provides = ['aiopg'],
-      requires = ['psycopg2'],
+      install_requires=install_requires,
+      extras_require=extras_require,
+      provides=['aiopg'],
+      requires=['psycopg2'],
       include_package_data = True)

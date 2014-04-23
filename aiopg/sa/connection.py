@@ -8,46 +8,6 @@ from .transaction import (RootTransaction, Transaction,
                           NestedTransaction, TwoPhaseTransaction)
 
 
-def _distill_params(multiparams, params):
-    """Given arguments from the calling form *multiparams, **params,
-    return a list of bind parameter structures, usually a list of
-    dictionaries.
-
-    In the case of 'raw' execution which accepts positional parameters,
-    it may be a list of tuples or lists.
-
-    """
-
-    if not multiparams:
-        if params:
-            return [params]
-        else:
-            return []
-    elif len(multiparams) == 1:
-        zero = multiparams[0]
-        if isinstance(zero, (list, tuple)):
-            if not zero or hasattr(zero[0], '__iter__') and \
-                    not hasattr(zero[0], 'strip'):
-                # execute(stmt, [{}, {}, {}, ...])
-                # execute(stmt, [(), (), (), ...])
-                return zero
-            else:
-                # execute(stmt, ("value", "value"))
-                return [zero]
-        elif hasattr(zero, 'keys'):
-            # execute(stmt, {"key":"value"})
-            return [zero]
-        else:
-            # execute(stmt, "value")
-            return [[zero]]
-    else:
-        if (hasattr(multiparams[0], '__iter__') and
-                not hasattr(multiparams[0], 'strip')):
-            return multiparams
-        else:
-            return [multiparams]
-
-
 class SAConnection:
 
     def __init__(self, connection, dialect):
@@ -270,10 +230,10 @@ class SAConnection:
         else:
             yield from self._commit_impl()
 
+    @property
     def in_transaction(self):
         """Return True if a transaction is in progress."""
-
-        return self._transaction is not None
+        return self._transaction is not None and self._transaction.is_active
 
     @asyncio.coroutine
     def close(self):
@@ -307,3 +267,43 @@ class SAConnection:
             del self._connection
         self._can_reconnect = False
         self._transaction = None
+
+
+def _distill_params(multiparams, params):
+    """Given arguments from the calling form *multiparams, **params,
+    return a list of bind parameter structures, usually a list of
+    dictionaries.
+
+    In the case of 'raw' execution which accepts positional parameters,
+    it may be a list of tuples or lists.
+
+    """
+
+    if not multiparams:
+        if params:
+            return [params]
+        else:
+            return []
+    elif len(multiparams) == 1:
+        zero = multiparams[0]
+        if isinstance(zero, (list, tuple)):
+            if not zero or hasattr(zero[0], '__iter__') and \
+                    not hasattr(zero[0], 'strip'):
+                # execute(stmt, [{}, {}, {}, ...])
+                # execute(stmt, [(), (), (), ...])
+                return zero
+            else:
+                # execute(stmt, ("value", "value"))
+                return [zero]
+        elif hasattr(zero, 'keys'):
+            # execute(stmt, {"key":"value"})
+            return [zero]
+        else:
+            # execute(stmt, "value")
+            return [[zero]]
+    else:
+        if (hasattr(multiparams[0], '__iter__') and
+                not hasattr(multiparams[0], 'strip')):
+            return multiparams
+        else:
+            return [multiparams]
