@@ -126,7 +126,6 @@ def go():
     yield from count(engine)
     yield from show_julia(engine)
     yield from ave_age(engine)
-    # print("Average age of our population", ave_age)
 
 
 loop = asyncio.get_event_loop()
