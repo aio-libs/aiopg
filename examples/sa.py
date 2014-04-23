@@ -118,7 +118,7 @@ def ave_age(engine):
 def go():
     engine = yield from create_engine(user='aiopg',
                                       database='aiopg',
-                                      host='localhost',
+                                      host='127.0.0.1',
                                       password='passwd')
 
     yield from create_tables(engine)
