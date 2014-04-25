@@ -9,14 +9,27 @@ aiopg
 .. _GitHub: https://github.com/aio-libs/aiopg
 .. _PostgreSQL: http://www.postgresql.org/
 .. _asyncio: http://docs.python.org/3.4/library/asyncio.html
+.. _sqlalchemy: http://docs.sqlalchemy.org/
 
 
 **aiopg** is a library for accessing a PostgreSQL_ database
 from the asyncio_ (PEP-3156/tulip) framework. It wraps
 asynchronous features of the Psycopg database driver.
 
+Features
+--------
 
-It uses :mod:`psycopg2` connections in **asynchronous** mode internally.
+- Implements *asyncio DB-API like* interface for PostgreSQL_.  It
+  includes :ref:`aiopg-core-connection`, :ref:`aiopg-core-cursor` and
+  :ref:`aiopg-core-pool` objects.
+- Implements *optional* support for charming sqlalchemy_ functional sql layer.
+
+
+Basics
+------
+
+The library uses :mod:`psycopg2` connections in **asynchronous** mode
+internally.
 
 Literally it is an (almost) transparent wrapper for psycopg2
 connection and cursor, but with only exception.
@@ -27,6 +40,23 @@ every method.
 Properties are unchanged, so ``conn.prop`` is correct as well as
 ``conn.prop = val``.
 
+See example::
+
+    import asyncio
+    import aiopg
+
+    dsn = 'dbname=aiopg user=aiopg password=passwd host=127.0.0.1'
+
+    @asyncio.coroutine
+    def go():
+        pool = yield from aiopg.create_pool(dsn)
+        with (yield from pool.cursor()) as cur:
+            ret = yield from cur.execute("SELECT 1")
+            assert ret == (1,)
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(go())
+
 For documentation about connection and cursor methods/properties
 please go to psycopg docs: http://initd.org/psycopg/docs/
 
@@ -34,10 +64,25 @@ please go to psycopg docs: http://initd.org/psycopg/docs/
           option in asynchronous mode. Autocommitting cannot be disabled.
 
 
+SQLAlchemy and aiopg
+--------------------
+
+TBD
+
+
 Installation
 --------------------
 
    pip3 install aiopg
+
+Also probably you want to use :mod:`aiopg.sa`.
+
+.. _aiozmq-install-sqlalchemy:
+
+:mod:`aiopg.sa` module is **optional** and requires sqlalchemy_. You can
+install *sqlalchemy* by::
+
+  pip3 install sqlalchemy
 
 Source code
 -----------
@@ -56,6 +101,7 @@ Dependencies
 
 - Python 3.3 and :mod:`asyncio` or Python 3.4+
 - psycopg2
+- aiopg.sa requires sqlalchemy_
 
 Authors and License
 -------------------
@@ -65,13 +111,17 @@ licensed and freely available.
 
 Feel free to improve this package and send a pull request to GitHub_.
 
+Getting Started
+---------------
+
+TBD
 
 Contents:
 
 .. toctree::
    :maxdepth: 2
 
-   reference
+   core
 
 Indices and tables
 ==================

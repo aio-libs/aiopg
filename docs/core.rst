@@ -1,10 +1,14 @@
-API Reference
+.. _aiopg-core:
+
+Core API Reference
 ===============================
 
 .. module:: aiopg
    :synopsis: A library for accessing a PostgreSQL database from the asyncio
 .. currentmodule:: aiopg
 
+
+.. _aiopg-core-connection:
 
 Connection
 --------------
@@ -51,6 +55,12 @@ Example::
 
        A :ref:`coroutine<coroutine>` that returns cursor for connection.
 
+
+.. _aiopg-core-cursor:
+
+Cursor
+------
+
 .. class:: Cursor
 
    A cursor for connection.
@@ -74,6 +84,8 @@ Example::
 
    Use :meth:`Connection.cursor()` for getting cursor for connection.
 
+
+.. _aiopg-core-pool:
 
 Pool
 -----
@@ -190,6 +202,8 @@ The basic usage is::
              yield from cur.execute('SELECT 1')
 
       After exiting from *with block* cursor *cur* will be closed.
+
+.. _aiopg-core-exceptions:
 
 Exceptions
 -----------

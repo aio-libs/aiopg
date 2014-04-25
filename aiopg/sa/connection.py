@@ -18,18 +18,18 @@ class SAConnection:
         self._weak_results = weakref.WeakSet()
 
     @asyncio.coroutine
-    def execute(self, obj, *multiparams, **params):
+    def execute(self, query, *multiparams, **params):
         cursor = yield from self._connection.cursor()
 
-        if isinstance(obj, str):
+        if isinstance(query, str):
             distilled_params = _distill_params(multiparams, params)
             result_map = None
-            yield from cursor.execute(obj, distilled_params)
-        elif isinstance(obj, ClauseElement):
+            yield from cursor.execute(query, distilled_params)
+        elif isinstance(query, ClauseElement):
             if multiparams or params:
                 raise exc.ArgumentError("Don't mix sqlalchemy clause "
                                         "and execution with parameters")
-            compiled = obj.compile(dialect=self._dialect)
+            compiled = query.compile(dialect=self._dialect)
             parameters = compiled.params
             result_map = compiled.result_map
             yield from cursor.execute(str(compiled), parameters)
@@ -44,8 +44,8 @@ class SAConnection:
         return ret
 
     @asyncio.coroutine
-    def scalar(self, obj, *multiparams, **params):
-        res = yield from self.execute(obj, *multiparams, **params)
+    def scalar(self, query, *multiparams, **params):
+        res = yield from self.execute(query, *multiparams, **params)
         return (yield from res.scalar())
 
     @property
@@ -64,36 +64,30 @@ class SAConnection:
     def begin(self):
         """Begin a transaction and return a transaction handle.
 
-        The returned object is an instance of :class:`.Transaction`.
+        The returned object is an instance of Transaction.
         This object represents the "scope" of the transaction,
-        which completes when either the :meth:`.Transaction.rollback`
-        or :meth:`.Transaction.commit` method is called.
+        which completes when either the .rollback
+        or .commit method is called.
 
-        Nested calls to :meth:`.begin` on the same :class:`.Connection`
-        will return new :class:`.Transaction` objects that represent
+        Nested calls to .begin on the same SAConnection instance
+        will return new Transaction objects that represent
         an emulated transaction within the scope of the enclosing
         transaction, that is::
 
-            trans = conn.begin()   # outermost transaction
-            trans2 = conn.begin()  # "nested"
-            trans2.commit()        # does nothing
-            trans.commit()         # actually commits
+            trans = yield from conn.begin()   # outermost transaction
+            trans2 = yield from conn.begin()  # "nested"
+            yield from trans2.commit()        # does nothing
+            yield from trans.commit()         # actually commits
 
-        Calls to :meth:`.Transaction.commit` only have an effect
-        when invoked via the outermost :class:`.Transaction` object, though the
-        :meth:`.Transaction.rollback` method of any of the
-        :class:`.Transaction` objects will roll back the
+        Calls to .commit only have an effect
+        when invoked via the outermost Transaction object, though the
+        .rollback method of any of the
+        Transaction objects will roll back the
         transaction.
 
         See also:
-
-        :meth:`.Connection.begin_nested` - use a SAVEPOINT
-
-        :meth:`.Connection.begin_twophase` - use a two phase /XID transaction
-
-        :meth:`.Engine.begin` - context manager available from
-        :class:`.Engine`.
-
+          .begin_nested - use a SAVEPOINT
+          .begin_twophase - use a two phase/XA transaction
         """
         if self._transaction is None:
             self._transaction = RootTransaction(self)
