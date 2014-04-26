@@ -207,11 +207,13 @@ class SAConnection:
 
     @asyncio.coroutine
     def recover_twophase(self):
+        """Return a list of prepared twophase transaction ids."""
         result = yield from self.execute("SELECT gid FROM pg_prepared_xacts")
         return [row[0] for row in result]
 
     @asyncio.coroutine
     def rollback_prepared(self, xid, *, is_prepared=True):
+        """Rollback prepared twophase transaction."""
         if is_prepared:
             yield from self.execute("ROLLBACK PREPARED '%s'" % xid)
         else:
@@ -219,6 +221,7 @@ class SAConnection:
 
     @asyncio.coroutine
     def commit_prepared(self, xid, *, is_prepared=True):
+        """Commit prepared twophase transaction."""
         if is_prepared:
             self.execute("COMMIT PREPARED '%s'" % xid)
         else:
@@ -231,23 +234,18 @@ class SAConnection:
 
     @asyncio.coroutine
     def close(self):
-        """Close this :class:`.Connection`.
+        """Close this SAConnection.
 
         This results in a release of the underlying database
-        resources, that is, the DBAPI connection referenced
-        internally. The DBAPI connection is typically restored
-        back to the connection-holding :class:`.Pool` referenced
-        by the :class:`.Engine` that produced this
-        :class:`.Connection`. Any transactional state present on
-        the DBAPI connection is also unconditionally released via
-        the DBAPI connection's ``rollback()`` method, regardless
-        of any :class:`.Transaction` object that may be
-        outstanding with regards to this :class:`.Connection`.
+        resources, that is, the underlying connection referenced
+        internally. The underlying connection is typically restored
+        back to the connection-holding Pool referenced by the Engine
+        that produced this SAConnection. Any transactional state
+        present on the underlying connection is also unconditionally
+        released via calling Transaction.rollback() method.
 
-        After :meth:`~.Connection.close` is called, the
-        :class:`.Connection` is permanently in a closed state,
-        and will allow no further operations.
-
+        After .close() is called, the SAConnection is permanently in a
+        closed state, and will allow no further operations.
         """
         try:
             self._connection

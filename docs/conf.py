@@ -33,6 +33,8 @@ extensions = ['sphinx.ext.viewcode', 'sphinx.ext.autodoc',
               'sphinx.ext.intersphinx']
 
 intersphinx_mapping = {'python': ('http://docs.python.org/3', None),
+                       'sqlalchemy': ('http://docs.sqlalchemy.org/en/rel_0_9/',
+                                      None),
                        'psycopg2': ('http://initd.org/psycopg/docs/', None)}
 
 # Add any paths that contain templates here, relative to this directory.

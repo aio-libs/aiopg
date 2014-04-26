@@ -1,0 +1,7 @@
+psycopg2>=2.5
+sqlalchemy>=0.9
+pep8>=1.5
+pyflakes>=0.8
+coverage>=3.7
+ipdb>=0.8
+-e .

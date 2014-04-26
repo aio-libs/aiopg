@@ -7,22 +7,21 @@ aiopg
 =================================
 
 .. _GitHub: https://github.com/aio-libs/aiopg
-.. _PostgreSQL: http://www.postgresql.org/
 .. _asyncio: http://docs.python.org/3.4/library/asyncio.html
-.. _sqlalchemy: http://docs.sqlalchemy.org/
 
 
-**aiopg** is a library for accessing a PostgreSQL_ database
+**aiopg** is a library for accessing a :term:`PostgreSQL` database
 from the asyncio_ (PEP-3156/tulip) framework. It wraps
 asynchronous features of the Psycopg database driver.
 
 Features
 --------
 
-- Implements *asyncio DB-API like* interface for PostgreSQL_.  It
+- Implements *asyncio DB-API like* interface for :term:`PostgreSQL`.  It
   includes :ref:`aiopg-core-connection`, :ref:`aiopg-core-cursor` and
   :ref:`aiopg-core-pool` objects.
-- Implements *optional* support for charming sqlalchemy_ functional sql layer.
+- Implements *optional* support for charming :term:`sqlalchemy`
+  functional sql layer.
 
 
 Basics
@@ -122,6 +121,8 @@ Contents:
    :maxdepth: 2
 
    core
+   sa
+   glossary
 
 Indices and tables
 ==================

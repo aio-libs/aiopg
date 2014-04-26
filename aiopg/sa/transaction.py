@@ -5,33 +5,24 @@ from . import exc
 class Transaction(object):
     """Represent a database transaction in progress.
 
-    The :class:`.Transaction` object is procured by
-    calling the :meth:`~.Connection.begin` method of
-    :class:`.Connection`::
+    The Transaction object is procured by
+    calling the SAConnection.begin() method of
+    SAConnection:
 
-        from sqlalchemy import create_engine
-        engine = create_engine("postgresql://scott:tiger@localhost/test")
-        connection = engine.connect()
-        trans = connection.begin()
-        connection.execute("insert into x (a, b) values (1, 2)")
-        trans.commit()
+        with (yield from engine) as conn:
+            trans = yield from conn.begin()
+            try:
+                yield from conn.execute("insert into x (a, b) values (1, 2)")
+            except Exception:
+                yield from trans.rollback()
+            else:
+                yield from trans.commit()
 
-    The object provides :meth:`.rollback` and :meth:`.commit`
-    methods in order to control transaction boundaries.  It
-    also implements a context manager interface so that
-    the Python ``with`` statement can be used with the
-    :meth:`.Connection.begin` method::
+    The object provides .rollback() and .commit()
+    methods in order to control transaction boundaries.
 
-        with connection.begin():
-            connection.execute("insert into x (a, b) values (1, 2)")
-
-    The Transaction object is **not** threadsafe.
-
-    See also:  :meth:`.Connection.begin`, :meth:`.Connection.begin_twophase`,
-    :meth:`.Connection.begin_nested`.
-
-    .. index::
-      single: thread safety; Transaction
+    See also:  SAConnection.begin(), SAConnection.begin_twophase(),
+    SAConnection.begin_nested().
     """
 
     def __init__(self, connection, parent):
@@ -41,10 +32,12 @@ class Transaction(object):
 
     @property
     def is_active(self):
+        """Return ``True`` if a transaction is active."""
         return self._is_active
 
     @property
     def connection(self):
+        """Return transaction's connection (SAConnection instance)."""
         return self._connection
 
     @asyncio.coroutine
@@ -57,7 +50,6 @@ class Transaction(object):
 
         This is used to cancel a Transaction without affecting the scope of
         an enclosing transaction.
-
         """
         if not self._parent._is_active:
             return
@@ -68,9 +60,7 @@ class Transaction(object):
 
     @asyncio.coroutine
     def rollback(self):
-        """Roll back this :class:`.Transaction`.
-
-        """
+        """Roll back this :class:`.Transaction`."""
         if not self._parent._is_active:
             return
         yield from self._do_rollback()
@@ -115,7 +105,6 @@ class NestedTransaction(Transaction):
     using the :meth:`.Connection.begin_nested` method.
 
     The interface is the same as that of :class:`.Transaction`.
-
     """
 
     _savepoint = None
@@ -146,8 +135,8 @@ class TwoPhaseTransaction(Transaction):
 
     The interface is the same as that of :class:`.Transaction`
     with the addition of the :meth:`prepare` method.
-
     """
+
     def __init__(self, connection, xid):
         super().__init__(connection, None)
         self._is_prepared = False
@@ -155,6 +144,7 @@ class TwoPhaseTransaction(Transaction):
 
     @property
     def xid(self):
+        """Returns twophase transaction id."""
         return self._xid
 
     @asyncio.coroutine
@@ -162,8 +152,8 @@ class TwoPhaseTransaction(Transaction):
         """Prepare this :class:`.TwoPhaseTransaction`.
 
         After a PREPARE, the transaction can be committed.
-
         """
+
         if not self._parent.is_active:
             raise exc.InvalidRequestError("This transaction is inactive")
         yield from self._connection._prepare_twophase_impl(self._xid)

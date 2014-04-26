@@ -234,6 +234,7 @@ class ResultProxy:
 
     @property
     def dialect(self):
+        """SQLAlchemy dialect."""
         return self._dialect
 
     @property
@@ -256,7 +257,7 @@ class ResultProxy:
 
         .. note::
 
-           Notes regarding :attr:`.ResultProxy.rowcount`:
+           Notes regarding .rowcount:
 
 
            * This attribute returns the number of rows *matched*,
@@ -265,24 +266,13 @@ class ResultProxy:
              may have no net change on a given row if the SET values
              given are the same as those present in the row already.
              Such a row would be matched but not modified.
-             On backends that feature both styles, such as MySQL,
-             rowcount is configured by default to return the match
-             count in all cases.
 
-           * :attr:`.ResultProxy.rowcount` is *only* useful in conjunction
+           * .rowcount is *only* useful in conjunction
              with an UPDATE or DELETE statement.  Contrary to what the Python
              DBAPI says, it does *not* return the
              number of rows available from the results of a SELECT statement
              as DBAPIs cannot support this functionality when rows are
              unbuffered.
-
-           * :attr:`.ResultProxy.rowcount` may not be fully implemented by
-             all dialects.  In particular, most DBAPIs do not support an
-             aggregate rowcount result from an executemany call.
-             The :meth:`.ResultProxy.supports_sane_rowcount` and
-             :meth:`.ResultProxy.supports_sane_multi_rowcount` methods
-             will report from the dialect if each usage is known to be
-             supported.
 
            * Statements that use RETURNING may not return a correct
              rowcount.

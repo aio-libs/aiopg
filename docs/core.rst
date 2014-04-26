@@ -40,7 +40,7 @@ Example::
 
 .. class:: Connection
 
-   A connection to a PostgreSQL database instance. It encapsulates a
+   A connection to a :term:`PostgreSQL` database instance. It encapsulates a
    database session.
 
    It's insterface is very close to :class:`psycopg2.connection`
@@ -65,7 +65,7 @@ Cursor
 
    A cursor for connection.
 
-   Allows Python code to execute PostgreSQL command in a database
+   Allows Python code to execute :term:`PostgreSQL` command in a database
    session. Cursors are created by the :meth:`Connection.cursor` coroutine:
    they are bound to the connection for the entire lifetime and all
    the commands are executed in the context of the database session
@@ -116,7 +116,7 @@ The basic usage is::
                           loop=None, **kwargs)
 
    A :ref:`coroutine<coroutine>` that creates a pool of connections to
-   PostgreSQL database.
+   :term:`PostgreSQL` database.
 
    The function accepts all parameters that :func:`psycopg2.connect`
    does plus optional keyword-only parameters *loop*, *minsize*, *maxsize*.
