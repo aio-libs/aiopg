@@ -62,11 +62,49 @@ please go to psycopg docs: http://initd.org/psycopg/docs/
 .. note:: psycopg2 creates new connections with ``autocommit=True``
           option in asynchronous mode. Autocommitting cannot be disabled.
 
+          See :ref:`aiopg-core-transactions` about transaction usage
+          in *autocommit mode*.
 
 SQLAlchemy and aiopg
 --------------------
 
-TBD
+:ref:`aiopg-core` provides core support for :term:`PostgreSQL` connections.
+
+We had found very annoying to write raw SQL querues manually, that we
+introduce support for :term:`sqlalchemy` query builders::
+
+    import asyncio
+    from aiopg.sa import create_engine
+    import sqlalchemy as sa
+
+
+    metadata = sa.MetaData()
+
+    tbl = sa.Table('tbl', metadata,
+                   sa.Column('id', sa.Integer, primary_key=True),
+                   sa.Column('val', sa.String(255)))
+
+    @asyncio.coroutine
+    def go():
+        engine = yield from create_engine(user='aiopg',
+                                          database='aiopg',
+                                          host='127.0.0.1',
+                                          password='passwd')
+
+        with (yield from engine) as conn:
+            yield from conn.execute(tbl.insert().values(val='abc'))
+
+            res = yield from conn.execute(tbl.select().where(tbl.c.val=='abc'))
+            for row in res:
+                print(row.id, row.val)
+
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(go())
+
+We beleive constructions like ``tbl.insert().values(val='abc')`` and
+``tbl.select().where(tbl.c.val=='abc')`` are very handy and
+convinient.
 
 
 Installation
@@ -78,8 +116,8 @@ Also probably you want to use :mod:`aiopg.sa`.
 
 .. _aiozmq-install-sqlalchemy:
 
-:mod:`aiopg.sa` module is **optional** and requires sqlalchemy_. You can
-install *sqlalchemy* by::
+:mod:`aiopg.sa` module is **optional** and requires
+:term:`sqlalchemy`. You can install *sqlalchemy* by::
 
   pip3 install sqlalchemy
 
@@ -100,7 +138,7 @@ Dependencies
 
 - Python 3.3 and :mod:`asyncio` or Python 3.4+
 - psycopg2
-- aiopg.sa requires sqlalchemy_
+- aiopg.sa requires :term:`sqlalchemy`.
 
 Authors and License
 -------------------
@@ -110,11 +148,6 @@ licensed and freely available.
 
 Feel free to improve this package and send a pull request to GitHub_.
 
-Getting Started
----------------
-
-TBD
-
 Contents:
 
 .. toctree::
@@ -122,6 +155,7 @@ Contents:
 
    core
    sa
+   examples
    glossary
 
 Indices and tables

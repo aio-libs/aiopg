@@ -212,3 +212,17 @@ Any call to library function, method or property can raise an exception.
 
 :mod:`aiopg` doesn't define any exception class itself, it reuses
 :ref:`DBAPI Exceptions <dbapi-exceptions>` from :mod:`psycopg2`
+
+
+.. _aiopg-core-transactions:
+
+Transactions
+------------
+
+While :mod:`aiopg` works only in *autocommit mode* there is still
+possible to use SQL transactions.
+
+Just execute **BEGIN** and **COMMIT** statements manually.
+
+:meth:`Connection.commit` and :meth:`Connection.rollback` methods are
+disabled and always raises :exc:`psycopg2.ProgrammingError` exception.

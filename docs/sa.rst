@@ -19,7 +19,44 @@ Fortunately we can use excellent :ref:`core_toplevel` as **SQL query builder**.
 
 Example::
 
-   TBD
+    import asyncio
+    from aiopg.sa import create_engine
+    import sqlalchemy as sa
+
+
+    metadata = sa.MetaData()
+
+    tbl = sa.Table('tbl', metadata,
+                   sa.Column('id', sa.Integer, primary_key=True),
+                   sa.Column('val', sa.String(255)))
+
+    @asyncio.coroutine
+    def go():
+        engine = yield from create_engine(user='aiopg',
+                                          database='aiopg',
+                                          host='127.0.0.1',
+                                          password='passwd')
+
+        with (yield from engine) as conn:
+            yield from conn.execute(tbl.insert().values(val='abc'))
+
+            res = yield from conn.execute(tbl.select())
+            for row in res:
+                print(row.id, row.val)
+
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(go())
+
+So you can execute SQL query built by
+``tbl.insert().values(val='abc')`` or ``tbl.select()`` expressions.
+
+:term:`sqlalchemy` has rich and very powerful set of SQL construction
+functions, please read :ref:`tutorial <core_toplevel>` for full list
+of available operations.
+
+Also we provide SQL transactions support. Please take a look on
+:meth:`SAConnection.begin` method and family.
 
 Engine
 ------
@@ -109,7 +146,8 @@ Connection
 
       This method is a :ref:`coroutine <coroutine>`.
 
-      :param query: TBD
+      :param query: a SQL query string or any :term:`sqlalchemy`
+                    expression (see :ref:`core_toplevel`)
       :returns: :class:`ResultProxy` instance with results of SQL
                 query execution.
 
@@ -491,4 +529,3 @@ Transaction objects
       This method is a :ref:`coroutine <coroutine>`.
 
       After a PREPARE, the transaction can be committed.
-
