@@ -9,6 +9,7 @@ tbl = sa.Table('tbl', metadata,
                sa.Column('id', sa.Integer, primary_key=True),
                sa.Column('val', sa.String(255)))
 
+
 @asyncio.coroutine
 def create_table(engine):
     with (yield from engine) as conn:
@@ -16,6 +17,7 @@ def create_table(engine):
         yield from conn.execute('''CREATE TABLE tbl (
                                             id serial PRIMARY KEY,
                                             val varchar(255))''')
+
 
 @asyncio.coroutine
 def go():
