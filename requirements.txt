@@ -1,7 +1,9 @@
-psycopg2>=2.5
-sqlalchemy>=0.9
-pep8>=1.5
-pyflakes>=0.8
-coverage>=3.7
-ipdb>=0.8
--e .
+SQLAlchemy==0.9.4
+-e git+git@github.com:aio-libs/aiopg.git@0fe0734c0cef2250ad2dd5456b65e5479d1b9c70#egg=aiopg-v0.2.0
+coverage==3.7.1
+ipdb==0.8
+ipython==2.0.0
+pep8==1.5.6
+psycopg2==2.5.2
+pyflakes==0.8.1
+wheel==0.23.0
