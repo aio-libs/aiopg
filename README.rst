@@ -37,31 +37,33 @@ Example
 Example of SQLAlchemy optional integration
 -------------------------------------------
 
-  import asyncio
-  from aiopg.sa import create_engine
-  import sqlalchemy as sa
+.. code-block:: python
+
+    import asyncio
+    from aiopg.sa import create_engine
+    import sqlalchemy as sa
 
 
-  metadata = sa.MetaData()
+    metadata = sa.MetaData()
 
-  tbl = sa.Table('tbl', metadata,
-  sa.Column('id', sa.Integer, primary_key=True),
-  sa.Column('val', sa.String(255)))
-
-
-  @asyncio.coroutine
-  def go():
-  engine = yield from create_engine(user='aiopg',
-  database='aiopg',
-  host='127.0.0.1',
-  password='passwd')
-
-  with (yield from engine) as conn:
-  yield from conn.execute(tbl.insert().values(val='abc'))
-
-  res = yield from conn.execute(tbl.select())
-  for row in res:
-  print(row.id, row.val)
+    tbl = sa.Table('tbl', metadata,
+    sa.Column('id', sa.Integer, primary_key=True),
+    sa.Column('val', sa.String(255)))
 
 
-  asyncio.get_event_loop().run_until_complete(go())
+    @asyncio.coroutine
+    def go():
+        engine = yield from create_engine(user='aiopg',
+                                          database='aiopg',
+                                          host='127.0.0.1',
+                                          password='passwd')
+
+        with (yield from engine) as conn:
+            yield from conn.execute(tbl.insert().values(val='abc'))
+
+            res = yield from conn.execute(tbl.select())
+            for row in res:
+                print(row.id, row.val)
+
+
+    asyncio.get_event_loop().run_until_complete(go())
