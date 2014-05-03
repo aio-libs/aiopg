@@ -6,7 +6,7 @@ from the asyncio_ (PEP-3156/tulip) framework. It wraps
 asynchronous features of the Psycopg database driver.
 
 Example
-=======
+-------
 
 .. code-block:: python
 
@@ -26,9 +26,42 @@ Example
             ret = yield from cur.fetchone()
             assert ret == (1,), ret
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(test_select())
+
+    asyncio.get_event_loop().run_until_complete(test_select())
 
 .. _PostgreSQL: http://www.postgresql.org/
 .. _asyncio: http://docs.python.org/3.4/library/asyncio.html
 .. _aiopg: https://github.com/aio-libs/aiopg
+
+
+Example of SQLAlchemy optional integration
+-------------------------------------------
+
+import asyncio
+from aiopg.sa import create_engine
+import sqlalchemy as sa
+
+
+metadata = sa.MetaData()
+
+tbl = sa.Table('tbl', metadata,
+               sa.Column('id', sa.Integer, primary_key=True),
+               sa.Column('val', sa.String(255)))
+
+
+@asyncio.coroutine
+def go():
+    engine = yield from create_engine(user='aiopg',
+                                      database='aiopg',
+                                      host='127.0.0.1',
+                                      password='passwd')
+
+    with (yield from engine) as conn:
+        yield from conn.execute(tbl.insert().values(val='abc'))
+
+        res = yield from conn.execute(tbl.select())
+        for row in res:
+            print(row.id, row.val)
+
+
+asyncio.get_event_loop().run_until_complete(go())
