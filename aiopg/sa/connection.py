@@ -2,8 +2,9 @@ import asyncio
 import weakref
 
 from sqlalchemy.sql import ClauseElement
-from .result import ResultProxy
+
 from . import exc
+from .result import ResultProxy
 from .transaction import (RootTransaction, Transaction,
                           NestedTransaction, TwoPhaseTransaction)
 
@@ -64,30 +65,29 @@ class SAConnection:
     def begin(self):
         """Begin a transaction and return a transaction handle.
 
-        The returned object is an instance of Transaction.
-        This object represents the "scope" of the transaction,
-        which completes when either the .rollback
-        or .commit method is called.
+        The returned object is an instance of Transaction.  This
+        object represents the "scope" of the transaction, which
+        completes when either the .rollback or .commit method is
+        called.
 
-        Nested calls to .begin on the same SAConnection instance
-        will return new Transaction objects that represent
-        an emulated transaction within the scope of the enclosing
-        transaction, that is::
+        Nested calls to .begin on the same SAConnection instance will
+        return new Transaction objects that represent an emulated
+        transaction within the scope of the enclosing transaction,
+        that is::
 
             trans = yield from conn.begin()   # outermost transaction
             trans2 = yield from conn.begin()  # "nested"
             yield from trans2.commit()        # does nothing
             yield from trans.commit()         # actually commits
 
-        Calls to .commit only have an effect
-        when invoked via the outermost Transaction object, though the
-        .rollback method of any of the
-        Transaction objects will roll back the
-        transaction.
+        Calls to .commit only have an effect when invoked via the
+        outermost Transaction object, though the .rollback method of
+        any of the Transaction objects will roll back the transaction.
 
         See also:
           .begin_nested - use a SAVEPOINT
           .begin_twophase - use a two phase/XA transaction
+
         """
         if self._transaction is None:
             self._transaction = RootTransaction(self)
@@ -134,6 +134,7 @@ class SAConnection:
 
         See also :meth:`.Connection.begin`,
         :meth:`.Connection.begin_twophase`.
+
         """
         if self._transaction is None:
             self._transaction = RootTransaction(self)
@@ -178,13 +179,13 @@ class SAConnection:
         """Begin a two-phase or XA transaction and return a transaction
         handle.
 
-        The returned object is an instance of :class:`.TwoPhaseTransaction`,
-        which in addition to the methods provided by
-        :class:`.Transaction`, also provides a
+        The returned object is an instance of
+        :class:`.TwoPhaseTransaction`, which in addition to the
+        methods provided by :class:`.Transaction`, also provides a
         :meth:`~.TwoPhaseTransaction.prepare` method.
 
         :param xid: the two phase transaction id.  If not supplied, a
-          random id will be generated.
+        random id will be generated.
 
         See also :meth:`.Connection.begin`,
         :meth:`.Connection.begin_twophase`.

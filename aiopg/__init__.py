@@ -1,10 +1,11 @@
-from collections import namedtuple
 import re
 import sys
+from collections import namedtuple
 
 from .connection import connect, Connection
 from .cursor import Cursor
 from .pool import create_pool, Pool
+
 
 __all__ = ('connect', 'create_pool', 'Connectiion', 'Cursor', 'Pool')
 

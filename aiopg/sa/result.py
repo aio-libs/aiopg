@@ -1,9 +1,10 @@
 import asyncio
 import weakref
 from collections.abc import Mapping, Sequence
-from . import exc
 
 from sqlalchemy.sql import expression, sqltypes
+
+from . import exc
 
 
 class RowProxy(Mapping):
