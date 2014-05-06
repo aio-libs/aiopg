@@ -8,62 +8,61 @@ asynchronous features of the Psycopg database driver.
 Example
 -------
 
-.. code-block:: python
+::
 
-    import asyncio
-    from aiopg.pool import create_pool
+   import asyncio
+   from aiopg.pool import create_pool
 
-    dsn = 'dbname=jetty user=nick password=1234 host=localhost port=5432'
-
-
-    @asyncio.coroutine
-    def test_select():
-        pool = yield from create_pool(dsn)
-
-        with (yield from pool) as conn:
-            cur = yield from conn.cursor()
-            yield from cur.execute('SELECT 1')
-            ret = yield from cur.fetchone()
-            assert ret == (1,), ret
+   dsn = 'dbname=jetty user=nick password=1234 host=localhost port=5432'
 
 
-    asyncio.get_event_loop().run_until_complete(test_select())
+   @asyncio.coroutine
+   def test_select():
+       pool = yield from create_pool(dsn)
 
-.. _PostgreSQL: http://www.postgresql.org/
-.. _asyncio: http://docs.python.org/3.4/library/asyncio.html
-.. _aiopg: https://github.com/aio-libs/aiopg
+       with (yield from pool) as conn:
+           cur = yield from conn.cursor()
+           yield from cur.execute('SELECT 1')
+           ret = yield from cur.fetchone()
+           assert ret == (1,), ret
+
+
+   asyncio.get_event_loop().run_until_complete(test_select())
 
 
 Example of SQLAlchemy optional integration
 -------------------------------------------
 
-.. code-block:: python
+::
 
-    import asyncio
-    from aiopg.sa import create_engine
-    import sqlalchemy as sa
-
-
-    metadata = sa.MetaData()
-
-    tbl = sa.Table('tbl', metadata,
-    sa.Column('id', sa.Integer, primary_key=True),
-    sa.Column('val', sa.String(255)))
+   import asyncio
+   from aiopg.sa import create_engine
+   import sqlalchemy as sa
 
 
-    @asyncio.coroutine
-    def go():
-        engine = yield from create_engine(user='aiopg',
-                                          database='aiopg',
-                                          host='127.0.0.1',
-                                          password='passwd')
+   metadata = sa.MetaData()
 
-        with (yield from engine) as conn:
-            yield from conn.execute(tbl.insert().values(val='abc'))
-
-            res = yield from conn.execute(tbl.select())
-            for row in res:
-                print(row.id, row.val)
+   tbl = sa.Table('tbl', metadata,
+   sa.Column('id', sa.Integer, primary_key=True),
+   sa.Column('val', sa.String(255)))
 
 
-    asyncio.get_event_loop().run_until_complete(go())
+   @asyncio.coroutine
+   def go():
+       engine = yield from create_engine(user='aiopg',
+                                         database='aiopg',
+                                         host='127.0.0.1',
+                                         password='passwd')
+
+       with (yield from engine) as conn:
+           yield from conn.execute(tbl.insert().values(val='abc'))
+
+           res = yield from conn.execute(tbl.select())
+           for row in res:
+               print(row.id, row.val)
+
+
+   asyncio.get_event_loop().run_until_complete(go())
+
+.. _PostgreSQL: http://www.postgresql.org/
+.. _asyncio: http://docs.python.org/3.4/library/asyncio.html
