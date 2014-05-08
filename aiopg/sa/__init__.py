@@ -1,7 +1,6 @@
 """Optional support for sqlalchemy.sql dynamic query generation."""
-
-from .engine import create_engine, dialect, Engine
 from .connection import SAConnection
+from .engine import create_engine, dialect, Engine
 from .exc import (Error, ArgumentError, InvalidRequestError,
                   NoSuchColumnError, ResourceClosedError)
 

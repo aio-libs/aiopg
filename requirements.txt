@@ -1,6 +1,6 @@
 SQLAlchemy==0.9.4
--e git+git@github.com:aio-libs/aiopg.git@0fe0734c0cef2250ad2dd5456b65e5479d1b9c70#egg=aiopg-v0.2.0
 coverage==3.7.1
+docutils==0.11
 ipdb==0.8
 ipython==2.0.0
 pep8==1.5.6

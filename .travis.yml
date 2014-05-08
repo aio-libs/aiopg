@@ -8,6 +8,7 @@ install:
   - python setup.py install
   - pip install pyflakes
   - pip install pep8
+  - pip install docutils
   - test $USE_SA == 1 && pip install sqlalchemy || true
 
 before_script:
@@ -19,6 +20,7 @@ script:
   - pep8 aiopg examples tests
   - pyflakes .
   - python runtests.py -v
+  - python setup.py check -rms
 
 addons:
   postgresql: "9.3"
