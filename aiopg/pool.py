@@ -1,6 +1,9 @@
 import asyncio
 
+from psycopg2.extensions import TRANSACTION_STATUS_IDLE
+
 from .connection import connect
+from .log import logger
 
 
 @asyncio.coroutine
@@ -79,6 +82,13 @@ class Pool:
         assert conn in self._used, (conn, self._used)
         self._used.remove(conn)
         if not conn.closed:
+            tran_status = conn._conn.get_transaction_status()
+            if tran_status != TRANSACTION_STATUS_IDLE:
+                logger.warning(
+                    "Invalid transaction status on released connection: %d",
+                    tran_status)
+                conn._close()
+                return
             try:
                 self._free.put_nowait(conn)
             except asyncio.QueueFull:
