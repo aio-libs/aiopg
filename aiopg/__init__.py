@@ -7,9 +7,9 @@ from .cursor import Cursor
 from .pool import create_pool, Pool
 
 
-__all__ = ('connect', 'create_pool', 'Connectiion', 'Cursor', 'Pool')
+__all__ = ('connect', 'create_pool', 'Connection', 'Cursor', 'Pool')
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 version = __version__ + ' , Python ' + sys.version
 
