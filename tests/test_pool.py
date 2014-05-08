@@ -1,7 +1,10 @@
 import asyncio
-import aiopg
 import unittest
+from unittest import mock
 
+from psycopg2.extensions import TRANSACTION_STATUS_INTRANS
+
+import aiopg
 from aiopg.connection import Connection
 from aiopg.pool import Pool
 
@@ -243,5 +246,27 @@ class TestPool(unittest.TestCase):
                 ret = yield from cur.fetchone()
                 self.assertEqual((1,), ret)
             self.assertTrue(cur.closed)
+
+        self.loop.run_until_complete(go())
+
+    @mock.patch("aiopg.pool.logger")
+    def test_release_with_invalid_status(self, m_log):
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool()
+            conn = yield from pool.acquire()
+            self.assertEqual(9, pool.freesize)
+            self.assertEqual({conn}, pool._used)
+            cur = yield from conn.cursor()
+            yield from cur.execute('BEGIN')
+            cur.close()
+
+            pool.release(conn)
+            self.assertEqual(9, pool.freesize)
+            self.assertFalse(pool._used)
+            self.assertTrue(conn.closed)
+            m_log.warning.assert_called_with(
+                "Invalid transaction status on released connection: %d",
+                TRANSACTION_STATUS_INTRANS)
 
         self.loop.run_until_complete(go())
