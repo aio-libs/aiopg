@@ -66,3 +66,9 @@ Example of SQLAlchemy optional integration
 
 .. _PostgreSQL: http://www.postgresql.org/
 .. _asyncio: http://docs.python.org/3.4/library/asyncio.html
+
+Please use::
+
+   $ python3 runtests.py 
+   
+for executing project's unittests
