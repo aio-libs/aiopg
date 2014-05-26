@@ -43,13 +43,13 @@ Example::
    A connection to a :term:`PostgreSQL` database instance. It encapsulates a
    database session.
 
-   It's insterface is very close to :class:`psycopg2.connection`
+   Its insterface is very close to :class:`psycopg2.connection`
    (http://initd.org/psycopg/docs/connection.html) except all methods
    are :ref:`coroutines<coroutine>`.
 
    Use :func:`connect` for creating connection.
 
-   The most important method is a
+   The most important method is
 
    .. method:: cursor()
 
@@ -71,14 +71,14 @@ Cursor
    the commands are executed in the context of the database session
    wrapped by the connection.
 
-   Cursors created from the same connection are not isolated, i.e.,
-   any changes done to the database by a cursor are immediately
+   Cursors that are created from the same connection are not isolated,
+   i.e., any changes done to the database by a cursor are immediately
    visible by the other cursors. Cursors created from different
    connections can or can not be isolated, depending on the
    connections’ isolation level. See also rollback() and commit()
    methods.
 
-   It's insterface is very close to :class:`psycopg2.cursor`
+   Its insterface is very close to :class:`psycopg2.cursor`
    (http://initd.org/psycopg/docs/cursor.html) except all methods
    are :ref:`coroutines<coroutine>`.
 
@@ -141,7 +141,7 @@ The basic usage is::
    If *maxsize* is ``0`` than size of pool is unlimited (but it
    recycles used connections of course).
 
-   The most important ways to use are getting connection in *with statement*::
+   The most important way to use it is getting connection in *with statement*::
 
       with (yield from pool) as conn:
           cur = yield from conn.cursor()
@@ -219,7 +219,7 @@ Any call to library function, method or property can raise an exception.
 Transactions
 ------------
 
-While :mod:`aiopg` works only in *autocommit mode* there is still
+While :mod:`aiopg` works only in *autocommit mode* it is still
 possible to use SQL transactions.
 
 Just execute **BEGIN** and **COMMIT** statements manually.

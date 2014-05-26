@@ -33,7 +33,7 @@ internally.
 Literally it is an (almost) transparent wrapper for psycopg2
 connection and cursor, but with only exception.
 
-You should to use ``yield from conn.f()`` instead of just call ``conn.f()`` for
+You should use ``yield from conn.f()`` instead of just call ``conn.f()`` for
 every method.
 
 Properties are unchanged, so ``conn.prop`` is correct as well as
@@ -70,8 +70,8 @@ SQLAlchemy and aiopg
 
 :ref:`aiopg-core` provides core support for :term:`PostgreSQL` connections.
 
-We had found very annoying to write raw SQL querues manually, that we
-introduce support for :term:`sqlalchemy` query builders::
+We have found it to be very annoying to write raw SQL queries manually,
+so we introduce support for :term:`sqlalchemy` query builders::
 
     import asyncio
     from aiopg.sa import create_engine
@@ -102,22 +102,24 @@ introduce support for :term:`sqlalchemy` query builders::
     loop = asyncio.get_event_loop()
     loop.run_until_complete(go())
 
-We beleive constructions like ``tbl.insert().values(val='abc')`` and
-``tbl.select().where(tbl.c.val=='abc')`` are very handy and
+We believe constructions like ``tbl.insert().values(val='abc')`` and
+``tbl.select().where(tbl.c.val=='abc')`` to be very handy and
 convinient.
 
 
 Installation
 --------------------
 
+.. code::
+
    pip3 install aiopg
 
-Also probably you want to use :mod:`aiopg.sa`.
+Also you probably want to use :mod:`aiopg.sa`.
 
 .. _aiozmq-install-sqlalchemy:
 
 :mod:`aiopg.sa` module is **optional** and requires
-:term:`sqlalchemy`. You can install *sqlalchemy* by::
+:term:`sqlalchemy`. You can install *sqlalchemy* by running::
 
   pip3 install sqlalchemy
 

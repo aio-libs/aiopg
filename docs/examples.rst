@@ -1,7 +1,7 @@
 Examples of aiopg usage
 ========================
 
-There is a list of examples from `aiopg/examples
+Below is a list of examples from `aiopg/examples
 <https://github.com/aio-libs/aiopg/tree/master/examples>`_
 
 Every example is a correct tiny python program.
