@@ -25,6 +25,10 @@ class SAConnection:
         if isinstance(query, str):
             distilled_params = _distill_params(multiparams, params)
             result_map = None
+            if len(distilled_params) > 1:
+                raise exc.ArgumentError("aiopg doesn't support executemany")
+            elif distilled_params:
+                distilled_params = distilled_params[0]
             yield from cursor.execute(query, distilled_params)
         elif isinstance(query, ClauseElement):
             if multiparams or params:
@@ -39,7 +43,6 @@ class SAConnection:
                                     "SQLAlchemy data "
                                     "selection/modification clause")
 
-        # TODO: add weakref to ResultProxy to close cursor on decref
         ret = ResultProxy(self, cursor, self._dialect, result_map)
         self._weak_results.add(ret)
         return ret

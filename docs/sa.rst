@@ -148,6 +148,37 @@ Connection
 
       :param query: a SQL query string or any :term:`sqlalchemy`
                     expression (see :ref:`core_toplevel`)
+
+      :param \*multiparams/\**params: represent bound parameter
+       values to be used in the execution.   Typically,
+       the format is either a collection of one or more
+       dictionaries passed to \*multiparams::
+
+           conn.execute(
+               table.insert(),
+               {"id":1, "value":"v1"},
+               {"id":2, "value":"v2"}
+           )
+
+       ...or individual key/values interpreted by \**params::
+
+           conn.execute(
+               table.insert(), id=1, value="v1"
+           )
+
+       In the case that a plain SQL string is passed, a collection of
+       tuples or individual values in \*multiparams may be passed::
+
+           conn.execute(
+               "INSERT INTO table (id, value) VALUES (%d, %s)",
+               (1, "v1"), (2, "v2")
+           )
+
+           conn.execute(
+               "INSERT INTO table (id, value) VALUES (%s, %s)",
+               1, "v1"
+           )
+
       :returns: :class:`ResultProxy` instance with results of SQL
                 query execution.
 
