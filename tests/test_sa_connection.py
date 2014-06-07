@@ -140,6 +140,83 @@ class TestSAConnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
+    def test_raw_insert(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            yield from conn.execute(
+                "INSERT INTO sa_tbl (name) VALUES ('third')")
+            res = yield from conn.execute(tbl.select())
+            self.assertEqual(2, res.rowcount)
+            self.assertEqual(('id', 'name'), res.keys())
+            self.assertTrue(res.returns_rows)
+
+            rows = [r for r in res]
+            self.assertEqual(2, len(rows))
+            self.assertEqual(2, rows[1].id)
+        self.loop.run_until_complete(go())
+
+    def test_raw_insert_with_params(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            res = yield from conn.execute(
+                "INSERT INTO sa_tbl (id, name) VALUES (%s, %s)",
+                2, 'third')
+            res = yield from conn.execute(tbl.select())
+            self.assertEqual(2, res.rowcount)
+            self.assertEqual(('id', 'name'), res.keys())
+            self.assertTrue(res.returns_rows)
+
+            rows = [r for r in res]
+            self.assertEqual(2, len(rows))
+            self.assertEqual(2, rows[1].id)
+        self.loop.run_until_complete(go())
+
+    def test_raw_insert_with_params_dict(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            res = yield from conn.execute(
+                "INSERT INTO sa_tbl (id, name) VALUES (%(id)s, %(name)s)",
+                {'id': 2, 'name': 'third'})
+            res = yield from conn.execute(tbl.select())
+            self.assertEqual(2, res.rowcount)
+            self.assertEqual(('id', 'name'), res.keys())
+            self.assertTrue(res.returns_rows)
+
+            rows = [r for r in res]
+            self.assertEqual(2, len(rows))
+            self.assertEqual(2, rows[1].id)
+        self.loop.run_until_complete(go())
+
+    def test_raw_insert_with_named_params(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            res = yield from conn.execute(
+                "INSERT INTO sa_tbl (id, name) VALUES (%(id)s, %(name)s)",
+                id=2, name='third')
+            res = yield from conn.execute(tbl.select())
+            self.assertEqual(2, res.rowcount)
+            self.assertEqual(('id', 'name'), res.keys())
+            self.assertTrue(res.returns_rows)
+
+            rows = [r for r in res]
+            self.assertEqual(2, len(rows))
+            self.assertEqual(2, rows[1].id)
+        self.loop.run_until_complete(go())
+
+    def test_raw_insert_with_executemany(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            with self.assertRaises(sa.ArgumentError):
+                yield from conn.execute(
+                    "INSERT INTO sa_tbl (id, name) VALUES (%(id)s, %(name)s)",
+                    [(2, 'third'), (3, 'forth')])
+        self.loop.run_until_complete(go())
+
     def test_delete(self):
         @asyncio.coroutine
         def go():
