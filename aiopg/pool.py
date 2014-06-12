@@ -68,7 +68,7 @@ class Pool:
 
     @asyncio.coroutine
     def _fill_free_pool(self):
-        while self.size < self.minsize:
+        while self.freesize < self.minsize and self.size < self.maxsize:
             conn = yield from connect(
                 self._dsn, loop=self._loop,
                 **self._conn_kwargs)

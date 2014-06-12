@@ -270,3 +270,37 @@ class TestPool(unittest.TestCase):
                 TRANSACTION_STATUS_INTRANS)
 
         self.loop.run_until_complete(go())
+
+    def test__fill_free(self):
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool(minsize=1)
+            with (yield from pool):
+                self.assertEqual(0, pool.freesize)
+                self.assertEqual(1, pool.size)
+
+                conn = yield from asyncio.wait_for(pool.acquire(),
+                                                   timeout=0.5,
+                                                   loop=self.loop)
+                self.assertEqual(0, pool.freesize)
+                self.assertEqual(2, pool.size)
+                pool.release(conn)
+                self.assertEqual(1, pool.freesize)
+                self.assertEqual(2, pool.size)
+            self.assertEqual(2, pool.freesize)
+            self.assertEqual(2, pool.size)
+
+        self.loop.run_until_complete(go())
+
+    def test_connect_from_acquire(self):
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool(minsize=0)
+            self.assertEqual(0, pool.freesize)
+            self.assertEqual(0, pool.size)
+            with (yield from pool):
+                self.assertEqual(1, pool.size)
+                self.assertEqual(0, pool.freesize)
+            self.assertEqual(1, pool.size)
+            self.assertEqual(1, pool.freesize)
+        self.loop.run_until_complete(go())
