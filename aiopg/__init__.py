@@ -9,7 +9,7 @@ from .pool import create_pool, Pool
 
 __all__ = ('connect', 'create_pool', 'Connection', 'Cursor', 'Pool')
 
-__version__ = '0.2.2'
+__version__ = '0.2.3'
 
 version = __version__ + ' , Python ' + sys.version
 
