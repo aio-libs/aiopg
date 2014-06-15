@@ -1,0 +1,7 @@
+Acknowledgements
+----------------
+
+A number of people have contributed to *aiopg* by reporting problems,
+suggesting improvements or submitting changes. Some of these people are:
+
+Petr Viktorin  <encukou@gmail.com>

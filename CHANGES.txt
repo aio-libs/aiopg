@@ -4,6 +4,8 @@ CHANGES
 0.3.0 (XXXX-XX-XX)
 ^^^^^^^^^^^^^^^^^^
 
+* Allow executing SQLAlchemy DDL statements
+
 0.2.3 (2014-06-12)
 ^^^^^^^^^^^^^^^^^^
 
