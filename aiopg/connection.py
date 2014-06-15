@@ -12,7 +12,14 @@ __all__ = ('connect',)
 
 @asyncio.coroutine
 def connect(dsn=None, *, loop=None, **kwargs):
-    """XXX"""
+    """A factory for connecting to PostgreSQL.
+
+    The coroutine accepts all parameters that psycopg2.connect() does
+    plus optional keyword-only `loop` parameter.
+
+    Returns instantiated Connection object.
+
+    """
     if loop is None:
         loop = asyncio.get_event_loop()
 
@@ -23,7 +30,12 @@ def connect(dsn=None, *, loop=None, **kwargs):
 
 
 class Connection:
-    """XXX"""
+    """Low-level asynchronous interface for wrapped psycopg2 connection.
+
+    The Connection instance encapsulates a database session.
+    Provides support for creating asynchronous cursors.
+
+    """
 
     def __init__(self, dsn, loop, waiter, **kwargs):
         self._loop = loop
@@ -116,7 +128,12 @@ class Connection:
     @asyncio.coroutine
     def cursor(self, name=None, cursor_factory=None,
                scrollable=None, withhold=False):
-        """XXX"""
+        """A coroutine that returns cursor for connection.
+
+        *name*, *scrollable* and *withhold* parameters are not supported by
+        psycopg in asynchronous mode.
+
+        """
         impl = yield from self._cursor(name=name,
                                        cursor_factory=cursor_factory,
                                        scrollable=scrollable,
@@ -137,8 +154,8 @@ class Connection:
     @asyncio.coroutine
     def close(self):
         """Remove the connection from the event_loop and close it."""
-        # FIXME: process closing with uncommitted transaction
-        # that should wait for _conn.poll() I guess.
+        # N.B. If connection contains uncommitted transaction the
+        # transaction will be discarded
         self._close()
 
     def _close(self):
@@ -152,8 +169,12 @@ class Connection:
 
     @property
     def closed(self):
-        """Read-only attribute reporting whether the database connection
-        is open (False) or closed (True)."""
+        """Connection status.
+
+        Read-only attribute reporting whether the database connection is
+        open (False) or closed (True).
+
+        """
         return self._conn.closed
 
     @asyncio.coroutine
@@ -201,6 +222,7 @@ class Connection:
 
     @asyncio.coroutine
     def cancel(self):
+        """Cancel current operation."""
         waiter = self._create_waiter('cancel')
         self._conn.cancel()
         yield from self._poll(waiter)
@@ -212,6 +234,12 @@ class Connection:
 
     @property
     def dsn(self):
+        """DSN connection string.
+
+        Read-only attribute representing dsn connection string used
+        for connectint to PostgreSQL server.
+
+        """
         return self._dsn
 
     @asyncio.coroutine
@@ -222,12 +250,12 @@ class Connection:
 
     @property
     def autocommit(self):
-        """XXX"""
+        """Autocommit status"""
         return self._conn.autocommit
 
     @autocommit.setter
     def autocommit(self, val):
-        """XXX"""
+        """Autocommit status"""
         self._conn.autocommit = val
 
     @property
@@ -241,7 +269,7 @@ class Connection:
 
     @property
     def encoding(self):
-        """XXX"""
+        """Client encoding for SQL operations."""
         return self._conn.encoding
 
     @asyncio.coroutine

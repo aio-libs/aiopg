@@ -30,12 +30,12 @@ Example::
 
 .. function:: connect(dsn=None, *, loop=None, **kwargs)
 
-   A :ref:`coroutine<coroutine>` that connects to PostgreSQL.
+   A :ref:`coroutine <coroutine>` that connects to PostgreSQL.
 
    The function accepts all parameters that :func:`psycopg2.connect`
    does plus optional keyword-only parameter *loop*.
 
-   Returns :class:`Connection` instance.
+   :returns: :class:`Connection` instance.
 
 
 .. class:: Connection
@@ -45,15 +45,70 @@ Example::
 
    Its insterface is very close to :class:`psycopg2.connection`
    (http://initd.org/psycopg/docs/connection.html) except all methods
-   are :ref:`coroutines<coroutine>`.
+   are :ref:`coroutines <coroutine>`.
 
    Use :func:`connect` for creating connection.
 
    The most important method is
 
-   .. method:: cursor()
+   .. method:: cursor(name=None, cursor_factory=None, \
+               scrollable=None, withhold=False)
 
-       A :ref:`coroutine<coroutine>` that returns cursor for connection.
+       A :ref:`coroutine <coroutine>` that returns cursor for connection.
+
+       The only *cursor_factory* can be specified, all other
+       parameters are not supported by :term:`psycopg2` in
+       asynchronous mode yet.
+
+       :returns: :class:`Cursor` instance.
+
+   .. method:: close()
+
+      Immediatelly close the connection.
+
+   .. attribute:: closed
+
+      The readonly property that returns ``True`` if connections is closed.
+
+   .. method:: cancel()
+
+      A :ref:`coroutine <coroutine>` that cancels current database
+      operation.
+
+      The method interrupts the processing of the current
+      operation. If no query is being executed, it does nothing. You
+      can call this function from a different thread than the one
+      currently executing a database operation, for instance if you
+      want to cancel a long running query if a button is pushed in the
+      UI. Interrupting query execution will cause the cancelled method
+      to raise a `~psycopg2.extensions.QueryCanceledError`. Note that
+      the termination of the query is not guaranteed to succeed: see
+      the documentation for |PQcancel|_.
+
+      .. |PQcancel| replace:: `!PQcancel()`
+      .. _PQcancel: http://www.postgresql.org/docs/current/static/libpq-cancel.html#LIBPQ-PQCANCEL
+   .. attribute:: dsn
+
+      The readonly property that returns *dsn* string used by the
+      connection.
+
+   .. attribute:: autocommit
+
+      Autocommit mode status for connection (always ``True``).
+
+      .. note::
+
+         :term:`psycopg2` doesn't allow to change *autocommit* mode in
+         asynchronous mode.
+
+   .. attribute:: encoding
+
+      Client encoding for SQL operations.
+
+      .. note::
+
+         :term:`psycopg2` doesn't allow to change encoding in
+         asynchronous mode.
 
 
 .. _aiopg-core-cursor:
@@ -80,7 +135,7 @@ Cursor
 
    Its insterface is very close to :class:`psycopg2.cursor`
    (http://initd.org/psycopg/docs/cursor.html) except all methods
-   are :ref:`coroutines<coroutine>`.
+   are :ref:`coroutines <coroutine>`.
 
    Use :meth:`Connection.cursor()` for getting cursor for connection.
 
@@ -115,7 +170,7 @@ The basic usage is::
 .. function:: create_pool(dsn=None, *, minsize=10, maxsize=10,\
                           loop=None, **kwargs)
 
-   A :ref:`coroutine<coroutine>` that creates a pool of connections to
+   A :ref:`coroutine <coroutine>` that creates a pool of connections to
    :term:`PostgreSQL` database.
 
    The function accepts all parameters that :func:`psycopg2.connect`
@@ -173,13 +228,13 @@ The basic usage is::
 
    .. method:: clear()
 
-      A :ref:`coroutine<coroutine>` that closes all *free* connections
+      A :ref:`coroutine <coroutine>` that closes all *free* connections
       in the pool. At next connection acquiring at least :attr:`minsize` of
       them will be recreated.
 
    .. method:: acquire()
 
-      A :ref:`coroutine<coroutine>` that acquires a connection from
+      A :ref:`coroutine <coroutine>` that acquires a connection from
       *free pool*. Creates new connection if needed and :attr:`size`
       of pool is less than :attr:`maxsize`.
 
@@ -189,7 +244,7 @@ The basic usage is::
 
       Reverts connection *conn* to *free pool* for future recycling.
 
-      .. warning:: The method is not a :ref:`coroutine<coroutine>`.
+      .. warning:: The method is not a :ref:`coroutine <coroutine>`.
 
    .. method:: cursor()
 
