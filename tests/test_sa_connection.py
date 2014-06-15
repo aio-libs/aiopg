@@ -4,6 +4,10 @@ from aiopg import connect, sa, Cursor
 import unittest
 
 from sqlalchemy import MetaData, Table, Column, Integer, String
+from sqlalchemy.schema import DropTable, CreateTable
+
+import psycopg2
+
 
 meta = MetaData()
 tbl = Table('sa_tbl', meta,
@@ -400,5 +404,25 @@ class TestSAConnection(unittest.TestCase):
             rows2 = yield from res.fetchmany()
             self.assertEqual(0, len(rows2))
             self.assertTrue(res.closed)
+
+        self.loop.run_until_complete(go())
+
+    def test_create_table(self, **kwargs):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            res = yield from conn.execute(DropTable(tbl))
+            with self.assertRaises(sa.ResourceClosedError):
+                yield from res.fetchmany()
+
+            with self.assertRaises(psycopg2.ProgrammingError):
+                yield from conn.execute("SELECT * FROM sa_tbl")
+
+            res = yield from conn.execute(CreateTable(tbl))
+            with self.assertRaises(sa.ResourceClosedError):
+                yield from res.fetchmany()
+
+            res = yield from conn.execute("SELECT * FROM sa_tbl")
+            self.assertEqual(0, len(list(res)))
 
         self.loop.run_until_complete(go())
