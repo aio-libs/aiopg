@@ -36,7 +36,11 @@ class SAConnection:
                                         "and execution with parameters")
             compiled = query.compile(dialect=self._dialect)
             parameters = compiled.params
-            result_map = compiled.result_map
+            try:
+                result_map = compiled.result_map
+            except AttributeError:
+                # Some expressions (e.g. DDL) may not have a result map
+                result_map = None
             yield from cursor.execute(str(compiled), parameters)
         else:
             raise exc.ArgumentError("sql statement should be str or "
