@@ -17,9 +17,9 @@ asynchronous features of the Psycopg database driver.
 Features
 --------
 
-- Implements *asyncio DB-API like* interface for :term:`PostgreSQL`.  It
-  includes :ref:`aiopg-core-connection`, :ref:`aiopg-core-cursor` and
-  :ref:`aiopg-core-pool` objects.
+- Implements *asyncio* :term:`DBAPI` *like* interface for
+  :term:`PostgreSQL`.  It includes :ref:`aiopg-core-connection`,
+  :ref:`aiopg-core-cursor` and :ref:`aiopg-core-pool` objects.
 - Implements *optional* support for charming :term:`sqlalchemy`
   functional sql layer.
 

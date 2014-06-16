@@ -128,7 +128,11 @@ class Connection:
     @asyncio.coroutine
     def cursor(self, name=None, cursor_factory=None,
                scrollable=None, withhold=False):
-        """A coroutine that returns cursor for connection.
+        """A coroutine that returns a new cursor object using the connection.
+
+        *cursor_factory* argument can be used to create non-standard
+         cursors. The argument must be suclass of
+         `psycopg2.extensions.cursor`.
 
         *name*, *scrollable* and *withhold* parameters are not supported by
         psycopg in asynchronous mode.
@@ -222,7 +226,7 @@ class Connection:
 
     @asyncio.coroutine
     def cancel(self):
-        """Cancel current operation."""
+        """Cancel the current database operation."""
         waiter = self._create_waiter('cancel')
         self._conn.cancel()
         yield from self._poll(waiter)
@@ -260,11 +264,20 @@ class Connection:
 
     @property
     def isolation_level(self):
-        """XXX"""
+        """Transaction isolation level.
+
+        The only allowed value is ISOLATION_LEVEL_READ_COMMITTED.
+
+        """
         return self._conn.isolation_level
 
     @asyncio.coroutine
     def set_isolation_level(self, val):
+        """Transaction isolation level.
+
+        The only allowed value is ISOLATION_LEVEL_READ_COMMITTED.
+
+        """
         self._conn.set_isolation_level(val)
 
     @property
@@ -278,39 +291,42 @@ class Connection:
 
     @property
     def notices(self):
-        """XXX"""
+        """A list of all db messages sent to the client during the session."""
         return self._conn.notices
 
     @property
     def cursor_factory(self):
-        """XXX"""
+        """The default cursor factory used by .cursor()."""
         return self._conn.cursor_factory
 
     @asyncio.coroutine
     def get_backend_pid(self):
+        """Returns the PID of the backend server process."""
         return self._conn.get_backend_pid()
 
     @asyncio.coroutine
     def get_parameter_status(self, parameter):
+        """Look up a current parameter setting of the server."""
         return self._conn.get_parameter_status(parameter)
 
     @asyncio.coroutine
     def get_transaction_status(self):
+        """Return the current session transaction status as an integer."""
         return self._conn.get_transaction_status()
 
     @property
     def protocol_version(self):
-        """XXX"""
+        """A read-only integer representing protocol being used."""
         return self._conn.protocol_version
 
     @property
     def server_version(self):
-        """XXX"""
+        """A read-only integer representing the backend version."""
         return self._conn.server_version
 
     @property
     def status(self):
-        """XXX"""
+        """A read-only integer representing the status of the connection."""
         return self._conn.status
 
     @asyncio.coroutine

@@ -28,3 +28,7 @@ Glossary
       The Python SQL Toolkit and Object Relational Mapper.
 
       See http://www.sqlalchemy.org/
+
+   DBAPI
+
+      :pep:`249` -- Python Database API Specification v2.0
