@@ -20,6 +20,44 @@ class SAConnection:
 
     @asyncio.coroutine
     def execute(self, query, *multiparams, **params):
+        """Executes a SQL query with optional parameters.
+
+        query - a SQL query string or any sqlalchemy expression.
+
+        *multiparams/**params - represent bound parameter values to be
+        used in the execution.  Typically, the format is either a
+        collection of one or more dictionaries passed to
+        *multiparams:
+
+            conn.execute(
+                table.insert(),
+                {"id":1, "value":"v1"},
+                {"id":2, "value":"v2"}
+            )
+
+        ...or individual key/values interpreted by **params::
+
+            conn.execute(
+                table.insert(), id=1, value="v1"
+            )
+
+        In the case that a plain SQL string is passed, a collection of
+        tuples or individual values in \*multiparams may be passed::
+
+            conn.execute(
+                "INSERT INTO table (id, value) VALUES (%d, %s)",
+                (1, "v1"), (2, "v2")
+            )
+
+            conn.execute(
+                "INSERT INTO table (id, value) VALUES (%s, %s)",
+                1, "v1"
+            )
+
+        Returns ResultProxy instance with results of SQL query
+        execution.
+
+        """
         cursor = yield from self._connection.cursor()
 
         if isinstance(query, str):
@@ -53,11 +91,13 @@ class SAConnection:
 
     @asyncio.coroutine
     def scalar(self, query, *multiparams, **params):
+        """Executes a SQL query and returns a scalar value."""
         res = yield from self.execute(query, *multiparams, **params)
         return (yield from res.scalar())
 
     @property
     def closed(self):
+        """The readonly property that returns True if connections is closed."""
         return self._connection is None
 
     @property
@@ -135,13 +175,9 @@ class SAConnection:
 
         Nested transactions require SAVEPOINT support in the
         underlying database.  Any transaction in the hierarchy may
-        ``commit`` and ``rollback``, however the outermost transaction
-        still controls the overall ``commit`` or ``rollback`` of the
+        .commit() and .rollback(), however the outermost transaction
+        still controls the overall .commit() or .rollback() of the
         transaction of a whole.
-
-        See also :meth:`.Connection.begin`,
-        :meth:`.Connection.begin_twophase`.
-
         """
         if self._transaction is None:
             self._transaction = RootTransaction(self)
@@ -187,16 +223,12 @@ class SAConnection:
         handle.
 
         The returned object is an instance of
-        :class:`.TwoPhaseTransaction`, which in addition to the
-        methods provided by :class:`.Transaction`, also provides a
-        :meth:`~.TwoPhaseTransaction.prepare` method.
+        TwoPhaseTransaction, which in addition to the
+        methods provided by Transaction, also provides a
+        TwoPhaseTransaction.prepare() method.
 
-        :param xid: the two phase transaction id.  If not supplied, a
+        xid - the two phase transaction id.  If not supplied, a
         random id will be generated.
-
-        See also :meth:`.Connection.begin`,
-        :meth:`.Connection.begin_twophase`.
-
         """
 
         if self._transaction is not None:

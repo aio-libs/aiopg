@@ -183,13 +183,11 @@ class Connection:
 
     @asyncio.coroutine
     def commit(self):
-        """XXX"""
         raise psycopg2.ProgrammingError(
             "commit cannot be used in asynchronous mode")
 
     @asyncio.coroutine
     def rollback(self):
-        """XXX"""
         raise psycopg2.ProgrammingError(
             "rollback cannot be used in asynchronous mode")
 
