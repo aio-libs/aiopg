@@ -201,8 +201,8 @@ class ResultProxy:
     """Wraps a DB-API cursor object to provide easier access to row columns.
 
     Individual columns may be accessed by their integer position,
-    case-insensitive column name, or by ``schema.Column``
-    object. e.g.::
+    case-insensitive column name, or by sqlalchemy schema.Column
+    object. e.g.:
 
       row = fetchone()
 
@@ -212,8 +212,8 @@ class ResultProxy:
 
       col3 = row[mytable.c.mycol] # access via Column object.
 
-    ``ResultProxy`` also handles post-processing of result column
-    data using ``TypeEngine`` objects, which are referenced from
+    ResultProxy also handles post-processing of result column
+    data using sqlalchemy TypeEngine objects, which are referenced from
     the originating SQL statement that produced this result set.
     """
 
@@ -282,12 +282,10 @@ class ResultProxy:
 
     @property
     def returns_rows(self):
-        """True if this :class:`.ResultProxy` returns rows.
+        """True if this ResultProxy returns rows.
 
-        I.e. if it is legal to call the methods
-        :meth:`~.ResultProxy.fetchone`,
-        :meth:`~.ResultProxy.fetchmany`
-        :meth:`~.ResultProxy.fetchall`.
+        I.e. if it is legal to call the methods .fetchone(),
+        .fetchmany() and .fetchall()`.
         """
         return self._metadata is not None
 
@@ -346,7 +344,7 @@ class ResultProxy:
 
     @asyncio.coroutine
     def fetchall(self):
-        """Fetch all rows, just like DB-API ``cursor.fetchall()``."""
+        """Fetch all rows, just like DB-API cursor.fetchall()."""
         try:
             rows = yield from self._cursor.fetchall()
         except AttributeError:
@@ -358,7 +356,7 @@ class ResultProxy:
 
     @asyncio.coroutine
     def fetchone(self):
-        """Fetch one row, just like DB-API ``cursor.fetchone()``.
+        """Fetch one row, just like DB-API cursor.fetchone().
 
         If a row is present, the cursor remains open after this is called.
         Else the cursor is automatically closed and None is returned.
@@ -377,7 +375,7 @@ class ResultProxy:
     @asyncio.coroutine
     def fetchmany(self, size=None):
         """Fetch many rows, just like DB-API
-        ``cursor.fetchmany(size=cursor.arraysize)``.
+        cursor.fetchmany(size=cursor.arraysize).
 
         If rows are present, the cursor remains open after this is called.
         Else the cursor is automatically closed and an empty list is returned.

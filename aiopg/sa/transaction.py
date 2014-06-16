@@ -43,7 +43,7 @@ class Transaction(object):
 
     @asyncio.coroutine
     def close(self):
-        """Close this :class:`.Transaction`.
+        """Close this transaction.
 
         If this transaction is the base transaction in a begin/commit
         nesting, the transaction will rollback().  Otherwise, the
@@ -61,7 +61,7 @@ class Transaction(object):
 
     @asyncio.coroutine
     def rollback(self):
-        """Roll back this :class:`.Transaction`."""
+        """Roll back this transaction."""
         if not self._parent._is_active:
             return
         yield from self._do_rollback()
@@ -73,7 +73,7 @@ class Transaction(object):
 
     @asyncio.coroutine
     def commit(self):
-        """Commit this :class:`.Transaction`."""
+        """Commit this transaction."""
 
         if not self._parent._is_active:
             raise exc.InvalidRequestError("This transaction is inactive")
@@ -102,10 +102,10 @@ class RootTransaction(Transaction):
 class NestedTransaction(Transaction):
     """Represent a 'nested', or SAVEPOINT transaction.
 
-    A new :class:`.NestedTransaction` object may be procured
-    using the :meth:`.Connection.begin_nested` method.
+    A new NestedTransaction object may be procured
+    using the SAConnection.begin_nested() method.
 
-    The interface is the same as that of :class:`.Transaction`.
+    The interface is the same as that of Transaction class.
     """
 
     _savepoint = None
@@ -131,11 +131,11 @@ class NestedTransaction(Transaction):
 class TwoPhaseTransaction(Transaction):
     """Represent a two-phase transaction.
 
-    A new :class:`.TwoPhaseTransaction` object may be procured
-    using the :meth:`.Connection.begin_twophase` method.
+    A new TwoPhaseTransaction object may be procured
+    using the SAConnection.begin_twophase() method.
 
-    The interface is the same as that of :class:`.Transaction`
-    with the addition of the :meth:`prepare` method.
+    The interface is the same as that of Transaction class
+    with the addition of the .prepare() method.
     """
 
     def __init__(self, connection, xid):
@@ -150,7 +150,7 @@ class TwoPhaseTransaction(Transaction):
 
     @asyncio.coroutine
     def prepare(self):
-        """Prepare this :class:`.TwoPhaseTransaction`.
+        """Prepare this TwoPhaseTransaction.
 
         After a PREPARE, the transaction can be committed.
         """
