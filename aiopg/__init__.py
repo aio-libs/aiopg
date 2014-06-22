@@ -7,7 +7,8 @@ from .cursor import Cursor
 from .pool import create_pool, Pool
 
 
-__all__ = ('connect', 'create_pool', 'Connection', 'Cursor', 'Pool')
+__all__ = ('connect', 'create_pool', 'Connection', 'Cursor', 'Pool',
+           'version', 'version_info')
 
 __version__ = '0.3.0'
 
