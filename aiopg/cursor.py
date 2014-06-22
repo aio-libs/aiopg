@@ -49,6 +49,11 @@ class Cursor:
         return self._conn
 
     @property
+    def raw(self):
+        """Underlying psycopg cursor object, readonly"""
+        return self._impl
+
+    @property
     def name(self):
         # Not supported
         return self._impl.name

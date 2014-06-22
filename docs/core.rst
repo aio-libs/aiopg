@@ -85,6 +85,11 @@ Example::
 
       The readonly property that returns ``True`` if connections is closed.
 
+   .. attribute:: raw
+
+      The readonly property that underlying
+      :class:`psycopg2.connection` instance.
+
    .. method:: cancel()
 
       A :ref:`coroutine <coroutine>` that cancels current database
@@ -96,7 +101,7 @@ Example::
       currently executing a database operation, for instance if you
       want to cancel a long running query if a button is pushed in the
       UI. Interrupting query execution will cause the cancelled method
-      to raise a `~psycopg2.extensions.QueryCanceledError`. Note that
+      to raise a :exc:`psycopg2.extensions.QueryCanceledError`. Note that
       the termination of the query is not guaranteed to succeed: see
       the documentation for |PQcancel|_.
 
@@ -308,6 +313,11 @@ Cursor
 
       Read-only boolean attribute: specifies if the cursor is closed
       (``True``) or not (``False``).
+
+   .. attribute:: raw
+
+      The readonly property that underlying
+      :class:`psycopg2.cursor` instance.
 
    .. attribute:: connection
 

@@ -48,6 +48,7 @@ class TestConnection(unittest.TestCase):
             self.assertIsInstance(conn, Connection)
             self.assertFalse(conn._reading)
             self.assertFalse(conn._writing)
+            self.assertIs(conn._conn, conn.raw)
 
         self.loop.run_until_complete(go())
 

@@ -51,6 +51,16 @@ class TestCursor(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
+    def test_raw(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            cur = yield from conn.cursor()
+            self.assertEqual(cur._impl, cur.raw)
+
+        self.loop.run_until_complete(go())
+
     def test_close(self):
 
         @asyncio.coroutine

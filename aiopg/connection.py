@@ -181,6 +181,11 @@ class Connection:
         """
         return self._conn.closed
 
+    @property
+    def raw(self):
+        """Underlying psycopg connection object, readonly"""
+        return self._conn
+
     @asyncio.coroutine
     def commit(self):
         raise psycopg2.ProgrammingError(
