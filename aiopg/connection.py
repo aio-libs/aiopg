@@ -103,7 +103,7 @@ class Connection:
             'connection': self,
             })
         self._close()
-        if self._waiter:
+        if self._waiter and not self._waiter.done():
             self._waiter.set_exception(psycopg2.OperationalError(message))
 
     def _create_waiter(self, func_name):
@@ -170,6 +170,9 @@ class Connection:
             self._loop.remove_writer(self._fileno)
             self._writing = False
         self._conn.close()
+        if self._waiter is not None and not self._waiter.done():
+            self._waiter.set_exception(
+                psycopg2.OperationalError("Connection closed"))
 
     @property
     def closed(self):

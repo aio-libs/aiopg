@@ -538,3 +538,31 @@ class TestConnection(unittest.TestCase):
                 yield from cur.execute('SELECT 1')
 
         self.loop.run_until_complete(go())
+
+    def test_closing_in_separate_task(self):
+        event = asyncio.Future(loop=self.loop)
+
+        @asyncio.coroutine
+        def waiter(conn):
+            cur = yield from conn.cursor()
+            fut = cur.execute("SELECT pg_sleep(1000)")
+            event.set_result(None)
+            with self.assertRaises(psycopg2.OperationalError):
+                yield from fut
+
+        @asyncio.coroutine
+        def closer(conn):
+            yield from event
+            yield from conn.close()
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from aiopg.connect(database='aiopg',
+                                            user='aiopg',
+                                            password='passwd',
+                                            host='127.0.0.1',
+                                            loop=self.loop)
+            yield from asyncio.gather(waiter(conn), closer(conn),
+                                      loop=self.loop)
+
+        self.loop.run_until_complete(go())
