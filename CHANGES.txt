@@ -6,6 +6,8 @@ CHANGES
 
 * Allow executing SQLAlchemy DDL statements
 
+* Fix bug with race conditions on acquiring/releasing connections from pool.
+
 0.2.3 (2014-06-12)
 ^^^^^^^^^^^^^^^^^^
 

@@ -89,17 +89,18 @@ class Pool:
                     tran_status)
                 conn._close()
                 return
-            try:
-                self._free.put_nowait(conn)
-            except asyncio.QueueFull:
-                # close the oldest connection in free pool.
-                # that can happen if we acuire multiple
-                # connections from parallel tasks
-                # when minsize == 0
-                conn2 = self._free.get_nowait()
-                conn2._close()
-                assert not self._free.full(), self._free
-                self._free.put_nowait(conn)
+            while True:
+                try:
+                    self._free.put_nowait(conn)
+                except asyncio.QueueFull:
+                    # close the oldest connection in free pool.
+                    # that can happen if we acuire multiple
+                    # connections from parallel tasks
+                    # when minsize == 0
+                    conn2 = self._free.get_nowait()
+                    conn2._close()
+                else:
+                    break
 
     @asyncio.coroutine
     def cursor(self):
