@@ -50,7 +50,8 @@ See example::
     def go():
         pool = yield from aiopg.create_pool(dsn)
         with (yield from pool.cursor()) as cur:
-            ret = yield from cur.execute("SELECT 1")
+            yield from cur.execute("SELECT 1")
+            ret = yield from cur.fetchone()
             assert ret == (1,)
 
     loop = asyncio.get_event_loop()
