@@ -69,6 +69,6 @@ Example of SQLAlchemy optional integration
 
 Please use::
 
-   $ python3 runtests.py 
-   
+   $ python3 runtests.py
+
 for executing project's unittests

@@ -115,6 +115,18 @@ Installation
 
    pip3 install aiopg
 
+.. note:: :mod:`aiopg` requires :term:`psycopg2` library.
+
+   You can use standard one from your distro like::
+
+      $ sudo apt-get install python3-psycopg2
+
+   but if you like to use virtual environments
+   (:term:`virtualenvwrapper`, :term:`virtualenv` or :term:`venv`) you
+   probably have to install :term:`libpq` development package::
+
+      $ sudo apt-get install libpq-dev
+
 Also you probably want to use :mod:`aiopg.sa`.
 
 .. _aiozmq-install-sqlalchemy:
@@ -159,6 +171,7 @@ Contents:
    core
    sa
    examples
+   contributing
    glossary
 
 Indices and tables
