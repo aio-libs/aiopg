@@ -39,6 +39,7 @@ classifiers=[
     'Programming Language :: Python :: 3.3',
     'Programming Language :: Python :: 3.4',
     'Operating System :: POSIX',
+    'Operating System :: MacOS :: MacOS X',
     'Environment :: Web Environment',
     'Development Status :: 4 - Beta',
     'Topic :: Database',
