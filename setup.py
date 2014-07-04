@@ -15,10 +15,11 @@ elif PY_VER >= (3, 3):
 else:
     raise RuntimeError("aiopg doesn't suppport Python earllier than 3.3")
 
+
 def read(f):
     return open(os.path.join(os.path.dirname(__file__), f)).read().strip()
 
-extras_require = {'sa': ['sqlalchemy>=0.9'],}
+extras_require = {'sa': ['sqlalchemy>=0.9'], }
 
 
 def read_version():
@@ -32,7 +33,7 @@ def read_version():
         else:
             raise RuntimeError('Cannot find version in aiopg/__init__.py')
 
-classifiers=[
+classifiers = [
     'License :: OSI Approved :: BSD License',
     'Intended Audience :: Developers',
     'Programming Language :: Python :: 3',
@@ -46,7 +47,7 @@ classifiers=[
 
 setup(name='aiopg',
       version=read_version(),
-      description=('Postgress integration with asyncio.'),
+      description=('Postgres integration with asyncio.'),
       long_description='\n\n'.join((read('README.rst'), read('CHANGES.txt'))),
       classifiers=classifiers,
       platforms=['POSIX'],
