@@ -1,10 +1,10 @@
-SQLAlchemy
 coverage
 docutils
 ipdb
 ipython
 pep8
-psycopg2
 pyflakes
 wheel
 setuptools
+-e .[sa]
+sphinx
