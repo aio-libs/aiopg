@@ -8,3 +8,4 @@ wheel
 setuptools
 -e .[sa]
 sphinx
+readthedocs-sphinx-ext
