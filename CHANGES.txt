@@ -1,10 +1,15 @@
 CHANGES
 -------
 
+0.3.1 (2014-07-04)
+^^^^^^^^^^^^^^^^^^
+
+* Forward arguments to cursor constructor for pooled connections.
+
 0.3.0 (2014-06-22)
 ^^^^^^^^^^^^^^^^^^
 
-* Allow executing SQLAlchemy DDL statements
+* Allow executing SQLAlchemy DDL statements.
 
 * Fix bug with race conditions on acquiring/releasing connections from pool.
 
@@ -32,6 +37,6 @@ CHANGES
 0.1.0 (2014-04-06)
 ^^^^^^^^^^^^^^^^^^
 
-* Implemented plain connections: connect, Connection, Cursor
+* Implemented plain connections: connect, Connection, Cursor.
 
-* Implemented database pools: create_pool and Pool
+* Implemented database pools: create_pool and Pool.
