@@ -1,6 +1,12 @@
 CHANGES
 -------
 
+0.3.2 (2014-07-07)
+^^^^^^^^^^^^^^^^^^
+
+* change signature to cursor.execute(operation, parameters=None) to
+  follow psycopg2 convention.
+
 0.3.1 (2014-07-04)
 ^^^^^^^^^^^^^^^^^^
 
