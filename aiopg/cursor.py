@@ -79,7 +79,7 @@ class Cursor:
         self._impl.withhold = val
 
     @asyncio.coroutine
-    def execute(self, operation, parameters=()):
+    def execute(self, operation, parameters=None):
         """Prepare and execute a database operation (query or command).
 
         Parameters may be provided as sequence or mapping and will be
