@@ -2,9 +2,12 @@ import os
 import re
 import sys
 from setuptools import setup, find_packages
+import platform
 
-
-install_requires = ['psycopg2>=2.5.2']
+if platform.python_implementation() != "PyPy":
+    install_requires = ['psycopg2>=2.5.2']
+else:
+    install_requires = ['psycopg2cffi>=2.5.2']
 
 PY_VER = sys.version_info
 
@@ -13,7 +16,7 @@ if PY_VER >= (3, 4):
 elif PY_VER >= (3, 3):
     install_requires.append('asyncio')
 else:
-    raise RuntimeError("aiopg doesn't suppport Python earllier than 3.3")
+    install_requires.append('trollius')
 
 
 def read(f):
