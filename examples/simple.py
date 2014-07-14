@@ -8,7 +8,8 @@ dsn = 'dbname=aiopg user=aiopg password=passwd host=127.0.0.1'
 def test_select():
     pool = yield from aiopg.create_pool(dsn)
     with (yield from pool.cursor()) as cur:
-        ret = yield from cur.execute("SELECT 1")
+        yield from cur.execute("SELECT 1")
+        ret = yield from cur.fetchone()
         assert ret == (1,)
 
 
