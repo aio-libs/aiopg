@@ -77,7 +77,7 @@ def count(engine):
         join = sa.join(emails, users, users.c.id == emails.c.user_id)
         query = (sa.select([users.c.name])
                  .select_from(join)
-                 .where(emails.c.private == 0)
+                 .where(emails.c.private == False)
                  .group_by(users.c.name)
                  .having(sa.func.count(emails.c.private) > 0))
 
