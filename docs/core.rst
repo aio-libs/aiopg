@@ -33,7 +33,11 @@ Example::
    A :ref:`coroutine <coroutine>` that connects to PostgreSQL.
 
    The function accepts all parameters that :func:`psycopg2.connect`
-   does plus optional keyword-only parameter *loop*.
+   does plus optional keyword-only *loop* and *timeout* parameters.
+
+   :param loop: asyncio event loop instance or ``None`` for default one.
+
+   :param float timeout: default timeout (in seconds) for connection operations.
 
    :returns: :class:`Connection` instance.
 

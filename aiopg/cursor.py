@@ -5,9 +5,10 @@ import psycopg2
 
 class Cursor:
 
-    def __init__(self, conn, impl):
+    def __init__(self, conn, impl, timeout):
         self._conn = conn
         self._impl = impl
+        self._timeout = timeout
 
     @property
     def description(self):
@@ -79,7 +80,7 @@ class Cursor:
         self._impl.withhold = val
 
     @asyncio.coroutine
-    def execute(self, operation, parameters=None):
+    def execute(self, operation, parameters=None, *, timeout=None):
         """Prepare and execute a database operation (query or command).
 
         Parameters may be provided as sequence or mapping and will be
@@ -87,9 +88,11 @@ class Cursor:
         either with positional %s or named %({name})s placeholders.
 
         """
+        if timeout is None:
+            timeout = self._timeout
         waiter = self._conn._create_waiter('cursor.execute')
         self._impl.execute(operation, parameters)
-        yield from self._conn._poll(waiter)
+        yield from self._conn._poll(waiter, timeout)
 
     @asyncio.coroutine
     def executemany(self, operation, seq_of_parameters):
@@ -98,7 +101,7 @@ class Cursor:
             "executemany cannot be used in asynchronous mode")
 
     @asyncio.coroutine
-    def callproc(self, procname, parameters):
+    def callproc(self, procname, parameters, *, timeout=None):
         """Call a stored database procedure with the given name.
 
         The sequence of parameters must contain one entry for each
@@ -108,9 +111,11 @@ class Cursor:
         parameters replaced with possibly new values.
 
         """
+        if timeout is None:
+            timeout = self._timeout
         waiter = self._conn._create_waiter('cursor.callproc')
         self._impl.callproc(procname, parameters)
-        yield from self._conn._poll(waiter)
+        yield from self._conn._poll(waiter, timeout)
 
     @asyncio.coroutine
     def mogrify(self, operation, parameters=()):
@@ -326,3 +331,8 @@ class Cursor:
     def copy_expert(self, sql, file, size=8192):
         raise psycopg2.ProgrammingError(
             "copy_expert cannot be used in asynchronous mode")
+
+    @property
+    def timeout(self):
+        """Return default timeout for cursor operations."""
+        return self._timeout
