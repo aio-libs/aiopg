@@ -101,7 +101,7 @@ class Cursor:
             "executemany cannot be used in asynchronous mode")
 
     @asyncio.coroutine
-    def callproc(self, procname, parameters, *, timeout=None):
+    def callproc(self, procname, parameters=None, *, timeout=None):
         """Call a stored database procedure with the given name.
 
         The sequence of parameters must contain one entry for each
@@ -118,7 +118,7 @@ class Cursor:
         yield from self._conn._poll(waiter, timeout)
 
     @asyncio.coroutine
-    def mogrify(self, operation, parameters=()):
+    def mogrify(self, operation, parameters=None):
         """Return a query string after arguments binding.
 
         The string returned is exactly the one that would be sent to

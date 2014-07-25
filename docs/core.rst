@@ -28,7 +28,7 @@ Example::
       ret = yield from cur.fetchall()
 
 
-.. function:: connect(dsn=None, *, loop=None, **kwargs)
+.. function:: connect(dsn=None, *, loop=None, timeout=60.0, **kwargs)
 
    A :ref:`coroutine <coroutine>` that connects to PostgreSQL.
 
@@ -38,6 +38,8 @@ Example::
    :param loop: asyncio event loop instance or ``None`` for default one.
 
    :param float timeout: default timeout (in seconds) for connection operations.
+
+                         60 secs if not specified.
 
    :returns: :class:`Connection` instance.
 
@@ -56,7 +58,7 @@ Example::
    The most important method is
 
    .. method:: cursor(name=None, cursor_factory=None, \
-               scrollable=None, withhold=False)
+               scrollable=None, withhold=False, timeout=None)
 
        A :ref:`coroutine <coroutine>` that creates a new cursor object
        using the connection.
@@ -70,6 +72,9 @@ Example::
        `psycopg2.extensions.cursor`. See :ref:`subclassing-cursor` for
        details. A default factory for the connection can also be
        specified using the `~Connection.cursor_factory` attribute.
+
+       :param float timeout: timeout for returned cursor instance if
+                             parameter is not `None`.
 
        :returns: :class:`Cursor` instance.
 
@@ -94,7 +99,7 @@ Example::
       The readonly property that underlying
       :class:`psycopg2.connection` instance.
 
-   .. method:: cancel()
+   .. method:: cancel(timeout=None)
 
       A :ref:`coroutine <coroutine>` that cancels current database
       operation.
@@ -109,8 +114,11 @@ Example::
       the termination of the query is not guaranteed to succeed: see
       the documentation for |PQcancel|_.
 
+      :param float timeout: timeout for cancelling.
+
       .. |PQcancel| replace:: ``PQcancel()``
       .. _PQcancel: http://www.postgresql.org/docs/current/static/libpq-cancel.html#LIBPQ-PQCANCEL
+
    .. attribute:: dsn
 
       The readonly property that returns *dsn* string used by the
@@ -236,7 +244,12 @@ Example::
       `psycopg2.extensions`: see :ref:`connection-status-constants`
       for the available values.
 
-      The status is undefined for `closed` connectons.
+      The status is undefined for *closed* connectons.
+
+   .. attribute:: timeout
+
+      A read-only float representing default timeout for connection's
+      operations.
 
    The :class:`Connection` class also has several methods not
    described here.  Those methods are not supported in asynchronous
@@ -328,7 +341,12 @@ Cursor
       Read-only attribute returning a reference to the :class:`Connection`
       object on which the cursor was created.
 
-   .. method:: execute(operation [, parameters])
+   .. attribute:: timeout
+
+      A read-only float representing default timeout for cursor's
+      operations.
+
+   .. method:: execute(operation, parameters=None, *, timeout=None)
 
       Prepare and execute a database operation (query or command).
 
@@ -337,10 +355,12 @@ Cursor
       positional (``%s``) or named (:samp:`%({name})s`) placeholders. See
       :ref:`query-parameters`.
 
-      The method returns ``None``. If a query was executed, the returned
-      values can be retrieved using |fetch*|_ methods.
+      :param float timeout: overrides cursor's timeout if not ``None``.
 
-   .. method:: callproc(procname [, parameters])
+      :returns: ``None``. If a query was executed, the returned
+                values can be retrieved using |fetch*|_ methods.
+
+   .. method:: callproc(procname, parameters=None, *, timeout=None)
 
       Call a stored database procedure with the given name. The sequence of
       parameters must contain one entry for each argument that the procedure
@@ -351,9 +371,11 @@ Cursor
       The procedure may also provide a result set as output. This must then
       be made available through the standard |fetch*|_ methods.
 
-   .. method:: mogrify(operation [, parameters])
+      :param float timeout: overrides cursor's timeout if not ``None``.
 
-      Return a query string after arguments binding. The string returned is
+   .. method:: mogrify(operation, parameters=None)
+
+      :returns: a query string after arguments binding. The string returned is
       exactly the one that would be sent to the database running the
       :meth:`Cursor.execute` method or similar.
 
@@ -369,7 +391,7 @@ Cursor
 
 
 
-   .. |fetch*| replace:: `!fetch*()`
+   .. |fetch*| replace:: ``fetch*()``
 
    .. _fetch*:
 
@@ -409,7 +431,7 @@ Cursor
       call was issued yet.
 
 
-   .. method:: fetchmany([size=cursor.arraysize])
+   .. method:: fetchmany(size=cursor.arraysize)
 
       Fetch the next set of rows of a query result, returning a list of
       tuples. An empty list is returned when no more rows are available.
@@ -454,7 +476,7 @@ Cursor
       call was issued yet.
 
 
-    .. method:: scroll(value [, mode='relative'])
+    .. method:: scroll(value, mode='relative')
 
        Scroll the cursor in the result set to a new position according
        to mode.
@@ -561,7 +583,7 @@ Cursor
       module.
 
 
-   .. method:: setoutputsize(size [, column])
+   .. method:: setoutputsize(size, column=None)
 
       This method is exposed in compliance with the :term:`DBAPI`. It currently
       does nothing but it is safe to call it.
@@ -597,7 +619,7 @@ The basic usage is::
 
 
 .. function:: create_pool(dsn=None, *, minsize=10, maxsize=10,\
-                          loop=None, **kwargs)
+                          loop=None, timeout=60.0, **kwargs)
 
    A :ref:`coroutine <coroutine>` that creates a pool of connections to
    :term:`PostgreSQL` database.
@@ -609,6 +631,9 @@ The basic usage is::
     :func:`asyncio.get_event_loop` is used if *loop* is not specified.
 
    *minsize* and *maxsize* are minimum and maximum sizes of the *pool*.
+
+   *timeout* is a default timeout (in seconds) for connection
+    operations. 60 secs if not specified.
 
    Returns :class:`Pool` instance.
 
