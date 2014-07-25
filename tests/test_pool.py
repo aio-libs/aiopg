@@ -304,3 +304,38 @@ class TestPool(unittest.TestCase):
             self.assertEqual(1, pool.size)
             self.assertEqual(1, pool.freesize)
         self.loop.run_until_complete(go())
+
+    def test_acquire_more_than_maxsize(self):
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool(maxsize=2)
+
+            connections = set()
+            @asyncio.coroutine
+            def acquire_connection():
+                conn = yield from pool.acquire()
+                connections.add(conn._conn)
+                return conn
+
+            def task():
+                try:
+                    conn = yield from acquire_connection()
+                    self.assertLessEqual(len(connections), pool.maxsize)
+
+                    # perform some async work
+                    yield from asyncio.sleep(1, loop=self.loop)
+                finally:
+                    pool.release(conn)
+
+                try:
+                    conn = yield from acquire_connection()
+                    self.assertLessEqual(len(connections), pool.maxsize)
+                finally:
+                    pool.release(conn)
+
+            task1 = asyncio.Task(task(), loop=self.loop)
+            task2 = asyncio.Task(task(), loop=self.loop)
+            task3 = asyncio.Task(task(), loop=self.loop)
+            yield from asyncio.gather(task1, task2, task3, loop=self.loop)
+
+        self.loop.run_until_complete(go())

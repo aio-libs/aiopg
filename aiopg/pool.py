@@ -27,6 +27,7 @@ class Pool:
         self._conn_kwargs = kwargs
         self._free = asyncio.queues.Queue(maxsize, loop=self._loop)
         self._used = set()
+        self._transition = set()  # connections that stuck inside asyncio "entrails" after release and before acquire
 
     @property
     def minsize(self):
@@ -38,7 +39,7 @@ class Pool:
 
     @property
     def size(self):
-        return self.freesize + len(self._used)
+        return self.freesize + len(self._used) + len(self._transition)
 
     @property
     def freesize(self):
@@ -57,6 +58,7 @@ class Pool:
         yield from self._fill_free_pool()
         if self.minsize > 0 or not self._free.empty():
             conn = yield from self._free.get()
+            self._transition.discard(conn)
         else:
             conn = yield from connect(
                 self._dsn, loop=self._loop,
@@ -91,6 +93,8 @@ class Pool:
                 return
             while True:
                 try:
+                    if self._free._getters:
+                        self._transition.add(conn)
                     self._free.put_nowait(conn)
                 except asyncio.QueueFull:
                     # close the oldest connection in free pool.
