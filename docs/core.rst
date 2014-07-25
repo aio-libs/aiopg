@@ -58,25 +58,28 @@ Example::
    The most important method is
 
    .. method:: cursor(name=None, cursor_factory=None, \
-               scrollable=None, withhold=False, timeout=None)
+               scrollable=None, withhold=False, *, timeout=None)
 
-       A :ref:`coroutine <coroutine>` that creates a new cursor object
-       using the connection.
+      A :ref:`coroutine <coroutine>` that creates a new cursor object
+      using the connection.
 
-       The only *cursor_factory* can be specified, all other
-       parameters are not supported by :term:`psycopg2` in
-       asynchronous mode yet.
+      The only *cursor_factory* can be specified, all other
+      parameters are not supported by :term:`psycopg2` in
+      asynchronous mode yet.
 
-       The *cursor_factory* argument can be used to create
-       non-standard cursors. The argument must be a subclass of
-       `psycopg2.extensions.cursor`. See :ref:`subclassing-cursor` for
-       details. A default factory for the connection can also be
-       specified using the `~Connection.cursor_factory` attribute.
+      The *cursor_factory* argument can be used to create
+      non-standard cursors. The argument must be a subclass of
+      `psycopg2.extensions.cursor`. See :ref:`subclassing-cursor` for
+      details. A default factory for the connection can also be
+      specified using the :attr:`Connection.cursor_factory` attribute.
 
-       :param float timeout: timeout for returned cursor instance if
-                             parameter is not `None`.
+      *timeout* is a timeout for returned cursor instance if
+      parameter is not `None`.
 
-       :returns: :class:`Cursor` instance.
+      *name*, *scrollable* and *withhold* parameters are not supported
+      by :term:`psycopg2` in asynchronous mode.
+
+      :returns: :class:`Cursor` instance.
 
    .. method:: close()
 
@@ -375,14 +378,14 @@ Cursor
 
    .. method:: mogrify(operation, parameters=None)
 
-      :returns: a query string after arguments binding. The string returned is
-      exactly the one that would be sent to the database running the
-      :meth:`Cursor.execute` method or similar.
+      Returns a query string after arguments binding. The string
+      returned is exactly the one that would be sent to the database
+      running the :meth:`Cursor.execute` method or similar.
 
       The returned string is always a bytes string::
 
-          >>> cur.mogrify("INSERT INTO test (num, data) VALUES (%s, %s)", (42, 'bar'))
-          "INSERT INTO test (num, data) VALUES (42, E'bar')"
+         >>> cur.mogrify("INSERT INTO test (num, data) VALUES (%s, %s)", (42, 'bar'))
+         "INSERT INTO test (num, data) VALUES (42, E'bar')"
 
    .. method:: setinputsizes(sizes)
 
@@ -700,10 +703,27 @@ The basic usage is::
 
       .. warning:: The method is not a :ref:`coroutine <coroutine>`.
 
-   .. method:: cursor()
+   .. method:: cursor(name=None, cursor_factory=None, scrollable=None, \
+               withhold=False, *, timeout=None)
 
       A :ref:`coroutine<coroutine>` that :meth:`acquires <acquire>` a
       connection and returns *context manager*.
+
+      The only *cursor_factory* can be specified, all other
+      parameters are not supported by :term:`psycopg2` in
+      asynchronous mode yet.
+
+      The *cursor_factory* argument can be used to create
+      non-standard cursors. The argument must be a subclass of
+      `psycopg2.extensions.cursor`. See :ref:`subclassing-cursor` for
+      details. A default factory for the connection can also be
+      specified using the :attr:`Connection.cursor_factory` attribute.
+
+      *timeout* is a timeout for returned cursor instance if parameter
+      is not `None`.
+
+      *name*, *scrollable* and *withhold* parameters are not supported
+      by :term:`psycopg2` in asynchronous mode.
 
       The usage is::
 
@@ -711,6 +731,7 @@ The basic usage is::
              yield from cur.execute('SELECT 1')
 
       After exiting from *with block* cursor *cur* will be closed.
+
 
 .. _aiopg-core-exceptions:
 

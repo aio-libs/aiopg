@@ -109,11 +109,12 @@ class Pool:
 
     @asyncio.coroutine
     def cursor(self, name=None, cursor_factory=None,
-               scrollable=None, withhold=False):
+               scrollable=None, withhold=False, *, timeout=None):
         """XXX"""
         conn = yield from self.acquire()
         cur = yield from conn.cursor(name=name, cursor_factory=cursor_factory,
-                                     scrollable=scrollable, withhold=withhold)
+                                     scrollable=scrollable, withhold=withhold,
+                                     timeout=timeout)
         return _CursorContextManager(self, conn, cur)
 
     def __enter__(self):
