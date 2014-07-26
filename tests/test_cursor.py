@@ -2,7 +2,11 @@ import asyncio
 import aiopg
 import psycopg2
 import psycopg2.tz
+import time
 import unittest
+
+
+from aiopg.connection import TIMEOUT
 
 
 class TestCursor(unittest.TestCase):
@@ -358,5 +362,73 @@ class TestCursor(unittest.TestCase):
             cur.close()
             with self.assertRaises(psycopg2.InterfaceError):
                 yield from cur.callproc('inc', [1])
+
+        self.loop.run_until_complete(go())
+
+    def test_execute_timeout(self):
+        @asyncio.coroutine
+        def go():
+            timeout = 0.1
+            conn = yield from self.connect()
+            cur = yield from conn.cursor(timeout=timeout)
+            self.assertEqual(timeout, cur.timeout)
+
+            t1 = time.time()
+            with self.assertRaises(asyncio.TimeoutError):
+                yield from cur.execute("SELECT pg_sleep(1)")
+            t2 = time.time()
+            dt = t2 - t1
+            self.assertTrue(0.09 <= dt <= 0.11, dt)
+
+        self.loop.run_until_complete(go())
+
+    def test_execute_override_timeout(self):
+        @asyncio.coroutine
+        def go():
+            timeout = 0.1
+            conn = yield from self.connect()
+            cur = yield from conn.cursor()
+            self.assertEqual(TIMEOUT, cur.timeout)
+
+            t1 = time.time()
+            with self.assertRaises(asyncio.TimeoutError):
+                yield from cur.execute("SELECT pg_sleep(1)", timeout=timeout)
+            t2 = time.time()
+            dt = t2 - t1
+            self.assertTrue(0.09 <= dt <= 0.11, dt)
+
+        self.loop.run_until_complete(go())
+
+    def test_callproc_timeout(self):
+        @asyncio.coroutine
+        def go():
+            timeout = 0.1
+            conn = yield from self.connect()
+            cur = yield from conn.cursor(timeout=timeout)
+            self.assertEqual(timeout, cur.timeout)
+
+            t1 = time.time()
+            with self.assertRaises(asyncio.TimeoutError):
+                yield from cur.callproc("pg_sleep", [1])
+            t2 = time.time()
+            dt = t2 - t1
+            self.assertTrue(0.09 <= dt <= 0.11, dt)
+
+        self.loop.run_until_complete(go())
+
+    def test_callproc_override_timeout(self):
+        @asyncio.coroutine
+        def go():
+            timeout = 0.1
+            conn = yield from self.connect()
+            cur = yield from conn.cursor()
+            self.assertEqual(TIMEOUT, cur.timeout)
+
+            t1 = time.time()
+            with self.assertRaises(asyncio.TimeoutError):
+                yield from cur.callproc("pg_sleep", [1], timeout=timeout)
+            t2 = time.time()
+            dt = t2 - t1
+            self.assertTrue(0.09 <= dt <= 0.11, dt)
 
         self.loop.run_until_complete(go())
