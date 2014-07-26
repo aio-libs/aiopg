@@ -38,6 +38,8 @@ from unittest.signals import installHandler
 
 assert sys.version >= '3.3', 'Please use Python 3.3 or higher.'
 
+os.environ['PYTHONASYNCIODEBUG'] = '1'
+
 ARGS = argparse.ArgumentParser(description="Run all unittests.")
 ARGS.add_argument(
     '-v', action="store", dest='verbose',
