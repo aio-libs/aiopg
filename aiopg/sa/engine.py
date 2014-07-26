@@ -32,11 +32,13 @@ def create_engine(dsn=None, *, minsize=10, maxsize=10, loop=None,
     if loop is None:
         loop = asyncio.get_event_loop()
     pool = yield from aiopg.create_pool(dsn, minsize=minsize, maxsize=maxsize,
-                                        loop=loop, timeout=TIMEOUT, **kwargs)
+                                        loop=loop, timeout=timeout, **kwargs)
     conn = yield from pool.acquire()
-    real_dsn = conn.dsn
-    pool.release(conn)
-    return Engine(dialect, pool, real_dsn)
+    try:
+        real_dsn = conn.dsn
+        return Engine(dialect, pool, real_dsn)
+    finally:
+        pool.release(conn)
 
 
 class Engine:

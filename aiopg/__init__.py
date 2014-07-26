@@ -2,13 +2,13 @@ import re
 import sys
 from collections import namedtuple
 
-from .connection import connect, Connection
+from .connection import connect, Connection, TIMEOUT as DEFAULT_TIMEOUT
 from .cursor import Cursor
 from .pool import create_pool, Pool
 
 
 __all__ = ('connect', 'create_pool', 'Connection', 'Cursor', 'Pool',
-           'version', 'version_info')
+           'version', 'version_info', 'DEFAULT_TIMEOUT')
 
 __version__ = '0.4.0a0'
 
@@ -42,4 +42,4 @@ version_info = _parse_version(__version__)
 
 
 # make pyflakes happy
-(connect, create_pool, Connection, Cursor, Pool)
+(connect, create_pool, Connection, Cursor, Pool, DEFAULT_TIMEOUT)
