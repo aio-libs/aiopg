@@ -5,7 +5,7 @@ from unittest import mock
 from psycopg2.extensions import TRANSACTION_STATUS_INTRANS
 
 import aiopg
-from aiopg.connection import Connection
+from aiopg.connection import Connection, TIMEOUT
 from aiopg.pool import Pool
 
 
@@ -40,6 +40,7 @@ class TestPool(unittest.TestCase):
             self.assertEqual(10, pool.maxsize)
             self.assertEqual(10, pool.size)
             self.assertEqual(10, pool.freesize)
+            self.assertEqual(TIMEOUT, pool.timeout)
 
         self.loop.run_until_complete(go())
 
@@ -303,4 +304,26 @@ class TestPool(unittest.TestCase):
                 self.assertEqual(0, pool.freesize)
             self.assertEqual(1, pool.size)
             self.assertEqual(1, pool.freesize)
+        self.loop.run_until_complete(go())
+
+    def test_create_pool_with_timeout(self):
+
+        @asyncio.coroutine
+        def go():
+            timeout = 0.1
+            pool = yield from self.create_pool(timeout=timeout)
+            self.assertEqual(timeout, pool.timeout)
+            conn = yield from pool.acquire()
+            self.assertEqual(timeout, conn.timeout)
+
+        self.loop.run_until_complete(go())
+
+    def test_cursor_with_timeout(self):
+        @asyncio.coroutine
+        def go():
+            timeout = 0.1
+            pool = yield from self.create_pool()
+            with (yield from pool.cursor(timeout=timeout)) as cur:
+                self.assertEqual(timeout, cur.timeout)
+
         self.loop.run_until_complete(go())
