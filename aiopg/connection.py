@@ -122,8 +122,7 @@ class Connection:
         assert waiter is self._waiter, (waiter, self._waiter)
         self._ready()
         try:
-            yield from asyncio.wait_for(self._waiter, self._timeout,
-                                        loop=self._loop)
+            yield from asyncio.wait_for(self._waiter, timeout, loop=self._loop)
         finally:
             self._waiter = None
 

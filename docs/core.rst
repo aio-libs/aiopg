@@ -393,7 +393,6 @@ Cursor
       does nothing but it is safe to call it.
 
 
-
    .. |fetch*| replace:: ``fetch*()``
 
    .. _fetch*:
@@ -682,6 +681,11 @@ The basic usage is::
    .. attribute:: freesize
 
       A count of free connections in the pool (*readonly*).
+
+   .. attribute:: timeout
+
+      A read-only float representing default timeout for operations
+      for connections from pool.
 
    .. method:: clear()
 
