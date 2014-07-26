@@ -1,6 +1,11 @@
 CHANGES
 -------
 
+0.4.0 (XXXX-XX-XX)
+^^^^^^^^^^^^^^^^^^
+
+* add timeouts for database operations
+
 0.3.2 (2014-07-07)
 ^^^^^^^^^^^^^^^^^^
 
