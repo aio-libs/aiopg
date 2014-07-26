@@ -8,6 +8,7 @@ import aiopg
 
 from .connection import SAConnection
 from .exc import InvalidRequestError
+from aiopg.connection import TIMEOUT
 
 
 dialect = PGDialect_psycopg2()
@@ -20,7 +21,7 @@ dialect.supports_sane_multi_rowcount = True  # psycopg 2.0.9+
 
 @asyncio.coroutine
 def create_engine(dsn=None, *, minsize=10, maxsize=10, loop=None,
-                  dialect=dialect, **kwargs):
+                  dialect=dialect, timeout=TIMEOUT, **kwargs):
     """A coroutine for Engine creation.
 
     Returns Engine instance with embedded connection pool.
@@ -31,11 +32,13 @@ def create_engine(dsn=None, *, minsize=10, maxsize=10, loop=None,
     if loop is None:
         loop = asyncio.get_event_loop()
     pool = yield from aiopg.create_pool(dsn, minsize=minsize, maxsize=maxsize,
-                                        loop=loop, **kwargs)
+                                        loop=loop, timeout=timeout, **kwargs)
     conn = yield from pool.acquire()
-    real_dsn = conn.dsn
-    pool.release(conn)
-    return Engine(dialect, pool, real_dsn)
+    try:
+        real_dsn = conn.dsn
+        return Engine(dialect, pool, real_dsn)
+    finally:
+        pool.release(conn)
 
 
 class Engine:
@@ -71,6 +74,10 @@ class Engine:
     def dsn(self):
         """DSN connection info"""
         return self._dsn
+
+    @property
+    def timeout(self):
+        return self._pool.timeout
 
     @asyncio.coroutine
     def acquire(self):

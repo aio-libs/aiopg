@@ -62,7 +62,7 @@ Engine
 ------
 
 .. function:: create_engine(dsn=None, *, minsize=10, maxsize=10, loop=None, \
-                            dialect=dialect, **kwargs)
+                            dialect=dialect, timeout=60, **kwargs)
 
    A :ref:`coroutine <coroutine>` for :class:`Engine` creation.
 
@@ -113,6 +113,11 @@ Engine
          `psycopg2 connection.dsn
          <http://initd.org/psycopg/docs/connection.html#connection.dsn>`_
          attribute.
+
+   .. attribute:: timeout
+
+      A read-only float representing default timeout for operations
+      for connections from pool.
 
    .. method:: acquire()
 

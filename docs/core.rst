@@ -28,12 +28,18 @@ Example::
       ret = yield from cur.fetchall()
 
 
-.. function:: connect(dsn=None, *, loop=None, **kwargs)
+.. function:: connect(dsn=None, *, loop=None, timeout=60.0, **kwargs)
 
    A :ref:`coroutine <coroutine>` that connects to PostgreSQL.
 
    The function accepts all parameters that :func:`psycopg2.connect`
-   does plus optional keyword-only parameter *loop*.
+   does plus optional keyword-only *loop* and *timeout* parameters.
+
+   :param loop: asyncio event loop instance or ``None`` for default one.
+
+   :param float timeout: default timeout (in seconds) for connection operations.
+
+                         60 secs if not specified.
 
    :returns: :class:`Connection` instance.
 
@@ -52,22 +58,28 @@ Example::
    The most important method is
 
    .. method:: cursor(name=None, cursor_factory=None, \
-               scrollable=None, withhold=False)
+               scrollable=None, withhold=False, *, timeout=None)
 
-       A :ref:`coroutine <coroutine>` that creates a new cursor object
-       using the connection.
+      A :ref:`coroutine <coroutine>` that creates a new cursor object
+      using the connection.
 
-       The only *cursor_factory* can be specified, all other
-       parameters are not supported by :term:`psycopg2` in
-       asynchronous mode yet.
+      The only *cursor_factory* can be specified, all other
+      parameters are not supported by :term:`psycopg2` in
+      asynchronous mode yet.
 
-       The *cursor_factory* argument can be used to create
-       non-standard cursors. The argument must be a subclass of
-       `psycopg2.extensions.cursor`. See :ref:`subclassing-cursor` for
-       details. A default factory for the connection can also be
-       specified using the `~Connection.cursor_factory` attribute.
+      The *cursor_factory* argument can be used to create
+      non-standard cursors. The argument must be a subclass of
+      `psycopg2.extensions.cursor`. See :ref:`subclassing-cursor` for
+      details. A default factory for the connection can also be
+      specified using the :attr:`Connection.cursor_factory` attribute.
 
-       :returns: :class:`Cursor` instance.
+      *timeout* is a timeout for returned cursor instance if
+      parameter is not `None`.
+
+      *name*, *scrollable* and *withhold* parameters are not supported
+      by :term:`psycopg2` in asynchronous mode.
+
+      :returns: :class:`Cursor` instance.
 
    .. method:: close()
 
@@ -90,7 +102,7 @@ Example::
       The readonly property that underlying
       :class:`psycopg2.connection` instance.
 
-   .. method:: cancel()
+   .. method:: cancel(timeout=None)
 
       A :ref:`coroutine <coroutine>` that cancels current database
       operation.
@@ -105,8 +117,11 @@ Example::
       the termination of the query is not guaranteed to succeed: see
       the documentation for |PQcancel|_.
 
+      :param float timeout: timeout for cancelling.
+
       .. |PQcancel| replace:: ``PQcancel()``
       .. _PQcancel: http://www.postgresql.org/docs/current/static/libpq-cancel.html#LIBPQ-PQCANCEL
+
    .. attribute:: dsn
 
       The readonly property that returns *dsn* string used by the
@@ -232,7 +247,12 @@ Example::
       `psycopg2.extensions`: see :ref:`connection-status-constants`
       for the available values.
 
-      The status is undefined for `closed` connectons.
+      The status is undefined for *closed* connectons.
+
+   .. attribute:: timeout
+
+      A read-only float representing default timeout for connection's
+      operations.
 
    The :class:`Connection` class also has several methods not
    described here.  Those methods are not supported in asynchronous
@@ -324,7 +344,12 @@ Cursor
       Read-only attribute returning a reference to the :class:`Connection`
       object on which the cursor was created.
 
-   .. method:: execute(operation [, parameters])
+   .. attribute:: timeout
+
+      A read-only float representing default timeout for cursor's
+      operations.
+
+   .. method:: execute(operation, parameters=None, *, timeout=None)
 
       Prepare and execute a database operation (query or command).
 
@@ -333,10 +358,12 @@ Cursor
       positional (``%s``) or named (:samp:`%({name})s`) placeholders. See
       :ref:`query-parameters`.
 
-      The method returns ``None``. If a query was executed, the returned
-      values can be retrieved using |fetch*|_ methods.
+      :param float timeout: overrides cursor's timeout if not ``None``.
 
-   .. method:: callproc(procname [, parameters])
+      :returns: ``None``. If a query was executed, the returned
+                values can be retrieved using |fetch*|_ methods.
+
+   .. method:: callproc(procname, parameters=None, *, timeout=None)
 
       Call a stored database procedure with the given name. The sequence of
       parameters must contain one entry for each argument that the procedure
@@ -347,16 +374,18 @@ Cursor
       The procedure may also provide a result set as output. This must then
       be made available through the standard |fetch*|_ methods.
 
-   .. method:: mogrify(operation [, parameters])
+      :param float timeout: overrides cursor's timeout if not ``None``.
 
-      Return a query string after arguments binding. The string returned is
-      exactly the one that would be sent to the database running the
-      :meth:`Cursor.execute` method or similar.
+   .. method:: mogrify(operation, parameters=None)
+
+      Returns a query string after arguments binding. The string
+      returned is exactly the one that would be sent to the database
+      running the :meth:`Cursor.execute` method or similar.
 
       The returned string is always a bytes string::
 
-          >>> cur.mogrify("INSERT INTO test (num, data) VALUES (%s, %s)", (42, 'bar'))
-          "INSERT INTO test (num, data) VALUES (42, E'bar')"
+         >>> cur.mogrify("INSERT INTO test (num, data) VALUES (%s, %s)", (42, 'bar'))
+         "INSERT INTO test (num, data) VALUES (42, E'bar')"
 
    .. method:: setinputsizes(sizes)
 
@@ -364,8 +393,7 @@ Cursor
       does nothing but it is safe to call it.
 
 
-
-   .. |fetch*| replace:: `!fetch*()`
+   .. |fetch*| replace:: ``fetch*()``
 
    .. _fetch*:
 
@@ -405,7 +433,7 @@ Cursor
       call was issued yet.
 
 
-   .. method:: fetchmany([size=cursor.arraysize])
+   .. method:: fetchmany(size=cursor.arraysize)
 
       Fetch the next set of rows of a query result, returning a list of
       tuples. An empty list is returned when no more rows are available.
@@ -450,7 +478,7 @@ Cursor
       call was issued yet.
 
 
-    .. method:: scroll(value [, mode='relative'])
+    .. method:: scroll(value, mode='relative')
 
        Scroll the cursor in the result set to a new position according
        to mode.
@@ -557,7 +585,7 @@ Cursor
       module.
 
 
-   .. method:: setoutputsize(size [, column])
+   .. method:: setoutputsize(size, column=None)
 
       This method is exposed in compliance with the :term:`DBAPI`. It currently
       does nothing but it is safe to call it.
@@ -593,7 +621,7 @@ The basic usage is::
 
 
 .. function:: create_pool(dsn=None, *, minsize=10, maxsize=10,\
-                          loop=None, **kwargs)
+                          loop=None, timeout=60.0, **kwargs)
 
    A :ref:`coroutine <coroutine>` that creates a pool of connections to
    :term:`PostgreSQL` database.
@@ -605,6 +633,9 @@ The basic usage is::
     :func:`asyncio.get_event_loop` is used if *loop* is not specified.
 
    *minsize* and *maxsize* are minimum and maximum sizes of the *pool*.
+
+   *timeout* is a default timeout (in seconds) for connection
+    operations. 60 secs if not specified.
 
    Returns :class:`Pool` instance.
 
@@ -651,6 +682,11 @@ The basic usage is::
 
       A count of free connections in the pool (*readonly*).
 
+   .. attribute:: timeout
+
+      A read-only float representing default timeout for operations
+      for connections from pool.
+
    .. method:: clear()
 
       A :ref:`coroutine <coroutine>` that closes all *free* connections
@@ -671,10 +707,27 @@ The basic usage is::
 
       .. warning:: The method is not a :ref:`coroutine <coroutine>`.
 
-   .. method:: cursor()
+   .. method:: cursor(name=None, cursor_factory=None, scrollable=None, \
+               withhold=False, *, timeout=None)
 
       A :ref:`coroutine<coroutine>` that :meth:`acquires <acquire>` a
       connection and returns *context manager*.
+
+      The only *cursor_factory* can be specified, all other
+      parameters are not supported by :term:`psycopg2` in
+      asynchronous mode yet.
+
+      The *cursor_factory* argument can be used to create
+      non-standard cursors. The argument must be a subclass of
+      `psycopg2.extensions.cursor`. See :ref:`subclassing-cursor` for
+      details. A default factory for the connection can also be
+      specified using the :attr:`Connection.cursor_factory` attribute.
+
+      *timeout* is a timeout for returned cursor instance if parameter
+      is not `None`.
+
+      *name*, *scrollable* and *withhold* parameters are not supported
+      by :term:`psycopg2` in asynchronous mode.
 
       The usage is::
 
@@ -682,6 +735,7 @@ The basic usage is::
              yield from cur.execute('SELECT 1')
 
       After exiting from *with block* cursor *cur* will be closed.
+
 
 .. _aiopg-core-exceptions:
 

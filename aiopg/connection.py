@@ -10,12 +10,15 @@ from .cursor import Cursor
 __all__ = ('connect',)
 
 
+TIMEOUT = 60.
+
+
 @asyncio.coroutine
-def connect(dsn=None, *, loop=None, **kwargs):
+def connect(dsn=None, *, timeout=TIMEOUT, loop=None, **kwargs):
     """A factory for connecting to PostgreSQL.
 
     The coroutine accepts all parameters that psycopg2.connect() does
-    plus optional keyword-only `loop` parameter.
+    plus optional keyword-only `loop` and `timeout` parameters.
 
     Returns instantiated Connection object.
 
@@ -24,8 +27,8 @@ def connect(dsn=None, *, loop=None, **kwargs):
         loop = asyncio.get_event_loop()
 
     waiter = asyncio.Future(loop=loop)
-    conn = Connection(dsn, loop, waiter, **kwargs)
-    yield from conn._poll(waiter)
+    conn = Connection(dsn, loop, timeout, waiter, **kwargs)
+    yield from conn._poll(waiter, timeout)
     return conn
 
 
@@ -37,12 +40,13 @@ class Connection:
 
     """
 
-    def __init__(self, dsn, loop, waiter, **kwargs):
+    def __init__(self, dsn, loop, timeout, waiter, **kwargs):
         self._loop = loop
         self._conn = psycopg2.connect(dsn, async=True, **kwargs)
         self._dsn = self._conn.dsn
         assert self._conn.isexecuting(), "Is conn async at all???"
         self._fileno = self._conn.fileno()
+        self._timeout = timeout
         self._waiter = waiter
         self._reading = False
         self._writing = False
@@ -114,11 +118,11 @@ class Connection:
         return self._waiter
 
     @asyncio.coroutine
-    def _poll(self, waiter):
+    def _poll(self, waiter, timeout):
         assert waiter is self._waiter, (waiter, self._waiter)
         self._ready()
         try:
-            yield from self._waiter
+            yield from asyncio.wait_for(self._waiter, timeout, loop=self._loop)
         finally:
             self._waiter = None
 
@@ -127,7 +131,7 @@ class Connection:
 
     @asyncio.coroutine
     def cursor(self, name=None, cursor_factory=None,
-               scrollable=None, withhold=False):
+               scrollable=None, withhold=False, timeout=None):
         """A coroutine that returns a new cursor object using the connection.
 
         *cursor_factory* argument can be used to create non-standard
@@ -138,11 +142,14 @@ class Connection:
         psycopg in asynchronous mode.
 
         """
+        if timeout is None:
+            timeout = self._timeout
+
         impl = yield from self._cursor(name=name,
                                        cursor_factory=cursor_factory,
                                        scrollable=scrollable,
                                        withhold=withhold)
-        return Cursor(self, impl)
+        return Cursor(self, impl, timeout)
 
     @asyncio.coroutine
     def _cursor(self, name=None, cursor_factory=None,
@@ -231,11 +238,13 @@ class Connection:
             "tpc_recover cannot be used in asynchronous mode")
 
     @asyncio.coroutine
-    def cancel(self):
+    def cancel(self, timeout=None):
         """Cancel the current database operation."""
         waiter = self._create_waiter('cancel')
         self._conn.cancel()
-        yield from self._poll(waiter)
+        if timeout is None:
+            timeout = self._timeout
+        yield from self._poll(waiter, timeout)
 
     @asyncio.coroutine
     def reset(self):
@@ -339,3 +348,8 @@ class Connection:
     def lobject(self, *args, **kwargs):
         raise psycopg2.ProgrammingError(
             "lobject cannot be used in asynchronous mode")
+
+    @property
+    def timeout(self):
+        """Return default timeout for connection operations."""
+        return self._timeout

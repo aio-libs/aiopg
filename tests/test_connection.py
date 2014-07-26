@@ -5,8 +5,9 @@ import psycopg2.extras
 import socket
 import random
 import unittest
+import time
 
-from aiopg.connection import Connection
+from aiopg.connection import Connection, TIMEOUT
 from aiopg.cursor import Cursor
 from unittest import mock
 
@@ -564,5 +565,41 @@ class TestConnection(unittest.TestCase):
                                             loop=self.loop)
             yield from asyncio.gather(waiter(conn), closer(conn),
                                       loop=self.loop)
+
+        self.loop.run_until_complete(go())
+
+    def test_connection_timeout(self):
+        @asyncio.coroutine
+        def go():
+            timeout = 0.1
+            conn = yield from self.connect(timeout=timeout)
+            self.assertEqual(timeout, conn.timeout)
+            cur = yield from conn.cursor()
+            self.assertEqual(timeout, cur.timeout)
+
+            t1 = time.time()
+            with self.assertRaises(asyncio.TimeoutError):
+                yield from cur.execute("SELECT pg_sleep(1)")
+            t2 = time.time()
+            dt = t2 - t1
+            self.assertTrue(0.09 <= dt <= 0.11, dt)
+
+        self.loop.run_until_complete(go())
+
+    def test_override_cursor_timeout(self):
+        @asyncio.coroutine
+        def go():
+            timeout = 0.1
+            conn = yield from self.connect()
+            self.assertEqual(TIMEOUT, conn.timeout)
+            cur = yield from conn.cursor(timeout=timeout)
+            self.assertEqual(timeout, cur.timeout)
+
+            t1 = time.time()
+            with self.assertRaises(asyncio.TimeoutError):
+                yield from cur.execute("SELECT pg_sleep(1)")
+            t2 = time.time()
+            dt = t2 - t1
+            self.assertTrue(0.09 <= dt <= 0.11, dt)
 
         self.loop.run_until_complete(go())

@@ -1,5 +1,6 @@
 import asyncio
 from aiopg import sa
+from aiopg.connection import TIMEOUT
 
 import unittest
 
@@ -23,18 +24,20 @@ class TestEngine(unittest.TestCase):
         self.loop.close()
 
     @asyncio.coroutine
-    def make_engine(self, use_loop=True):
+    def make_engine(self, use_loop=True, **kwargs):
         if use_loop:
             return (yield from sa.create_engine(database='aiopg',
                                                 user='aiopg',
                                                 password='passwd',
                                                 host='127.0.0.1',
-                                                loop=self.loop))
+                                                loop=self.loop,
+                                                **kwargs))
         else:
             return (yield from sa.create_engine(database='aiopg',
                                                 user='aiopg',
                                                 password='passwd',
-                                                host='127.0.0.1'))
+                                                host='127.0.0.1',
+                                                **kwargs))
 
     @asyncio.coroutine
     def start(self):
@@ -85,4 +88,18 @@ class TestEngine(unittest.TestCase):
             with self.assertRaises(sa.InvalidRequestError):
                 self.engine.release(conn)
             del tr
+        self.loop.run_until_complete(go())
+
+    def test_timeout(self):
+        self.assertEqual(TIMEOUT, self.engine.timeout)
+
+    def test_timeout_override(self):
+        @asyncio.coroutine
+        def go():
+            timeout = 1
+            engine = yield from self.make_engine(timeout=timeout)
+            self.assertEqual(timeout, engine.timeout)
+            conn = yield from engine.acquire()
+            with self.assertRaises(asyncio.TimeoutError):
+                yield from conn.execute("SELECT pg_sleep(10)")
         self.loop.run_until_complete(go())

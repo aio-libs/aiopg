@@ -2,17 +2,17 @@ import asyncio
 
 from psycopg2.extensions import TRANSACTION_STATUS_IDLE
 
-from .connection import connect
+from .connection import connect, TIMEOUT
 from .log import logger
 
 
 @asyncio.coroutine
 def create_pool(dsn=None, *, minsize=10, maxsize=10,
-                loop=None, **kwargs):
+                loop=None, timeout=TIMEOUT, **kwargs):
     if loop is None:
         loop = asyncio.get_event_loop()
 
-    pool = Pool(dsn, minsize, maxsize, loop, **kwargs)
+    pool = Pool(dsn, minsize, maxsize, loop, timeout, **kwargs)
     yield from pool._fill_free_pool()
     return pool
 
@@ -20,10 +20,11 @@ def create_pool(dsn=None, *, minsize=10, maxsize=10,
 class Pool:
     """Connection pool"""
 
-    def __init__(self, dsn, minsize, maxsize, loop, **kwargs):
+    def __init__(self, dsn, minsize, maxsize, loop, timeout, **kwargs):
         self._dsn = dsn
         self._minsize = minsize
         self._loop = loop
+        self._timeout = timeout
         self._conn_kwargs = kwargs
         self._free = asyncio.queues.Queue(maxsize, loop=self._loop)
         self._used = set()
@@ -44,6 +45,10 @@ class Pool:
     def freesize(self):
         return self._free.qsize()
 
+    @property
+    def timeout(self):
+        return self._timeout
+
     @asyncio.coroutine
     def clear(self):
         """Close all free connections in pool."""
@@ -59,7 +64,7 @@ class Pool:
             conn = yield from self._free.get()
         else:
             conn = yield from connect(
-                self._dsn, loop=self._loop,
+                self._dsn, loop=self._loop, timeout=self._timeout,
                 **self._conn_kwargs)
         assert not conn.closed, conn
         assert conn not in self._used, (conn, self._used)
@@ -70,7 +75,7 @@ class Pool:
     def _fill_free_pool(self):
         while self.freesize < self.minsize and self.size < self.maxsize:
             conn = yield from connect(
-                self._dsn, loop=self._loop,
+                self._dsn, loop=self._loop, timeout=self._timeout,
                 **self._conn_kwargs)
             yield from self._free.put(conn)
 
@@ -104,11 +109,12 @@ class Pool:
 
     @asyncio.coroutine
     def cursor(self, name=None, cursor_factory=None,
-               scrollable=None, withhold=False):
+               scrollable=None, withhold=False, *, timeout=None):
         """XXX"""
         conn = yield from self.acquire()
         cur = yield from conn.cursor(name=name, cursor_factory=cursor_factory,
-                                     scrollable=scrollable, withhold=withhold)
+                                     scrollable=scrollable, withhold=withhold,
+                                     timeout=timeout)
         return _CursorContextManager(self, conn, cur)
 
     def __enter__(self):
