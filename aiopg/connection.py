@@ -67,7 +67,8 @@ class Connection:
             if self._writing:
                 self._loop.remove_writer(self._fileno)
                 self._writing = False
-            self._waiter.set_exception(exc)
+            if not self._waiter.cancelled():
+                self._waiter.set_exception(exc)
         else:
             if state == POLL_OK:
                 if self._reading:
@@ -76,7 +77,8 @@ class Connection:
                 if self._writing:
                     self._loop.remove_writer(self._fileno)
                     self._writing = False
-                self._waiter.set_result(None)
+                if not self._waiter.cancelled():
+                    self._waiter.set_result(None)
             elif state == POLL_READ:
                 if not self._reading:
                     self._loop.add_reader(self._fileno, self._ready)
