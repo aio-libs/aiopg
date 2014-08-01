@@ -543,6 +543,20 @@ Transaction objects
 
    The interface is the same as that of :class:`Transaction`.
 
+   .. seealso:: PostgreSQL commands for nested transactions:
+
+      * SAVEPOINT_
+      * `RELEASE SAVEPOINT`_
+      * `ROLLBACK TO SAVEPOINT`_
+
+.. _SAVEPOINT: http://www.postgresql.org/docs/current/static/sql-savepoint.html
+
+.. _RELEASE SAVEPOINT:
+   http://www.postgresql.org/docs/current/static/sql-release-savepoint.html
+
+.. _ROLLBACK TO SAVEPOINT:
+   http://www.postgresql.org/docs/current/static/sql-rollback-to.html
+
 
 .. class:: TwoPhaseTransaction
 
@@ -565,3 +579,18 @@ Transaction objects
       This method is a :ref:`coroutine <coroutine>`.
 
       After a PREPARE, the transaction can be committed.
+
+   .. seealso:: PostgreSQL commands for two phase transactions:
+
+      * `PREPARE TRANSACTION`_
+      * `COMMIT PREPARED`_
+      * `ROLLBACK PREPARED`_
+
+.. _PREPARE TRANSACTION:
+   http://www.postgresql.org/docs/current/static/sql-prepare-transaction.html
+
+.. _COMMIT PREPARED:
+   http://www.postgresql.org/docs/current/static/sql-commit-prepared.html
+
+.. _ROLLBACK PREPARED:
+   http://www.postgresql.org/docs/current/static/sql-rollback-prepared.html
