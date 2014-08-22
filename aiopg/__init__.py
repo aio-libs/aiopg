@@ -27,7 +27,7 @@ def _parse_version(ver):
         major = int(match.group('major'))
         minor = int(match.group('minor'))
         micro = int(match.group('micro'))
-        levels = {'rc': 'candidate',
+        levels = {'c': 'candidate',
                   'a': 'alpha',
                   'b': 'beta',
                   None: 'final'}
