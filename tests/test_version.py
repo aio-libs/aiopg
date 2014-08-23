@@ -14,8 +14,8 @@ class VersionTests(unittest.TestCase):
         self.assertEqual((0, 1, 2, 'beta', 0), _parse_version('0.1.2b'))
 
     def test_rc(self):
-        self.assertEqual((0, 1, 2, 'candidate', 5), _parse_version('0.1.2rc5'))
-        self.assertEqual((0, 1, 2, 'candidate', 0), _parse_version('0.1.2rc'))
+        self.assertEqual((0, 1, 2, 'candidate', 5), _parse_version('0.1.2c5'))
+        self.assertEqual((0, 1, 2, 'candidate', 0), _parse_version('0.1.2c'))
 
     def test_final(self):
         self.assertEqual((0, 1, 2, 'final', 0), _parse_version('0.1.2'))
