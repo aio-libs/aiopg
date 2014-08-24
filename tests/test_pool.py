@@ -44,6 +44,20 @@ class TestPool(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
+    def test_create_pool2(self):
+
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool(minsize=10, maxsize=20)
+            self.assertIsInstance(pool, Pool)
+            self.assertEqual(10, pool.minsize)
+            self.assertEqual(20, pool.maxsize)
+            self.assertEqual(10, pool.size)
+            self.assertEqual(10, pool.freesize)
+            self.assertEqual(TIMEOUT, pool.timeout)
+
+        self.loop.run_until_complete(go())
+
     def test_acquire(self):
 
         @asyncio.coroutine
@@ -325,5 +339,18 @@ class TestPool(unittest.TestCase):
             pool = yield from self.create_pool()
             with (yield from pool.cursor(timeout=timeout)) as cur:
                 self.assertEqual(timeout, cur.timeout)
+
+        self.loop.run_until_complete(go())
+
+    def test_concurrency(self):
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool(minsize=2, maxsize=4)
+            c1 = yield from pool.acquire()
+            self.addCleanup(pool.release, c1)
+            c2 = yield from pool.acquire()
+            self.addCleanup(pool.release, c2)
+            self.assertEqual(0, pool.freesize)
+            self.assertEqual(2, pool.size)
 
         self.loop.run_until_complete(go())

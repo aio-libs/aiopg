@@ -13,7 +13,7 @@ def create_pool(dsn=None, *, minsize=10, maxsize=10,
         loop = asyncio.get_event_loop()
 
     pool = Pool(dsn, minsize, maxsize, loop, timeout, **kwargs)
-    yield from pool._fill_free_pool()
+    yield from pool._fill_free_pool(False)
     return pool
 
 
@@ -59,21 +59,23 @@ class Pool:
     @asyncio.coroutine
     def acquire(self):
         """Acquire free connection from the pool."""
-        yield from self._fill_free_pool()
-        if self.minsize > 0 or not self._free.empty():
-            conn = yield from self._free.get()
-        else:
-            conn = yield from connect(
-                self._dsn, loop=self._loop, timeout=self._timeout,
-                **self._conn_kwargs)
+        yield from self._fill_free_pool(True)
+        conn = yield from self._free.get()
         assert not conn.closed, conn
         assert conn not in self._used, (conn, self._used)
         self._used.add(conn)
         return conn
 
     @asyncio.coroutine
-    def _fill_free_pool(self):
-        while self.freesize < self.minsize and self.size < self.maxsize:
+    def _fill_free_pool(self, override_min):
+        while self.size < self.minsize:
+            conn = yield from connect(
+                self._dsn, loop=self._loop, timeout=self._timeout,
+                **self._conn_kwargs)
+            yield from self._free.put(conn)
+        if not self._free.empty():
+            return
+        if override_min and self.size < self.maxsize:
             conn = yield from connect(
                 self._dsn, loop=self._loop, timeout=self._timeout,
                 **self._conn_kwargs)
