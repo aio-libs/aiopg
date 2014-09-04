@@ -38,7 +38,6 @@ from unittest.signals import installHandler
 
 assert sys.version >= '3.3', 'Please use Python 3.3 or higher.'
 
-os.environ['PYTHONASYNCIODEBUG'] = '1'
 
 ARGS = argparse.ArgumentParser(description="Run all unittests.")
 ARGS.add_argument(
@@ -67,8 +66,12 @@ ARGS.add_argument(
     '--coverage', action="store_true", dest='coverage',
     help='enable html coverage report')
 ARGS.add_argument(
+    '--aiodebug', action="store_true", default=False,
+    help='switch on extended asyncio debug mode')
+ARGS.add_argument(
     'pattern', action="store", nargs="*",
     help='optional regex patterns to match test ids (default all tests)')
+
 
 COV_ARGS = argparse.ArgumentParser(description="Run all unittests.")
 COV_ARGS.add_argument(
@@ -205,6 +208,9 @@ class TestRunner(unittest.TextTestRunner):
 
 def runtests():
     args = ARGS.parse_args()
+
+    if args.aiodebug:
+        os.environ['PYTHONASYNCIODEBUG'] = '1'
 
     if args.coverage and coverage is None:
         print("Coverage package is not installed.")

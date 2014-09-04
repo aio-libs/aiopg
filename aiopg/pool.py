@@ -21,6 +21,10 @@ class Pool:
     """Connection pool"""
 
     def __init__(self, dsn, minsize, maxsize, loop, timeout, **kwargs):
+        if minsize < 0:
+            raise ValueError("minsize should be zero or greater")
+        if maxsize < minsize:
+            raise ValueError("maxsize should be not less than minsize")
         self._dsn = dsn
         self._minsize = minsize
         self._loop = loop
