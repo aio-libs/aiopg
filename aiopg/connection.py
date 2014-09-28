@@ -3,6 +3,7 @@ import asyncio
 import psycopg2
 from psycopg2.extensions import (
     POLL_OK, POLL_READ, POLL_WRITE, POLL_ERROR)
+from psycopg2 import extras
 
 from .cursor import Cursor
 
@@ -14,7 +15,8 @@ TIMEOUT = 60.
 
 
 @asyncio.coroutine
-def connect(dsn=None, *, timeout=TIMEOUT, loop=None, **kwargs):
+def connect(dsn=None, *, timeout=TIMEOUT, loop=None,
+            enable_json=True, **kwargs):
     """A factory for connecting to PostgreSQL.
 
     The coroutine accepts all parameters that psycopg2.connect() does
@@ -29,6 +31,8 @@ def connect(dsn=None, *, timeout=TIMEOUT, loop=None, **kwargs):
     waiter = asyncio.Future(loop=loop)
     conn = Connection(dsn, loop, timeout, waiter, **kwargs)
     yield from conn._poll(waiter, timeout)
+    if enable_json:
+        extras.register_default_json(conn._conn)
     return conn
 
 
