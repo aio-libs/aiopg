@@ -20,14 +20,17 @@ def create_pool(dsn=None, *, minsize=10, maxsize=10,
 class Pool:
     """Connection pool"""
 
-    def __init__(self, dsn, minsize, maxsize, loop, timeout, **kwargs):
+    def __init__(self, dsn, minsize, maxsize, loop=None, timeout=TIMEOUT, **kwargs):
         if minsize < 0:
             raise ValueError("minsize should be zero or greater")
         if maxsize < minsize:
             raise ValueError("maxsize should be not less than minsize")
         self._dsn = dsn
         self._minsize = minsize
-        self._loop = loop
+        if loop:
+            self._loop = loop
+        else:
+            self._loop = asyncio.get_event_loop()
         self._timeout = timeout
         self._conn_kwargs = kwargs
         self._free = asyncio.queues.Queue(maxsize, loop=self._loop)
