@@ -47,7 +47,7 @@ class TestEngine(unittest.TestCase):
                                     "(id serial, name varchar(255))")
 
     def test_dialect(self):
-        self.assertEqual(sa.dialect, self.engine.dialect)
+        self.assertEqual(sa.engine._dialect, self.engine.dialect)
 
     def test_name(self):
         self.assertEqual('postgresql', self.engine.name)

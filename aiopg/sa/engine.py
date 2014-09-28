@@ -5,23 +5,25 @@ except ImportError:  # pragma: no cover
 
 import asyncio
 import aiopg
+import json
 
 from .connection import SAConnection
 from .exc import InvalidRequestError
 from aiopg.connection import TIMEOUT
 
 
-dialect = PGDialect_psycopg2()
-dialect.implicit_returning = True
-dialect.supports_native_enum = True
-dialect.supports_smallserial = True  # 9.2+
-dialect._backslash_escapes = False
-dialect.supports_sane_multi_rowcount = True  # psycopg 2.0.9+
+_dialect = PGDialect_psycopg2(json_serializer=json.dumps,
+                              json_deserialize=json.loads)
+_dialect.implicit_returning = True
+_dialect.supports_native_enum = True
+_dialect.supports_smallserial = True  # 9.2+
+_dialect._backslash_escapes = False
+_dialect.supports_sane_multi_rowcount = True  # psycopg 2.0.9+
 
 
 @asyncio.coroutine
 def create_engine(dsn=None, *, minsize=10, maxsize=10, loop=None,
-                  dialect=dialect, timeout=TIMEOUT, **kwargs):
+                  dialect=_dialect, timeout=TIMEOUT, **kwargs):
     """A coroutine for Engine creation.
 
     Returns Engine instance with embedded connection pool.

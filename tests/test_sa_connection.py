@@ -39,7 +39,7 @@ class TestSAConnection(unittest.TestCase):
         yield from cur.execute("INSERT INTO sa_tbl (name)"
                                "VALUES ('first')")
         cur.close()
-        return sa.SAConnection(conn, sa.dialect)
+        return sa.SAConnection(conn, sa.engine._dialect)
 
     def test_execute_text_select(self):
         @asyncio.coroutine

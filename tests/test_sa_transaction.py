@@ -53,7 +53,7 @@ class TestTransaction(unittest.TestCase):
                                   host='127.0.0.1',
                                   loop=self.loop,
                                   **kwargs)
-        ret = sa.SAConnection(conn, sa.dialect)
+        ret = sa.SAConnection(conn, sa.engine._dialect)
         return ret
 
     def test_without_transactions(self):
