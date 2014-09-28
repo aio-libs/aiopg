@@ -1,6 +1,7 @@
 import asyncio
 
 import psycopg2
+from psycopg2.extras import register_hstore
 from psycopg2.extensions import (
     POLL_OK, POLL_READ, POLL_WRITE, POLL_ERROR)
 
@@ -40,7 +41,7 @@ class Connection:
 
     """
 
-    def __init__(self, dsn, loop, timeout, waiter, **kwargs):
+    def __init__(self, dsn, loop, timeout, waiter, hstore_oid, **kwargs):
         self._loop = loop
         self._conn = psycopg2.connect(dsn, async=True, **kwargs)
         self._dsn = self._conn.dsn
@@ -50,6 +51,7 @@ class Connection:
         self._waiter = waiter
         self._reading = False
         self._writing = False
+        self._hstore_oid = hstore_oid
         self._ready()
 
     def _ready(self):
@@ -162,6 +164,7 @@ class Connection:
         else:
             impl = self._conn.cursor(name=name, cursor_factory=cursor_factory,
                                      scrollable=scrollable, withhold=withhold)
+        register_hstore(impl, oid=self._hstore_oid)       # hstore
         return impl
 
     @asyncio.coroutine
