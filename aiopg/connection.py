@@ -164,7 +164,8 @@ class Connection:
         else:
             impl = self._conn.cursor(name=name, cursor_factory=cursor_factory,
                                      scrollable=scrollable, withhold=withhold)
-        register_hstore(impl, oid=self._hstore_oid)       # hstore
+        if self._hstore_oid:
+            register_hstore(impl, oid=self._hstore_oid)       # hstore
         return impl
 
     @asyncio.coroutine
