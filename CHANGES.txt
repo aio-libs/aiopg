@@ -4,7 +4,9 @@ CHANGES
 0.4.0 (XXXX-XX-XX)
 ^^^^^^^^^^^^^^^^^^
 
-* add timeouts for database operations
+* add timeouts for database operations.
+
+* Autoregister psycopg2 support for json data type.
 
 0.3.2 (2014-07-07)
 ^^^^^^^^^^^^^^^^^^

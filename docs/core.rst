@@ -760,3 +760,29 @@ Just execute **BEGIN** and **COMMIT** statements manually.
 
 :meth:`Connection.commit` and :meth:`Connection.rollback` methods are
 disabled and always raises :exc:`psycopg2.ProgrammingError` exception.
+
+
+.. _aiopg-core-extension-type-translations:
+
+Extension type translations
+---------------------------
+
+JSON
+^^^^
+
+:mod:`aiopg` has support for ``JSON`` data type enabled by default.
+
+For pushing data to server please wrap json dict into
+:class:`psycopg2.extras.Json`::
+
+   from psycopg2.extras import Json
+
+   data = {'a': 1, 'b': 'str'}
+   yield from cur.execute("INSERT INTO tbl (val) VALUES (%s)", [Json(data)])
+
+On receiving data from json column :term:`psycopg2` autoconvers result
+into python :class:`dict` object::
+
+   yield from cur.execute("SELECT val FROM tbl")
+   item = yield from cur.fetchone()
+   assert item == {'b': 'str', 'a': 1}
