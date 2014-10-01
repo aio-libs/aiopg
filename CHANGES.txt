@@ -8,6 +8,10 @@ CHANGES
 
 * Autoregister psycopg2 support for json data type.
 
+* Support JSON in aiopg.sa
+
+* Support ARRAY in aiopg.sa
+
 0.3.2 (2014-07-07)
 ^^^^^^^^^^^^^^^^^^
 
