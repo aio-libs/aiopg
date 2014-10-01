@@ -2,6 +2,7 @@ import asyncio
 import weakref
 
 from sqlalchemy.sql import ClauseElement
+from sqlalchemy.sql.ddl import DDLElement
 
 from . import exc
 from .result import ResultProxy
@@ -73,13 +74,24 @@ class SAConnection:
                 raise exc.ArgumentError("Don't mix sqlalchemy clause "
                                         "and execution with parameters")
             compiled = query.compile(dialect=self._dialect)
-            parameters = compiled.params
-            try:
+            # parameters = compiled.params
+            if not isinstance(query, DDLElement):
+                compiled_parameters = [compiled.construct_params()]
+                processed_parameters = []
+                processors = compiled._bind_processors
+                for compiled_params in compiled_parameters:
+                    params = {key: (processors[key](compiled_params[key])
+                                    if key in processors
+                                    else compiled_params[key])
+                              for key in compiled_params}
+                    processed_parameters.append(params)
+                post_processed_params = self._dialect.execute_sequence_format(
+                    processed_parameters)
                 result_map = compiled.result_map
-            except AttributeError:
-                # Some expressions (e.g. DDL) may not have a result map
+            else:
+                post_processed_params = [compiled.construct_params()]
                 result_map = None
-            yield from cursor.execute(str(compiled), parameters)
+            yield from cursor.execute(str(compiled), post_processed_params[0])
         else:
             raise exc.ArgumentError("sql statement should be str or "
                                     "SQLAlchemy data "
