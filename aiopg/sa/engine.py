@@ -19,6 +19,7 @@ _dialect.supports_native_enum = True
 _dialect.supports_smallserial = True  # 9.2+
 _dialect._backslash_escapes = False
 _dialect.supports_sane_multi_rowcount = True  # psycopg 2.0.9+
+_dialect._has_native_hstore = True
 
 
 @asyncio.coroutine

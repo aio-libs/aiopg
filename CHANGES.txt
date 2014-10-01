@@ -12,6 +12,10 @@ CHANGES
 
 * Support ARRAY in aiopg.sa
 
+* Autoregister hstore support if present in connected DB
+
+* Support HSTORE in aiopg.sa
+
 0.3.2 (2014-07-07)
 ^^^^^^^^^^^^^^^^^^
 

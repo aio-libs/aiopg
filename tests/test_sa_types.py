@@ -73,7 +73,7 @@ class TestSATypes(unittest.TestCase):
         @asyncio.coroutine
         def go():
             engine = yield from self.connect()
-            data = {'a': 1, 'b': 'name'}
+            data = {'a': 'str', 'b': 'name'}
             with (yield from engine) as conn:
                 yield from conn.execute(tbl.insert().values(hstore_val=data))
 
