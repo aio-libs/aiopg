@@ -51,5 +51,5 @@ class TestSATypes(unittest.TestCase):
 
                 ret = yield from conn.execute(tbl.select())
                 item = yield from ret.fetchone()
-                self.assertEqual(1, item['json_val'])
+                self.assertEqual(data, item['json_val'])
         self.loop.run_until_complete(go())

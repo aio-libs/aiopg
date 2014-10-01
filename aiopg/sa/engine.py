@@ -13,7 +13,7 @@ from aiopg.connection import TIMEOUT
 
 
 _dialect = PGDialect_psycopg2(json_serializer=json.dumps,
-                              json_deserialize=json.loads)
+                              json_deserializer=lambda x: x)
 _dialect.implicit_returning = True
 _dialect.supports_native_enum = True
 _dialect.supports_smallserial = True  # 9.2+
