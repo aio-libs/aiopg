@@ -17,7 +17,7 @@ before_script:
   - psql -c "create database aiopg;" -U postgres
   - psql -c "create user aiopg with password 'passwd';" -U postgres
   - psql -c "grant all privileges on database aiopg to aiopg;" -U postgres
-  - psql -c "create extension hstore;" -U aiopg -d aiopg
+  - psql -c "create extension hstore;" -U postgres -d aiopg
 
 script:
   - pep8 aiopg examples tests
