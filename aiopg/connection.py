@@ -15,8 +15,26 @@ TIMEOUT = 60.
 
 
 @asyncio.coroutine
+def _enable_hstore(conn):
+    cur = yield from conn.cursor()
+    yield from cur.execute("""\
+SELECT t.oid, typarray
+FROM pg_type t JOIN pg_namespace ns
+    ON typnamespace = ns.oid
+WHERE typname = 'hstore';
+""")
+    rv0, rv1 = [], []
+    for oids in (yield from cur.fetchall()):
+        rv0.append(oids[0])
+        rv1.append(oids[1])
+
+    cur.close()
+    return tuple(rv0), tuple(rv1)
+
+
+@asyncio.coroutine
 def connect(dsn=None, *, timeout=TIMEOUT, loop=None,
-            enable_json=True, **kwargs):
+            enable_json=True, enable_hstore=True, **kwargs):
     """A factory for connecting to PostgreSQL.
 
     The coroutine accepts all parameters that psycopg2.connect() does
@@ -33,6 +51,11 @@ def connect(dsn=None, *, timeout=TIMEOUT, loop=None,
     yield from conn._poll(waiter, timeout)
     if enable_json:
         extras.register_default_json(conn._conn)
+    if enable_hstore:
+        oids = yield from _enable_hstore(conn)
+        if oids is not None:
+            oid, array_oid = oids
+            extras.register_hstore(conn._conn, oid=oid, array_oid=array_oid)
     return conn
 
 

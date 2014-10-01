@@ -6,7 +6,7 @@ from aiopg import sa
 
 from sqlalchemy import MetaData, Table, Column, Integer
 from sqlalchemy.schema import CreateTable, DropTable
-from sqlalchemy.dialects.postgresql import ARRAY, JSON
+from sqlalchemy.dialects.postgresql import ARRAY, JSON, HSTORE
 
 
 meta = MetaData()
@@ -14,7 +14,8 @@ tbl = Table('sa_tbl_types', meta,
             Column('id', Integer, nullable=False,
                    primary_key=True),
             Column('json_val', JSON),
-            Column('array_val', ARRAY(Integer)))
+            Column('array_val', ARRAY(Integer)),
+            Column('hstore_val', HSTORE))
 
 
 class TestSATypes(unittest.TestCase):
@@ -66,4 +67,17 @@ class TestSATypes(unittest.TestCase):
                 ret = yield from conn.execute(tbl.select())
                 item = yield from ret.fetchone()
                 self.assertEqual(data, item['array_val'])
+        self.loop.run_until_complete(go())
+
+    def test_hstore(self):
+        @asyncio.coroutine
+        def go():
+            engine = yield from self.connect()
+            data = {'a': 'str', 'b': 'name'}
+            with (yield from engine) as conn:
+                yield from conn.execute(tbl.insert().values(hstore_val=data))
+
+                ret = yield from conn.execute(tbl.select())
+                item = yield from ret.fetchone()
+                self.assertEqual(data, item['hstore_val'])
         self.loop.run_until_complete(go())
