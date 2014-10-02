@@ -343,6 +343,10 @@ Cursor
       :exc:`psycopg2.InterfaceError` will be raised if any operation is
       attempted with the cursor.
 
+      .. note:: :meth:`close` is not a :ref:`coroutine <coroutine>`,
+                you don't need to wait it via ``yield from
+                curs.close()``.
+
    .. attribute:: closed
 
       Read-only boolean attribute: specifies if the cursor is closed
@@ -427,7 +431,7 @@ Cursor
 
          >>> cur.execute("SELECT * FROM test;")
          >>> for record in cur:
-         ...     print record
+         ...     print(record)
          ...
          (1, 100, "abc'def")
          (2, None, 'dada')
