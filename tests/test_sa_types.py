@@ -6,7 +6,7 @@ from aiopg import sa
 
 from sqlalchemy import MetaData, Table, Column, Integer
 from sqlalchemy.schema import CreateTable, DropTable
-from sqlalchemy.dialects.postgresql import ARRAY, JSON, HSTORE
+from sqlalchemy.dialects.postgresql import ARRAY, JSON, HSTORE, ENUM
 
 
 meta = MetaData()
@@ -15,7 +15,8 @@ tbl = Table('sa_tbl_types', meta,
                    primary_key=True),
             Column('json_val', JSON),
             Column('array_val', ARRAY(Integer)),
-            Column('hstore_val', HSTORE))
+            Column('hstore_val', HSTORE),
+            Column('enum_val', ENUM('first', 'second', name='simple_enum')))
 
 
 class TestSATypes(unittest.TestCase):
@@ -40,6 +41,9 @@ class TestSATypes(unittest.TestCase):
                 yield from conn.execute(DropTable(tbl))
             except psycopg2.ProgrammingError:
                 pass
+            yield from conn.execute("DROP TYPE IF EXISTS simple_enum;")
+            yield from conn.execute("""CREATE TYPE simple_enum AS ENUM
+                                       ('first', 'second');""")
             yield from conn.execute(CreateTable(tbl))
         return engine
 
@@ -80,4 +84,16 @@ class TestSATypes(unittest.TestCase):
                 ret = yield from conn.execute(tbl.select())
                 item = yield from ret.fetchone()
                 self.assertEqual(data, item['hstore_val'])
+        self.loop.run_until_complete(go())
+
+    def test_enum(self):
+        @asyncio.coroutine
+        def go():
+            engine = yield from self.connect()
+            with (yield from engine) as conn:
+                yield from conn.execute(tbl.insert().values(enum_val='second'))
+
+                ret = yield from conn.execute(tbl.select())
+                item = yield from ret.fetchone()
+                self.assertEqual('second', item['enum_val'])
         self.loop.run_until_complete(go())
