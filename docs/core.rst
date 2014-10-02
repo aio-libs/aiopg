@@ -28,7 +28,8 @@ Example::
       ret = yield from cur.fetchall()
 
 
-.. function:: connect(dsn=None, *, loop=None, timeout=60.0, **kwargs)
+.. function:: connect(dsn=None, *, loop=None, timeout=60.0, \
+                      enable_json=True, enable_hstore=True, **kwargs)
 
    A :ref:`coroutine <coroutine>` that connects to PostgreSQL.
 
@@ -39,7 +40,20 @@ Example::
 
    :param float timeout: default timeout (in seconds) for connection operations.
 
-                         60 secs if not specified.
+                         60 secs by default.
+
+   :param bool enable_json: enable json column types for connection.
+
+                         ``True`` by default.
+
+   :param bool enable_hstore: try to enable hstore column types for connection.
+
+                         ``True`` by default.
+
+                         For using HSTORE columns extension should be
+                         installed in database first::
+
+                             CREATE EXTENSION HSTORE
 
    :returns: :class:`Connection` instance.
 
@@ -621,6 +635,7 @@ The basic usage is::
 
 
 .. function:: create_pool(dsn=None, *, minsize=10, maxsize=10,\
+                          enable_json=True, enable_hstore=True, \
                           loop=None, timeout=60.0, **kwargs)
 
    A :ref:`coroutine <coroutine>` that creates a pool of connections to
@@ -636,6 +651,21 @@ The basic usage is::
 
    *timeout* is a default timeout (in seconds) for connection
     operations. 60 secs if not specified.
+
+   *enable_json* --- enable json column types for connections
+   created by the pool.
+
+      ``True`` by default.
+
+   *enable_hstore* --- try to enable hstore column types for connections
+   created by the pool.
+
+      ``True`` by default.
+
+      For using HSTORE columns extension should be
+      installed in database first::
+
+         CREATE EXTENSION HSTORE
 
    Returns :class:`Pool` instance.
 
