@@ -2,13 +2,16 @@ import asyncio
 
 import psycopg2
 
+from .log import logger
+
 
 class Cursor:
 
-    def __init__(self, conn, impl, timeout):
+    def __init__(self, conn, impl, timeout, echo):
         self._conn = conn
         self._impl = impl
         self._timeout = timeout
+        self._echo = echo
 
     @property
     def description(self):
@@ -91,6 +94,9 @@ class Cursor:
         if timeout is None:
             timeout = self._timeout
         waiter = self._conn._create_waiter('cursor.execute')
+        if self._echo:
+            logger.info(operation)
+            logger.info("%r", parameters)
         self._impl.execute(operation, parameters)
         yield from self._conn._poll(waiter, timeout)
 
@@ -114,6 +120,9 @@ class Cursor:
         if timeout is None:
             timeout = self._timeout
         waiter = self._conn._create_waiter('cursor.callproc')
+        if self._echo:
+            logger.info("CALL %s", procname)
+            logger.info("%r", parameters)
         self._impl.callproc(procname, parameters)
         yield from self._conn._poll(waiter, timeout)
 

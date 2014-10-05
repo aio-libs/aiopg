@@ -34,7 +34,7 @@ WHERE typname = 'hstore';
 
 @asyncio.coroutine
 def connect(dsn=None, *, timeout=TIMEOUT, loop=None,
-            enable_json=True, enable_hstore=True, **kwargs):
+            enable_json=True, enable_hstore=True, echo=False, **kwargs):
     """A factory for connecting to PostgreSQL.
 
     The coroutine accepts all parameters that psycopg2.connect() does
@@ -47,7 +47,7 @@ def connect(dsn=None, *, timeout=TIMEOUT, loop=None,
         loop = asyncio.get_event_loop()
 
     waiter = asyncio.Future(loop=loop)
-    conn = Connection(dsn, loop, timeout, waiter, **kwargs)
+    conn = Connection(dsn, loop, timeout, waiter, echo, **kwargs)
     yield from conn._poll(waiter, timeout)
     if enable_json:
         extras.register_default_json(conn._conn)
@@ -67,7 +67,7 @@ class Connection:
 
     """
 
-    def __init__(self, dsn, loop, timeout, waiter, **kwargs):
+    def __init__(self, dsn, loop, timeout, waiter, echo, **kwargs):
         self._loop = loop
         self._conn = psycopg2.connect(dsn, async=True, **kwargs)
         self._dsn = self._conn.dsn
@@ -77,6 +77,7 @@ class Connection:
         self._waiter = waiter
         self._reading = False
         self._writing = False
+        self._echo = echo
         self._ready()
 
     def _ready(self):
@@ -178,7 +179,7 @@ class Connection:
                                        cursor_factory=cursor_factory,
                                        scrollable=scrollable,
                                        withhold=withhold)
-        return Cursor(self, impl, timeout)
+        return Cursor(self, impl, timeout, self._echo)
 
     @asyncio.coroutine
     def _cursor(self, name=None, cursor_factory=None,

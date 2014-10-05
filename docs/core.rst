@@ -29,7 +29,8 @@ Example::
 
 
 .. function:: connect(dsn=None, *, loop=None, timeout=60.0, \
-                      enable_json=True, enable_hstore=True, **kwargs)
+                      enable_json=True, enable_hstore=True, echo=False, \
+                      **kwargs)
 
    A :ref:`coroutine <coroutine>` that connects to PostgreSQL.
 
@@ -54,6 +55,8 @@ Example::
                          installed in database first::
 
                              CREATE EXTENSION HSTORE
+
+   :param bool echo: log executed SQL statement (``False`` by default).
 
    :returns: :class:`Connection` instance.
 

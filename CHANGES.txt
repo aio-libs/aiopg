@@ -1,6 +1,11 @@
 CHANGES
 -------
 
+0.4.2 (XXXX-XX-XX)
+^^^^^^^^^^^^^^^^^^
+
+* Support *echo* parameter for logging executed SQL commands
+
 0.4.1 (2014-10-02)
 ^^^^^^^^^^^^^^^^^^
 
