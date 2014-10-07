@@ -50,6 +50,7 @@ class TestConnection(unittest.TestCase):
             self.assertFalse(conn._reading)
             self.assertFalse(conn._writing)
             self.assertIs(conn._conn, conn.raw)
+            self.assertFalse(conn.echo)
 
         self.loop.run_until_complete(go())
 
@@ -601,5 +602,13 @@ class TestConnection(unittest.TestCase):
             t2 = time.time()
             dt = t2 - t1
             self.assertTrue(0.09 <= dt <= 0.11, dt)
+
+        self.loop.run_until_complete(go())
+
+    def test_echo(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect(echo=True)
+            self.assertTrue(conn.echo)
 
         self.loop.run_until_complete(go())

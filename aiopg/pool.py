@@ -10,12 +10,14 @@ from .log import logger
 def create_pool(dsn=None, *, minsize=10, maxsize=10,
                 loop=None, timeout=TIMEOUT,
                 enable_json=True, enable_hstore=True,
+                echo=False,
                 **kwargs):
     if loop is None:
         loop = asyncio.get_event_loop()
 
     pool = Pool(dsn, minsize, maxsize, loop, timeout,
                 enable_json=enable_json, enable_hstore=enable_hstore,
+                echo=echo,
                 **kwargs)
     yield from pool._fill_free_pool(False)
     return pool
@@ -25,7 +27,7 @@ class Pool:
     """Connection pool"""
 
     def __init__(self, dsn, minsize, maxsize, loop, timeout, *,
-                 enable_json, enable_hstore, **kwargs):
+                 enable_json, enable_hstore, echo, **kwargs):
         if minsize < 0:
             raise ValueError("minsize should be zero or greater")
         if maxsize < minsize:
@@ -36,9 +38,14 @@ class Pool:
         self._timeout = timeout
         self._enable_json = enable_json
         self._enable_hstore = enable_hstore
+        self._echo = echo
         self._conn_kwargs = kwargs
         self._free = asyncio.queues.Queue(maxsize, loop=self._loop)
         self._used = set()
+
+    @property
+    def echo(self):
+        return self._echo
 
     @property
     def minsize(self):
@@ -84,6 +91,7 @@ class Pool:
                 self._dsn, loop=self._loop, timeout=self._timeout,
                 enable_json=self._enable_json,
                 enable_hstore=self._enable_hstore,
+                echo=self._echo,
                 **self._conn_kwargs)
             yield from self._free.put(conn)
         if not self._free.empty():
@@ -93,6 +101,7 @@ class Pool:
                 self._dsn, loop=self._loop, timeout=self._timeout,
                 enable_json=self._enable_json,
                 enable_hstore=self._enable_hstore,
+                echo=self._echo,
                 **self._conn_kwargs)
             yield from self._free.put(conn)
 

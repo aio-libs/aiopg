@@ -14,6 +14,11 @@ class Cursor:
         self._echo = echo
 
     @property
+    def echo(self):
+        """Return echo mode status."""
+        return self._echo
+
+    @property
     def description(self):
         """This read-only attribute is a sequence of 7-item sequences.
 

@@ -20,12 +20,13 @@ class TestCursor(unittest.TestCase):
         self.loop = None
 
     @asyncio.coroutine
-    def connect(self):
+    def connect(self, **kwargs):
         conn = (yield from aiopg.connect(database='aiopg',
                                          user='aiopg',
                                          password='passwd',
                                          host='127.0.0.1',
-                                         loop=self.loop))
+                                         loop=self.loop,
+                                         **kwargs))
         cur = yield from conn.cursor()
         yield from cur.execute("DROP TABLE IF EXISTS tbl")
         yield from cur.execute("CREATE TABLE tbl (id int, name varchar(255))")
@@ -442,3 +443,23 @@ class TestCursor(unittest.TestCase):
             data = [(1, 'a'), (2, 'b'), (3, 'c')]
             for item, tst in zip(cur, data):
                 self.assertEqual(item, tst)
+
+        self.loop.run_until_complete(go())
+
+    def test_echo(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect(echo=True)
+            cur = yield from conn.cursor()
+            self.assertTrue(cur.echo)
+
+        self.loop.run_until_complete(go())
+
+    def test_echo_false(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            cur = yield from conn.cursor()
+            self.assertFalse(cur.echo)
+
+        self.loop.run_until_complete(go())

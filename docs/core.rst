@@ -114,6 +114,11 @@ Example::
 
       The readonly property that returns ``True`` if connections is closed.
 
+   .. attribute:: echo
+
+      Return *echo mode* status. Log all executed queries to logger
+      named ``aiopg`` if ``True``
+
    .. attribute:: raw
 
       The readonly property that underlying
@@ -301,6 +306,12 @@ Cursor
    are :ref:`coroutines <coroutine>`.
 
    Use :meth:`Connection.cursor()` for getting cursor for connection.
+
+
+   .. attribute:: echo
+
+      Return *echo mode* status. Log all executed queries to logger
+      named ``aiopg`` if ``True``
 
    .. attribute:: description
 
@@ -674,6 +685,8 @@ The basic usage is::
 
          CREATE EXTENSION HSTORE
 
+   *echo* --- executed log SQL queryes (``False`` by default).
+
    Returns :class:`Pool` instance.
 
 
@@ -701,6 +714,11 @@ The basic usage is::
 
    See also :meth:`Pool.acquire` and :meth:`Pool.release` for acquring
    *connection* without *with statement*.
+
+   .. attribute:: echo
+
+      Return *echo mode* status. Log all executed queries to logger
+      named ``aiopg`` if ``True``
 
    .. attribute:: minsize
 
