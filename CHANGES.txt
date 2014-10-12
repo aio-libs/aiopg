@@ -1,6 +1,11 @@
 CHANGES
 -------
 
+0.5.0 (XXXX-XX-XX)
+^^^^^^^^^^^^^^^^^^
+
+* Reimplement connection pool (now pool size cannot be greater than pool.maxsize)
+
 0.4.2 (XXXX-XX-XX)
 ^^^^^^^^^^^^^^^^^^
 
