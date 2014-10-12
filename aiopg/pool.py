@@ -86,7 +86,6 @@ class Pool:
                     assert not conn.closed, conn
                     assert conn not in self._used, (conn, self._used)
                     self._used.add(conn)
-                    self._cond.notify()
                     return conn
                 else:
                     yield from self._cond.wait()
@@ -102,6 +101,7 @@ class Pool:
                     enable_hstore=self._enable_hstore,
                     **self._conn_kwargs)
                 self._free.append(conn)
+                self._cond.notify()
             finally:
                 self._acquiring -= 1
         if self._free:
@@ -116,6 +116,7 @@ class Pool:
                     enable_hstore=self._enable_hstore,
                     **self._conn_kwargs)
                 self._free.append(conn)
+                self._cond.notify()
                 return
             finally:
                 self._acquiring -= 1
