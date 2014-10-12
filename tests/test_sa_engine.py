@@ -60,6 +60,18 @@ class TestEngine(unittest.TestCase):
             'dbname=aiopg user=aiopg password=xxxxxx host=127.0.0.1',
             self.engine.dsn)
 
+    def test_minsize(self):
+        self.assertEqual(10, self.engine.minsize)
+
+    def test_maxsize(self):
+        self.assertEqual(10, self.engine.maxsize)
+
+    def test_size(self):
+        self.assertEqual(10, self.engine.size)
+
+    def test_freesize(self):
+        self.assertEqual(10, self.engine.freesize)
+
     def test_make_engine_with_default_loop(self):
 
         @asyncio.coroutine
@@ -102,4 +114,48 @@ class TestEngine(unittest.TestCase):
             conn = yield from engine.acquire()
             with self.assertRaises(asyncio.TimeoutError):
                 yield from conn.execute("SELECT pg_sleep(10)")
+        self.loop.run_until_complete(go())
+
+    def test_cannot_acquire_after_closing(self):
+        @asyncio.coroutine
+        def go():
+            engine = yield from self.make_engine()
+            engine.close()
+
+            with self.assertRaises(RuntimeError):
+                yield from engine.acquire()
+
+        self.loop.run_until_complete(go())
+
+    def test_wait_closed(self):
+        @asyncio.coroutine
+        def go():
+            engine = yield from self.make_engine()
+
+            c1 = yield from engine.acquire()
+            c2 = yield from engine.acquire()
+            self.assertEqual(10, engine.size)
+            self.assertEqual(8, engine.freesize)
+
+            ops = []
+
+            @asyncio.coroutine
+            def do_release(conn):
+                yield from asyncio.sleep(0, loop=self.loop)
+                engine.release(conn)
+                ops.append('release')
+
+            @asyncio.coroutine
+            def wait_closed():
+                yield from engine.wait_closed()
+                ops.append('wait_closed')
+
+            engine.close()
+            yield from asyncio.gather(wait_closed(),
+                                      do_release(c1),
+                                      do_release(c2),
+                                      loop=self.loop)
+            self.assertEqual(['release', 'release', 'wait_closed'], ops)
+            self.assertEqual(0, engine.freesize)
+
         self.loop.run_until_complete(go())

@@ -6,6 +6,10 @@ CHANGES
 
 * Reimplement connection pool (now pool size cannot be greater than pool.maxsize)
 
+* Add .close() and .wait_closed() to Pool and Engine
+
+* Add minsize, maxsize, size and freesize properties to sa.Engine
+
 0.4.2 (XXXX-XX-XX)
 ^^^^^^^^^^^^^^^^^^
 

@@ -82,6 +82,29 @@ class Engine:
     def timeout(self):
         return self._pool.timeout
 
+    @property
+    def minsize(self):
+        return self._pool.minsize
+
+    @property
+    def maxsize(self):
+        return self._pool.maxsize
+
+    @property
+    def size(self):
+        return self._pool.size
+
+    @property
+    def freesize(self):
+        return self._pool.freesize
+
+    def close(self):
+        self._pool.close()
+
+    @asyncio.coroutine
+    def wait_closed(self):
+        yield from self._pool.wait_closed()
+
     @asyncio.coroutine
     def acquire(self):
         """Get a connection from pool."""
