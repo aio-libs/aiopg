@@ -1,4 +1,6 @@
 import asyncio
+import collections
+
 
 from psycopg2.extensions import TRANSACTION_STATUS_IDLE
 
@@ -37,7 +39,9 @@ class Pool:
         self._enable_json = enable_json
         self._enable_hstore = enable_hstore
         self._conn_kwargs = kwargs
-        self._free = asyncio.queues.Queue(maxsize, loop=self._loop)
+        self._acquiring = 0
+        self._free = collections.deque(maxlen=maxsize)
+        self._cond = asyncio.Condition(loop=loop)
         self._used = set()
 
     @property
@@ -46,15 +50,15 @@ class Pool:
 
     @property
     def maxsize(self):
-        return self._free.maxsize
+        return self._free.maxlen
 
     @property
     def size(self):
-        return self.freesize + len(self._used)
+        return self.freesize + len(self._used) + self._acquiring
 
     @property
     def freesize(self):
-        return self._free.qsize()
+        return len(self._free)
 
     @property
     def timeout(self):
@@ -63,15 +67,15 @@ class Pool:
     @asyncio.coroutine
     def clear(self):
         """Close all free connections in pool."""
-        while not self._free.empty():
-            conn = yield from self._free.get()
+        while self._free:
+            conn = self._free.popleft()
             yield from conn.close()
+            self._cond.notify()
 
     @asyncio.coroutine
     def acquire(self):
         """Acquire free connection from the pool."""
-        yield from self._fill_free_pool(True)
-        conn = yield from self._free.get()
+        conn = yield from self._fill_free_pool(True)
         assert not conn.closed, conn
         assert conn not in self._used, (conn, self._used)
         self._used.add(conn)
@@ -79,22 +83,36 @@ class Pool:
 
     @asyncio.coroutine
     def _fill_free_pool(self, override_min):
-        while self.size < self.minsize:
-            conn = yield from connect(
-                self._dsn, loop=self._loop, timeout=self._timeout,
-                enable_json=self._enable_json,
-                enable_hstore=self._enable_hstore,
-                **self._conn_kwargs)
-            yield from self._free.put(conn)
-        if not self._free.empty():
-            return
-        if override_min and self.size < self.maxsize:
-            conn = yield from connect(
-                self._dsn, loop=self._loop, timeout=self._timeout,
-                enable_json=self._enable_json,
-                enable_hstore=self._enable_hstore,
-                **self._conn_kwargs)
-            yield from self._free.put(conn)
+        with (yield from self._cond):
+            while self.size < self.minsize:
+                self._acquiring += 1
+                try:
+                    conn = yield from connect(
+                        self._dsn, loop=self._loop, timeout=self._timeout,
+                        enable_json=self._enable_json,
+                        enable_hstore=self._enable_hstore,
+                        **self._conn_kwargs)
+                    self._free.append(conn)
+                finally:
+                    self._acquiring -= 1
+                    self._cond.notify()
+            if self._free:
+                conn = self._free.popleft()
+                return conn
+
+            if override_min and self.size < self.maxsize:
+                self._acquiring += 1
+                try:
+                    conn = yield from connect(
+                        self._dsn, loop=self._loop, timeout=self._timeout,
+                        enable_json=self._enable_json,
+                        enable_hstore=self._enable_hstore,
+                        **self._conn_kwargs)
+                finally:
+                    self._acquiring -= 1
+                    self._cond.notify()
+                yield from self._free.put(conn)
+            return self._free.popleft()
 
     def release(self, conn):
         """Release free connection back to the connection pool.
@@ -111,18 +129,12 @@ class Pool:
                     tran_status)
                 conn._close()
                 return
-            while True:
-                try:
-                    self._free.put_nowait(conn)
-                except asyncio.QueueFull:
-                    # close the oldest connection in free pool.
-                    # that can happen if we acuire multiple
-                    # connections from parallel tasks
-                    # when minsize == 0
-                    conn2 = self._free.get_nowait()
-                    conn2._close()
-                else:
-                    break
+            while self.size >= self.maxsize:
+                conn2 = self._free.popleft()
+                conn2._close()
+                self._cond.notify()
+            self._free.append(conn)
+            self._cond.notify()
 
     @asyncio.coroutine
     def cursor(self, name=None, cursor_factory=None,
