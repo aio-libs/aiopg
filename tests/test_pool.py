@@ -366,3 +366,35 @@ class TestPool(unittest.TestCase):
                 yield from self.create_pool(minsize=5, maxsize=2)
 
         self.loop.run_until_complete(go())
+
+    def xtest_true_parallel_tasks(self):
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool(minsize=0, maxsize=1)
+            self.assertEqual(1, pool.maxsize)
+            self.assertEqual(0, pool.minsize)
+            self.assertEqual(0, pool.size)
+            self.assertEqual(0, pool.freesize)
+
+            maxsize = 0
+            minfreesize = 100
+
+            def inner():
+                nonlocal maxsize, minfreesize
+                maxsize = max(maxsize, pool.size)
+                minfreesize = min(minfreesize, pool.freesize)
+                conn = yield from pool.acquire()
+                maxsize = max(maxsize, pool.size)
+                minfreesize = min(minfreesize, pool.freesize)
+                yield from asyncio.sleep(0.01)
+                conn.release()
+                maxsize = max(maxsize, pool.size)
+                minfreesize = min(minfreesize, pool.freesize)
+
+            yield from asyncio.gather(inner(), inner(),
+                                      loop=self.loop)
+
+            self.assertEqual(2, maxsize)
+            self.assertEqual(0, minfreesize)
+
+        self.loop.run_until_complete(go())
