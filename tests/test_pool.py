@@ -398,3 +398,47 @@ class TestPool(unittest.TestCase):
             self.assertEqual(0, minfreesize)
 
         self.loop.run_until_complete(go())
+
+    def test_cannot_acquire_after_closing(self):
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool()
+            pool.close()
+
+            with self.assertRaises(RuntimeError):
+                yield from pool.acquire()
+
+        self.loop.run_until_complete(go())
+
+    def test_wait_closed(self):
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool()
+
+            c1 = yield from pool.acquire()
+            c2 = yield from pool.acquire()
+            self.assertEqual(10, pool.size)
+            self.assertEqual(8, pool.freesize)
+
+            ops = []
+
+            @asyncio.coroutine
+            def do_release(conn):
+                yield from asyncio.sleep(0, loop=self.loop)
+                pool.release(conn)
+                ops.append('release')
+
+            @asyncio.coroutine
+            def wait_closed():
+                yield from pool.wait_closed()
+                ops.append('wait_closed')
+
+            pool.close()
+            yield from asyncio.gather(wait_closed(),
+                                      do_release(c1),
+                                      do_release(c2),
+                                      loop=self.loop)
+            self.assertEqual(['release', 'release', 'wait_closed'], ops)
+            self.assertEqual(0, pool.freesize)
+
+        self.loop.run_until_complete(go())

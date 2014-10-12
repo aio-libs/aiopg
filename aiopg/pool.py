@@ -25,7 +25,7 @@ def create_pool(dsn=None, *, minsize=10, maxsize=10,
     return pool
 
 
-class Pool:
+class Pool(asyncio.AbstractServer):
     """Connection pool"""
 
     def __init__(self, dsn, minsize, maxsize, loop, timeout, *,
@@ -45,6 +45,7 @@ class Pool:
         self._free = collections.deque(maxlen=maxsize)
         self._cond = asyncio.Condition(loop=loop)
         self._used = set()
+        self._closing = False
 
     @property
     def minsize(self):
@@ -75,9 +76,23 @@ class Pool:
                 yield from conn.close()
             self._cond.notify()
 
+    def close(self):
+        self._closing = True
+
+    @asyncio.coroutine
+    def wait_closed(self):
+        with (yield from self._cond):
+            while self.size > self.freesize:
+                yield from self._cond.wait()
+        while self._free:
+            conn = self._free.popleft()
+            conn._close()
+
     @asyncio.coroutine
     def acquire(self):
         """Acquire free connection from the pool."""
+        if self._closing:
+            raise RuntimeError("Cannot acquire connection after closing pool")
         with (yield from self._cond):
             while True:
                 yield from self._fill_free_pool(True)
