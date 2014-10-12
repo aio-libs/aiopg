@@ -89,7 +89,7 @@ class Pool:
                     self._cond.notify()
                     return conn
                 else:
-                    self._cond.wait()
+                    yield from self._cond.wait()
 
     @asyncio.coroutine
     def _fill_free_pool(self, override_min):
