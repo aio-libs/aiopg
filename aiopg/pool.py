@@ -19,7 +19,8 @@ def create_pool(dsn=None, *, minsize=10, maxsize=10,
     pool = Pool(dsn, minsize, maxsize, loop, timeout,
                 enable_json=enable_json, enable_hstore=enable_hstore,
                 **kwargs)
-    yield from pool._fill_free_pool(False)
+    if minsize > 0:
+        yield from pool._fill_free_pool(False)
     return pool
 
 
@@ -67,15 +68,17 @@ class Pool:
     @asyncio.coroutine
     def clear(self):
         """Close all free connections in pool."""
-        while self._free:
-            conn = self._free.popleft()
-            yield from conn.close()
+        with (yield from self._cond):
+            while self._free:
+                conn = self._free.popleft()
+                yield from conn.close()
             self._cond.notify()
 
     @asyncio.coroutine
     def acquire(self):
         """Acquire free connection from the pool."""
-        conn = yield from self._fill_free_pool(True)
+        yield from self._fill_free_pool(True)
+        conn = self._free.popleft()
         assert not conn.closed, conn
         assert conn not in self._used, (conn, self._used)
         self._used.add(conn)
@@ -84,35 +87,41 @@ class Pool:
     @asyncio.coroutine
     def _fill_free_pool(self, override_min):
         with (yield from self._cond):
-            while self.size < self.minsize:
-                self._acquiring += 1
-                try:
-                    conn = yield from connect(
-                        self._dsn, loop=self._loop, timeout=self._timeout,
-                        enable_json=self._enable_json,
-                        enable_hstore=self._enable_hstore,
-                        **self._conn_kwargs)
-                    self._free.append(conn)
-                finally:
-                    self._acquiring -= 1
-                    self._cond.notify()
-            if self._free:
-                conn = self._free.popleft()
-                return conn
+            while True:
+                while self.size < self.minsize:
+                    self._acquiring += 1
+                    try:
+                        conn = yield from connect(
+                            self._dsn, loop=self._loop, timeout=self._timeout,
+                            enable_json=self._enable_json,
+                            enable_hstore=self._enable_hstore,
+                            **self._conn_kwargs)
+                        self._free.append(conn)
+                    finally:
+                        self._acquiring -= 1
+                        self._cond.notify()
+                if self._free:
+                    return
 
-            if override_min and self.size < self.maxsize:
-                self._acquiring += 1
-                try:
-                    conn = yield from connect(
-                        self._dsn, loop=self._loop, timeout=self._timeout,
-                        enable_json=self._enable_json,
-                        enable_hstore=self._enable_hstore,
-                        **self._conn_kwargs)
-                finally:
-                    self._acquiring -= 1
-                    self._cond.notify()
-                yield from self._free.put(conn)
-            return self._free.popleft()
+                if override_min and self.size < self.maxsize:
+                    self._acquiring += 1
+                    try:
+                        conn = yield from connect(
+                            self._dsn, loop=self._loop, timeout=self._timeout,
+                            enable_json=self._enable_json,
+                            enable_hstore=self._enable_hstore,
+                            **self._conn_kwargs)
+                        self._free.append(conn)
+                        return
+                    finally:
+                        self._acquiring -= 1
+                        self._cond.notify()
+                else:
+                    self._cond.wait()
+
+    def _wakeup(self):
+        with (yield from self._cond):
+            self._cond.notify()
 
     def release(self, conn):
         """Release free connection back to the connection pool.
@@ -132,9 +141,8 @@ class Pool:
             while self.size >= self.maxsize:
                 conn2 = self._free.popleft()
                 conn2._close()
-                self._cond.notify()
             self._free.append(conn)
-            self._cond.notify()
+            asyncio.Task(self._wakeup(), loop=self._loop)
 
     @asyncio.coroutine
     def cursor(self, name=None, cursor_factory=None,

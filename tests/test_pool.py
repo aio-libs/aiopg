@@ -171,8 +171,8 @@ class TestPool(unittest.TestCase):
     def test_parallel_tasks(self):
         @asyncio.coroutine
         def go():
-            pool = yield from self.create_pool(minsize=0, maxsize=1)
-            self.assertEqual(1, pool.maxsize)
+            pool = yield from self.create_pool(minsize=0, maxsize=2)
+            self.assertEqual(2, pool.maxsize)
             self.assertEqual(0, pool.minsize)
             self.assertEqual(0, pool.size)
             self.assertEqual(0, pool.freesize)
@@ -192,20 +192,20 @@ class TestPool(unittest.TestCase):
             self.assertEqual({conn2}, pool._used)
 
             pool.release(conn2)
-            self.assertEqual(1, pool.size)
-            self.assertEqual(1, pool.freesize)
-            self.assertTrue(conn1.closed)
+            self.assertEqual(2, pool.size)
+            self.assertEqual(2, pool.freesize)
+            self.assertFalse(conn1.closed)
             self.assertFalse(conn2.closed)
 
             conn3 = yield from pool.acquire()
-            self.assertIs(conn3, conn2)
+            self.assertIs(conn3, conn1)
 
         self.loop.run_until_complete(go())
 
     def test_parallel_tasks_more(self):
         @asyncio.coroutine
         def go():
-            pool = yield from self.create_pool(minsize=0, maxsize=1)
+            pool = yield from self.create_pool(minsize=0, maxsize=3)
 
             fut1 = pool.acquire()
             fut2 = pool.acquire()
@@ -223,22 +223,22 @@ class TestPool(unittest.TestCase):
             self.assertEqual({conn2, conn3}, pool._used)
 
             pool.release(conn2)
-            self.assertEqual(2, pool.size)
-            self.assertEqual(1, pool.freesize)
+            self.assertEqual(3, pool.size)
+            self.assertEqual(2, pool.freesize)
             self.assertEqual({conn3}, pool._used)
-            self.assertTrue(conn1.closed)
+            self.assertFalse(conn1.closed)
             self.assertFalse(conn2.closed)
 
             pool.release(conn3)
-            self.assertEqual(1, pool.size)
-            self.assertEqual(1, pool.freesize)
+            self.assertEqual(3, pool.size)
+            self.assertEqual(3, pool.freesize)
             self.assertFalse(pool._used)
-            self.assertTrue(conn1.closed)
-            self.assertTrue(conn2.closed)
+            self.assertFalse(conn1.closed)
+            self.assertFalse(conn2.closed)
             self.assertFalse(conn3.closed)
 
             conn4 = yield from pool.acquire()
-            self.assertIs(conn4, conn3)
+            self.assertIs(conn4, conn1)
 
         self.loop.run_until_complete(go())
 
