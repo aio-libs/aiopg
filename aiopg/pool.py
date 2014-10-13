@@ -170,10 +170,10 @@ class Pool(asyncio.AbstractServer):
                     tran_status)
                 conn.close()
                 return
-            while self.size >= self.maxsize:
-                conn2 = self._free.popleft()
-                conn2.close()
-            self._free.append(conn)
+            if self._closing:
+                conn.close()
+            else:
+                self._free.append(conn)
             asyncio.Task(self._wakeup(), loop=self._loop)
 
     @asyncio.coroutine
