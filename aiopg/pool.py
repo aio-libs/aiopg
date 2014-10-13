@@ -12,12 +12,14 @@ from .log import logger
 def create_pool(dsn=None, *, minsize=10, maxsize=10,
                 loop=None, timeout=TIMEOUT,
                 enable_json=True, enable_hstore=True,
+                echo=False,
                 **kwargs):
     if loop is None:
         loop = asyncio.get_event_loop()
 
     pool = Pool(dsn, minsize, maxsize, loop, timeout,
                 enable_json=enable_json, enable_hstore=enable_hstore,
+                echo=echo,
                 **kwargs)
     if minsize > 0:
         with (yield from pool._cond):
@@ -29,7 +31,7 @@ class Pool(asyncio.AbstractServer):
     """Connection pool"""
 
     def __init__(self, dsn, minsize, maxsize, loop, timeout, *,
-                 enable_json, enable_hstore, **kwargs):
+                 enable_json, enable_hstore, echo, **kwargs):
         if minsize < 0:
             raise ValueError("minsize should be zero or greater")
         if maxsize < minsize:
@@ -40,12 +42,17 @@ class Pool(asyncio.AbstractServer):
         self._timeout = timeout
         self._enable_json = enable_json
         self._enable_hstore = enable_hstore
+        self._echo = echo
         self._conn_kwargs = kwargs
         self._acquiring = 0
         self._free = collections.deque(maxlen=maxsize)
         self._cond = asyncio.Condition(loop=loop)
         self._used = set()
         self._closing = False
+
+    @property
+    def echo(self):
+        return self._echo
 
     @property
     def minsize(self):
@@ -114,6 +121,7 @@ class Pool(asyncio.AbstractServer):
                     self._dsn, loop=self._loop, timeout=self._timeout,
                     enable_json=self._enable_json,
                     enable_hstore=self._enable_hstore,
+                    echo=self._echo,
                     **self._conn_kwargs)
                 self._free.append(conn)
                 self._cond.notify()
@@ -129,10 +137,10 @@ class Pool(asyncio.AbstractServer):
                     self._dsn, loop=self._loop, timeout=self._timeout,
                     enable_json=self._enable_json,
                     enable_hstore=self._enable_hstore,
+                    echo=self._echo,
                     **self._conn_kwargs)
                 self._free.append(conn)
                 self._cond.notify()
-                return
             finally:
                 self._acquiring -= 1
 

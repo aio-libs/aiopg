@@ -47,7 +47,7 @@ def connect(dsn=None, *, timeout=TIMEOUT, loop=None,
         loop = asyncio.get_event_loop()
 
     waiter = asyncio.Future(loop=loop)
-    conn = Connection(dsn, loop, timeout, waiter, echo, **kwargs)
+    conn = Connection(dsn, loop, timeout, waiter, bool(echo), **kwargs)
     yield from conn._poll(waiter, timeout)
     if enable_json:
         extras.register_default_json(conn._conn)
@@ -383,3 +383,8 @@ class Connection:
     def timeout(self):
         """Return default timeout for connection operations."""
         return self._timeout
+
+    @property
+    def echo(self):
+        """Return echo mode status."""
+        return self._echo

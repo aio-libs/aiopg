@@ -41,6 +41,7 @@ class TestPool(unittest.TestCase):
             self.assertEqual(10, pool.size)
             self.assertEqual(10, pool.freesize)
             self.assertEqual(TIMEOUT, pool.timeout)
+            self.assertFalse(pool.echo)
 
         self.loop.run_until_complete(go())
 
@@ -440,5 +441,16 @@ class TestPool(unittest.TestCase):
                                       loop=self.loop)
             self.assertEqual(['release', 'release', 'wait_closed'], ops)
             self.assertEqual(0, pool.freesize)
+
+        self.loop.run_until_complete(go())
+
+    def test_echo(self):
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool(echo=True)
+            self.assertTrue(pool.echo)
+
+            with (yield from pool) as conn:
+                self.assertTrue(conn.echo)
 
         self.loop.run_until_complete(go())
