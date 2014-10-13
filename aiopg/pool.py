@@ -100,7 +100,7 @@ class Pool(asyncio.AbstractServer):
                 yield from self._cond.wait()
         while self._free:
             conn = self._free.popleft()
-            conn._close()
+            conn.close()
 
     @asyncio.coroutine
     def acquire(self):
@@ -168,11 +168,11 @@ class Pool(asyncio.AbstractServer):
                 logger.warning(
                     "Invalid transaction status on released connection: %d",
                     tran_status)
-                conn._close()
+                conn.close()
                 return
             while self.size >= self.maxsize:
                 conn2 = self._free.popleft()
-                conn2._close()
+                conn2.close()
             self._free.append(conn)
             asyncio.Task(self._wakeup(), loop=self._loop)
 

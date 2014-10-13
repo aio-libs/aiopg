@@ -362,7 +362,7 @@ class TestConnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-    def test__close(self):
+    def test_close2(self):
 
         @asyncio.coroutine
         def go():
@@ -370,7 +370,7 @@ class TestConnection(unittest.TestCase):
             conn._reading = conn._writing = True
             self.loop.add_reader(conn._fileno, conn._ready)
             self.loop.add_writer(conn._fileno, conn._ready)
-            conn._close()
+            conn.close()
             self.assertFalse(conn._reading)
             self.assertFalse(conn._writing)
             self.assertTrue(conn.closed)

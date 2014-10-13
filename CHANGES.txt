@@ -10,10 +10,9 @@ CHANGES
 
 * Add minsize, maxsize, size and freesize properties to sa.Engine
 
-0.4.2 (XXXX-XX-XX)
-^^^^^^^^^^^^^^^^^^
-
 * Support *echo* parameter for logging executed SQL commands
+
+* Connection.close() is not a coroutine (but we keep backward compatibility).
 
 0.4.1 (2014-10-02)
 ^^^^^^^^^^^^^^^^^^

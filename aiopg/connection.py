@@ -136,7 +136,7 @@ class Connection:
             'message': message,
             'connection': self,
             })
-        self._close()
+        self.close()
         if self._waiter and not self._waiter.done():
             self._waiter.set_exception(psycopg2.OperationalError(message))
 
@@ -192,14 +192,10 @@ class Connection:
                                      scrollable=scrollable, withhold=withhold)
         return impl
 
-    @asyncio.coroutine
     def close(self):
         """Remove the connection from the event_loop and close it."""
         # N.B. If connection contains uncommitted transaction the
         # transaction will be discarded
-        self._close()
-
-    def _close(self):
         if self._reading:
             self._loop.remove_reader(self._fileno)
             self._reading = False
@@ -210,6 +206,9 @@ class Connection:
         if self._waiter is not None and not self._waiter.done():
             self._waiter.set_exception(
                 psycopg2.OperationalError("Connection closed"))
+        ret = asyncio.Future(loop=self._loop)
+        ret.set_result(None)
+        return ret
 
     @property
     def closed(self):

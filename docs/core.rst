@@ -1,7 +1,8 @@
 .. _aiopg-core:
 
-Core API Reference
-===============================
+====================
+ Core API Reference
+====================
 
 .. module:: aiopg
    :synopsis: A library for accessing a PostgreSQL database from the asyncio
@@ -11,7 +12,7 @@ Core API Reference
 .. _aiopg-core-connection:
 
 Connection
---------------
+==========
 
 The library provides a way to connect to PostgreSQL database.
 
@@ -109,6 +110,13 @@ Example::
       trying to use the connection.  Note that closing a connection without
       committing the changes first will cause any pending change to be
       discarded as if a ``ROLLBACK`` was performed.
+
+      .. versionchanged:: 0.5
+
+         :meth:`close` is regular function now.  For sake of backward
+         compatibility the method returns :class:`asyncio.Future`
+         instance with result already set to ``None`` (you still can
+         use ``yield from conn.close()`` construction.
 
    .. attribute:: closed
 
@@ -283,7 +291,7 @@ Example::
 .. _aiopg-core-cursor:
 
 Cursor
-------
+======
 
 .. class:: Cursor
 
@@ -628,7 +636,7 @@ Cursor
 .. _aiopg-core-pool:
 
 Pool
------
+====
 
 The library provides *connection pool* as well as plain
 :class:`Connection` objects.
@@ -815,7 +823,7 @@ The basic usage is::
 .. _aiopg-core-exceptions:
 
 Exceptions
------------
+==========
 
 Any call to library function, method or property can raise an exception.
 
@@ -826,7 +834,7 @@ Any call to library function, method or property can raise an exception.
 .. _aiopg-core-transactions:
 
 Transactions
-------------
+============
 
 While :mod:`aiopg` works only in *autocommit mode* it is still
 possible to use SQL transactions.
@@ -840,10 +848,10 @@ disabled and always raises :exc:`psycopg2.ProgrammingError` exception.
 .. _aiopg-core-extension-type-translations:
 
 Extension type translations
----------------------------
+===========================
 
 JSON
-^^^^
+----
 
 :mod:`aiopg` has support for ``JSON`` data type enabled by default.
 

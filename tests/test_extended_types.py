@@ -28,7 +28,7 @@ class TestComplexPGTypesConnection(unittest.TestCase):
                                       id SERIAL,
                                       val JSON)""")
         cur.close()
-        self.addCleanup(conn._close)
+        self.addCleanup(conn.close)
         return conn
 
     def test_simple(self):
