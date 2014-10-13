@@ -99,10 +99,16 @@ class Engine:
         return self._pool.freesize
 
     def close(self):
+        """Close engine.
+
+        Mark all engine connections to be closed on getting back to pool.
+        Closed engine doesn't allow to acquire new connections.
+        """
         self._pool.close()
 
     @asyncio.coroutine
     def wait_closed(self):
+        """Wait for closing all engine's connections."""
         yield from self._pool.wait_closed()
 
     @asyncio.coroutine

@@ -748,6 +748,26 @@ The basic usage is::
       in the pool. At next connection acquiring at least :attr:`minsize` of
       them will be recreated.
 
+   .. method:: close()
+
+      Close pool.
+
+      Mark all pool connections to be closed on getting back to pool.
+      Closed pool doesn't allow to acquire new connections.
+
+      If you want to wait for actual closing of acquired connection please
+      call :meth:`wait_closed` after :meth:`close`.
+
+      .. warning:: The method is not a :ref:`coroutine <coroutine>`.
+
+   .. method:: wait_closed()
+
+      A :ref:`coroutine <coroutine>` that waits for releasing and
+      closing all acquired connections.
+
+      Should be called after :meth:`close` for waiting for actual pool
+      closing.
+
    .. method:: acquire()
 
       A :ref:`coroutine <coroutine>` that acquires a connection from

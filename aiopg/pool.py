@@ -84,10 +84,17 @@ class Pool(asyncio.AbstractServer):
             self._cond.notify()
 
     def close(self):
+        """Close pool.
+
+        Mark all pool connections to be closed on getting back to pool.
+        Closed pool doesn't allow to acquire new connections.
+        """
         self._closing = True
 
     @asyncio.coroutine
     def wait_closed(self):
+        """Wait for closing all pool's connections."""
+
         with (yield from self._cond):
             while self.size > self.freesize:
                 yield from self._cond.wait()

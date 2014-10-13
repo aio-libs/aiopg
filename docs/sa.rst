@@ -114,10 +114,47 @@ Engine
          <http://initd.org/psycopg/docs/connection.html#connection.dsn>`_
          attribute.
 
+   .. attribute:: minsize
+
+      A minimal size of the pool (*read-only*), ``10`` by default.
+
+   .. attribute:: maxsize
+
+      A maximal size of the pool (*read-only*), ``10`` by default.
+
+   .. attribute:: size
+
+      A current size of the pool (*readonly*). Includes used and free
+      connections.
+
+   .. attribute:: freesize
+
+      A count of free connections in the pool (*readonly*).
+
    .. attribute:: timeout
 
       A read-only float representing default timeout for operations
       for connections from pool.
+
+   .. method:: close()
+
+      Close engine.
+
+      Mark all engine connections to be closed on getting back to engine.
+      Closed engine doesn't allow to acquire new connections.
+
+      If you want to wait for actual closing of acquired connection please
+      call :meth:`wait_closed` after :meth:`close`.
+
+      .. warning:: The method is not a :ref:`coroutine <coroutine>`.
+
+   .. method:: wait_closed()
+
+      A :ref:`coroutine <coroutine>` that waits for releasing and
+      closing all acquired connections.
+
+      Should be called after :meth:`close` for waiting for actual engine
+      closing.
 
    .. method:: acquire()
 
@@ -131,7 +168,7 @@ Engine
 
       Revert back connection *conn* to pool.
 
-      This method is a :ref:`coroutine <coroutine>`.
+      .. warning:: The method is not a :ref:`coroutine <coroutine>`.
 
 
 
