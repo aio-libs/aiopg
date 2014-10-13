@@ -95,12 +95,17 @@ class Pool(asyncio.AbstractServer):
     def wait_closed(self):
         """Wait for closing all pool's connections."""
 
-        with (yield from self._cond):
-            while self.size > self.freesize:
-                yield from self._cond.wait()
         while self._free:
             conn = self._free.popleft()
             conn.close()
+
+        with (yield from self._cond):
+            while self.size > self.freesize:
+                yield from self._cond.wait()
+
+                while self._free:
+                    conn = self._free.popleft()
+                    conn.close()
 
     @asyncio.coroutine
     def acquire(self):
