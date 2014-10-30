@@ -14,8 +14,12 @@ class TestPool(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
+        self.pool = None
 
     def tearDown(self):
+        if self.pool is not None:
+            self.pool.close()
+            self.loop.run_until_complete(self.poll.wait_closed())
         self.loop.close()
         self.loop = None
 
@@ -28,6 +32,7 @@ class TestPool(unittest.TestCase):
                                             host='127.0.0.1',
                                             loop=loop,
                                             **kwargs)
+        self.pool = pool
         return pool
 
     def test_create_pool(self):
