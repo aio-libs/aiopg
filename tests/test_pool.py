@@ -19,7 +19,7 @@ class TestPool(unittest.TestCase):
     def tearDown(self):
         if self.pool is not None:
             self.pool.close()
-            self.loop.run_until_complete(self.poll.wait_closed())
+            self.loop.run_until_complete(self.pool.wait_closed())
         self.loop.close()
         self.loop = None
 
