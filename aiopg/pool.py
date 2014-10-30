@@ -48,7 +48,7 @@ class Pool(asyncio.AbstractServer):
         self._free = collections.deque(maxlen=maxsize)
         self._cond = asyncio.Condition(loop=loop)
         self._used = set()
-        self._force_closed = set()
+        self._terminated = set()
         self._closing = False
         self._closed = False
         self._wakeups = {}
@@ -108,7 +108,7 @@ class Pool(asyncio.AbstractServer):
         for conn in self._used:
             conn.close()
 
-        self._force_closed, self._used = self._used, set()
+        self._terminated, self._used = self._used, set()
 
     @asyncio.coroutine
     def wait_closed(self):
@@ -200,8 +200,8 @@ class Pool(asyncio.AbstractServer):
 
         This is NOT a coroutine.
         """
-        if conn is self._force_closed:
-            self._force_closed.remove(conn)
+        if conn is self._terminated:
+            self._terminated.remove(conn)
             return
         assert conn in self._used, (conn, self._used)
         self._used.remove(conn)
