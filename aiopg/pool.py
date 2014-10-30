@@ -110,10 +110,6 @@ class Pool(asyncio.AbstractServer):
             conn = self._free.popleft()
             conn.close()
 
-        if self._wakeups:
-            yield from asyncio.gather(*list(self._wakeups.values()),
-                                      loop=self._loop)
-
         with (yield from self._cond):
             while self.size > self.freesize:
                 yield from self._cond.wait()
@@ -121,6 +117,11 @@ class Pool(asyncio.AbstractServer):
                 while self._free:
                     conn = self._free.popleft()
                     conn.close()
+
+        if self._wakeups:
+            yield from asyncio.gather(*list(self._wakeups.values()),
+                                      loop=self._loop)
+
         self._closed = True
 
     @asyncio.coroutine

@@ -76,6 +76,7 @@ class TestPool(unittest.TestCase):
             yield from cur.execute('SELECT 1')
             val = yield from cur.fetchone()
             self.assertEqual((1,), val)
+            pool.release(conn)
 
         self.loop.run_until_complete(go())
 
@@ -104,9 +105,10 @@ class TestPool(unittest.TestCase):
             self.assertFalse(pool._used)
             self.assertEqual(9, pool.size)
 
-            yield from pool.acquire()
+            conn2 = yield from pool.acquire()
             self.assertEqual(9, pool.freesize)
             self.assertEqual(10, pool.size)
+            pool.release(conn2)
 
         self.loop.run_until_complete(go())
 
@@ -205,6 +207,7 @@ class TestPool(unittest.TestCase):
 
             conn3 = yield from pool.acquire()
             self.assertIs(conn3, conn1)
+            pool.release(conn3)
 
         self.loop.run_until_complete(go())
 
@@ -245,6 +248,7 @@ class TestPool(unittest.TestCase):
 
             conn4 = yield from pool.acquire()
             self.assertIs(conn4, conn1)
+            pool.release(conn4)
 
         self.loop.run_until_complete(go())
 
@@ -335,6 +339,7 @@ class TestPool(unittest.TestCase):
             self.assertEqual(timeout, pool.timeout)
             conn = yield from pool.acquire()
             self.assertEqual(timeout, conn.timeout)
+            pool.release(conn)
 
         self.loop.run_until_complete(go())
 
@@ -353,11 +358,11 @@ class TestPool(unittest.TestCase):
         def go():
             pool = yield from self.create_pool(minsize=2, maxsize=4)
             c1 = yield from pool.acquire()
-            self.addCleanup(pool.release, c1)
             c2 = yield from pool.acquire()
-            self.addCleanup(pool.release, c2)
             self.assertEqual(0, pool.freesize)
             self.assertEqual(2, pool.size)
+            pool.release(c1)
+            pool.release(c2)
 
         self.loop.run_until_complete(go())
 
