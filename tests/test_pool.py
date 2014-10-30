@@ -18,7 +18,7 @@ class TestPool(unittest.TestCase):
 
     def tearDown(self):
         if self.pool is not None:
-            self.pool.close()
+            self.pool.terminate()
             self.loop.run_until_complete(self.pool.wait_closed())
         self.loop.close()
         self.loop = None
@@ -462,5 +462,44 @@ class TestPool(unittest.TestCase):
 
             with (yield from pool) as conn:
                 self.assertTrue(conn.echo)
+
+        self.loop.run_until_complete(go())
+
+    def xtest_close_with_acquired_connections(self):
+
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool()
+            yield from pool.acquire()
+            pool.close()
+
+            with self.assertRaises(asyncio.TimeoutError):
+                yield from asyncio.wait_for(pool.wait_closed(),
+                                            0.1, loop=self.loop)
+
+        self.loop.run_until_complete(go())
+
+    def test_terminate_with_acquired_connections(self):
+
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool()
+            conn = yield from pool.acquire()
+            pool.terminate()
+            yield from pool.wait_closed()
+
+            self.assertTrue(conn.closed)
+
+        self.loop.run_until_complete(go())
+
+    def test_release_closed_connection(self):
+
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool()
+            conn = yield from pool.acquire()
+            conn.close()
+
+            pool.release(conn)
 
         self.loop.run_until_complete(go())

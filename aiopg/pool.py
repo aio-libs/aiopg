@@ -48,6 +48,7 @@ class Pool(asyncio.AbstractServer):
         self._free = collections.deque(maxlen=maxsize)
         self._cond = asyncio.Condition(loop=loop)
         self._used = set()
+        self._force_closed = set()
         self._closing = False
         self._closed = False
         self._wakeups = {}
@@ -95,6 +96,19 @@ class Pool(asyncio.AbstractServer):
         if self._closed:
             return
         self._closing = True
+
+    def terminate(self):
+        """Terminate pool.
+
+        Close pool with instantly closing all acquired connections also.
+        """
+
+        self.close()
+
+        for conn in self._used:
+            conn.close()
+
+        self._force_closed, self._used = self._used, set()
 
     @asyncio.coroutine
     def wait_closed(self):
@@ -152,6 +166,7 @@ class Pool(asyncio.AbstractServer):
                     enable_hstore=self._enable_hstore,
                     echo=self._echo,
                     **self._conn_kwargs)
+                # raise exception if pool is closing
                 self._free.append(conn)
                 self._cond.notify()
             finally:
@@ -168,6 +183,7 @@ class Pool(asyncio.AbstractServer):
                     enable_hstore=self._enable_hstore,
                     echo=self._echo,
                     **self._conn_kwargs)
+                # raise exception if pool is closing
                 self._free.append(conn)
                 self._cond.notify()
             finally:
@@ -184,6 +200,9 @@ class Pool(asyncio.AbstractServer):
 
         This is NOT a coroutine.
         """
+        if conn is self._force_closed:
+            self._force_closed.remove(conn)
+            return
         assert conn in self._used, (conn, self._used)
         self._used.remove(conn)
         if not conn.closed:
