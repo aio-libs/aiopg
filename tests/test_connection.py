@@ -344,6 +344,15 @@ class TestConnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
+    def test_cancel_with_timeout(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            yield from conn.cancel(10)
+
+        self.loop.run_until_complete(go())
+
     def test_ready_without_waiter(self):
 
         @asyncio.coroutine
