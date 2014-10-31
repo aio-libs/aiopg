@@ -465,20 +465,6 @@ class TestPool(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-    def xtest_close_with_acquired_connections(self):
-
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool()
-            yield from pool.acquire()
-            pool.close()
-
-            with self.assertRaises(asyncio.TimeoutError):
-                yield from asyncio.wait_for(pool.wait_closed(),
-                                            0.1, loop=self.loop)
-
-        self.loop.run_until_complete(go())
-
     def test_terminate_with_acquired_connections(self):
 
         @asyncio.coroutine
@@ -524,5 +510,19 @@ class TestPool(unittest.TestCase):
             yield from pool.wait_closed()
 
             pool.release(conn)
+
+        self.loop.run_until_complete(go())
+
+    def test_close_with_acquired_connections(self):
+
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool()
+            yield from pool.acquire()
+            pool.close()
+
+            with self.assertRaises(asyncio.TimeoutError):
+                yield from asyncio.wait_for(pool.wait_closed(),
+                                            0.1, loop=self.loop)
 
         self.loop.run_until_complete(go())
