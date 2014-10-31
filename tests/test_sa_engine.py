@@ -159,3 +159,16 @@ class TestEngine(unittest.TestCase):
             self.assertEqual(0, engine.freesize)
 
         self.loop.run_until_complete(go())
+
+    def test_terminate_with_acquired_connections(self):
+
+        @asyncio.coroutine
+        def go():
+            engine = yield from self.make_engine()
+            conn = yield from engine.acquire()
+            engine.terminate()
+            yield from engine.wait_closed()
+
+            self.assertTrue(conn.closed)
+
+        self.loop.run_until_complete(go())

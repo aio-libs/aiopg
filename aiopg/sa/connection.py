@@ -110,7 +110,7 @@ class SAConnection:
     @property
     def closed(self):
         """The readonly property that returns True if connections is closed."""
-        return self._connection is None
+        return self._connection is None or self._connection.closed
 
     @property
     def info(self):

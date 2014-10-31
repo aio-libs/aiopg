@@ -148,6 +148,17 @@ Engine
 
       .. warning:: The method is not a :ref:`coroutine <coroutine>`.
 
+   .. method:: terminate()
+
+      Terminate engine.
+
+      Close engine's pool with instantly closing all acquired connections also.
+
+      :meth:`wait_closed` should be called after :meth:`terminate` for
+      waiting for actual finishing.
+
+      .. warning:: The method is not a :ref:`coroutine <coroutine>`.
+
    .. method:: wait_closed()
 
       A :ref:`coroutine <coroutine>` that waits for releasing and

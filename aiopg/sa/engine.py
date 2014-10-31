@@ -106,6 +106,14 @@ class Engine:
         """
         self._pool.close()
 
+    def terminate(self):
+        """Terminate engine.
+
+        Terminate engine pool with instantly closing all acquired
+        connections also.
+        """
+        self._pool.terminate()
+
     @asyncio.coroutine
     def wait_closed(self):
         """Wait for closing all engine's connections."""
