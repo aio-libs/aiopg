@@ -32,7 +32,9 @@ env:
   global:
     - PYTHON=python
   matrix:
-    - USE_SA=1
-    - USE_SA=0
+    - USE_SA=1 PYTHONASYNCIODEBUG=1
+    - USE_SA=0 PYTHONASYNCIODEBUG=1
+    - USE_SA=1 PYTHONASYNCIODEBUG=0
+    - USE_SA=0 PYTHONASYNCIODEBUG=0
 
 cache: apt
