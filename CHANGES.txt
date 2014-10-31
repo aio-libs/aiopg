@@ -1,8 +1,10 @@
 CHANGES
 -------
 
-0.5.0 (XXXX-XX-XX)
+0.5.0 (2014-10-31)
 ^^^^^^^^^^^^^^^^^^
+
+* Add .terminate() to Pool and Engine
 
 * Reimplement connection pool (now pool size cannot be greater than pool.maxsize)
 
