@@ -1,4 +1,6 @@
 import unittest
+import sqlalchemy
+
 from aiopg.sa.connection import _distill_params
 
 
@@ -83,3 +85,6 @@ class _DistillArgsTest(unittest.TestCase):
             _distill_params((("arg", "arg"),), {}),
             [("arg", "arg")]
         )
+
+
+sqlalchemy  # for sake of pyflakes checks
