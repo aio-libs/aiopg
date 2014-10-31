@@ -390,3 +390,32 @@ class TestTransaction(unittest.TestCase):
             yield from tr.commit()
 
         self.loop.run_until_complete(go())
+
+    def test_transactions_sequence(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+
+            yield from conn.execute(tbl.delete())
+
+            self.assertIsNone(conn._transaction)
+
+            tr1 = yield from conn.begin()
+            self.assertIs(tr1, conn._transaction)
+            yield from conn.execute(tbl.insert().values(name='a'))
+            res1 = yield from conn.scalar(tbl.count())
+            self.assertEqual(1, res1)
+
+            yield from tr1.commit()
+            self.assertIsNone(conn._transaction)
+
+            tr2 = yield from conn.begin()
+            self.assertIs(tr2, conn._transaction)
+            yield from conn.execute(tbl.insert().values(name='b'))
+            res2 = yield from conn.scalar(tbl.count())
+            self.assertEqual(2, res2)
+
+            yield from tr2.commit()
+            self.assertIsNone(conn._transaction)
+
+        self.loop.run_until_complete(go())

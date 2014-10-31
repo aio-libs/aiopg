@@ -1,6 +1,11 @@
 CHANGES
 -------
 
+0.5.1 (2014-10-31)
+^^^^^^^^^^^^^^^^^^
+
+* Fix a bug for processing transactions in line.
+
 0.5.0 (2014-10-31)
 ^^^^^^^^^^^^^^^^^^
 

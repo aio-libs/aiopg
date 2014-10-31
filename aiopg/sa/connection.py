@@ -170,6 +170,7 @@ class SAConnection:
             yield from cur.execute('COMMIT')
         finally:
             cur.close()
+            self._transaction = None
 
     @asyncio.coroutine
     def _rollback_impl(self):
