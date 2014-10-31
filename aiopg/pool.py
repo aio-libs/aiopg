@@ -105,10 +105,11 @@ class Pool(asyncio.AbstractServer):
 
         self.close()
 
-        for conn in self._used:
+        for conn in list(self._used):
             conn.close()
+            self._terminated.add(conn)
 
-        self._terminated, self._used = self._used, set()
+        self._used.clear()
 
     @asyncio.coroutine
     def wait_closed(self):
@@ -200,7 +201,8 @@ class Pool(asyncio.AbstractServer):
 
         This is NOT a coroutine.
         """
-        if conn is self._terminated:
+        if conn in self._terminated:
+            assert conn.closed, conn
             self._terminated.remove(conn)
             return
         assert conn in self._used, (conn, self._used)

@@ -513,3 +513,16 @@ class TestPool(unittest.TestCase):
                 yield from pool.wait_closed()
 
         self.loop.run_until_complete(go())
+
+    def test_release_terminated_pool(self):
+
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool()
+            conn = yield from pool.acquire()
+            pool.terminate()
+            yield from pool.wait_closed()
+
+            pool.release(conn)
+
+        self.loop.run_until_complete(go())
