@@ -51,8 +51,6 @@ class Pool(asyncio.AbstractServer):
         self._terminated = set()
         self._closing = False
         self._closed = False
-        self._wakeups = {}
-        self._counter = 0
 
     @property
     def echo(self):
@@ -129,14 +127,6 @@ class Pool(asyncio.AbstractServer):
             while self.size > self.freesize:
                 yield from self._cond.wait()
 
-                while self._free:
-                    conn = self._free.popleft()
-                    conn.close()
-
-        if self._wakeups:
-            yield from asyncio.gather(*list(self._wakeups.values()),
-                                      loop=self._loop)
-
         self._closed = True
 
     @asyncio.coroutine
@@ -191,10 +181,9 @@ class Pool(asyncio.AbstractServer):
                 self._acquiring -= 1
 
     @asyncio.coroutine
-    def _wakeup(self, wake_id):
+    def _wakeup(self):
         with (yield from self._cond):
             self._cond.notify()
-        del self._wakeups[wake_id]
 
     def release(self, conn):
         """Release free connection back to the connection pool.
@@ -219,12 +208,7 @@ class Pool(asyncio.AbstractServer):
                 conn.close()
             else:
                 self._free.append(conn)
-            next_id = self._counter + 1
-            if next_id > 0xffffffff:
-                next_id = 0
-            self._counter = next_id
-            self._wakeups[next_id] = asyncio.Task(self._wakeup(next_id),
-                                                  loop=self._loop)
+            asyncio.Task(self._wakeup(), loop=self._loop)
 
     @asyncio.coroutine
     def cursor(self, name=None, cursor_factory=None,
