@@ -33,6 +33,8 @@ At the least you should create user and database for test suite::
     # CREATE USER aiopg WITH PASSWORD 'passwd';
     # GRANT ALL PRIVILEGES ON DATABASE aiopg TO aiopg;
 
+    # CREATE EXTENSION hstore;
+
 
 That's all.
 
