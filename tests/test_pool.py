@@ -503,3 +503,13 @@ class TestPool(unittest.TestCase):
             pool.release(conn)
 
         self.loop.run_until_complete(go())
+
+    def test_wait_closing_on_not_closed(self):
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool()
+
+            with self.assertRaises(RuntimeError):
+                yield from pool.wait_closed()
+
+        self.loop.run_until_complete(go())
