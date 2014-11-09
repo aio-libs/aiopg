@@ -1,15 +1,16 @@
+import asyncio
+import json
+
+import aiopg
+from .connection import SAConnection
+from .exc import InvalidRequestError
+from aiopg.connection import TIMEOUT
+
+
 try:
     from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
 except ImportError:  # pragma: no cover
     raise ImportError('aiopg.sa requires sqlalchemy')
-
-import asyncio
-import aiopg
-import json
-
-from .connection import SAConnection
-from .exc import InvalidRequestError
-from aiopg.connection import TIMEOUT
 
 
 _dialect = PGDialect_psycopg2(json_serializer=json.dumps,
