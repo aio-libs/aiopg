@@ -13,7 +13,7 @@ if PY_VER >= (3, 4):
 elif PY_VER >= (3, 3):
     install_requires.append('asyncio')
 else:
-    raise RuntimeError("aiopg doesn't suppport Python earllier than 3.3")
+    raise RuntimeError("aiopg doesn't suppport Python earlier than 3.3")
 
 
 def read(f):
