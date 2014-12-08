@@ -1,6 +1,11 @@
 CHANGES
 -------
 
+0.5.2 (2014-12-08)
+^^^^^^^^^^^^^^^^^^
+
+* Minor release, fixes a bug that leaves connection in broken state after `cursor.execute()` failure.
+
 0.5.1 (2014-10-31)
 ^^^^^^^^^^^^^^^^^^
 
