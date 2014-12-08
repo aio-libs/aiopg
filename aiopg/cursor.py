@@ -102,8 +102,13 @@ class Cursor:
         if self._echo:
             logger.info(operation)
             logger.info("%r", parameters)
-        self._impl.execute(operation, parameters)
-        yield from self._conn._poll(waiter, timeout)
+        try:
+            self._impl.execute(operation, parameters)
+        except:
+            self._conn._waiter = None
+            raise
+        else:
+            yield from self._conn._poll(waiter, timeout)
 
     @asyncio.coroutine
     def executemany(self, operation, seq_of_parameters):
@@ -128,8 +133,13 @@ class Cursor:
         if self._echo:
             logger.info("CALL %s", procname)
             logger.info("%r", parameters)
-        self._impl.callproc(procname, parameters)
-        yield from self._conn._poll(waiter, timeout)
+        try:
+            self._impl.callproc(procname, parameters)
+        except:
+            self._conn._waiter = None
+            raise
+        else:
+            yield from self._conn._poll(waiter, timeout)
 
     @asyncio.coroutine
     def mogrify(self, operation, parameters=None):

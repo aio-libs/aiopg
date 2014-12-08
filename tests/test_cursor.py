@@ -90,6 +90,7 @@ class TestCursor(unittest.TestCase):
             self.assertTrue(cur.closed)
             with self.assertRaises(psycopg2.InterfaceError):
                 yield from cur.execute('SELECT 1')
+            self.assertIsNone(conn._waiter)
 
         self.loop.run_until_complete(go())
 
@@ -363,6 +364,7 @@ class TestCursor(unittest.TestCase):
             cur.close()
             with self.assertRaises(psycopg2.InterfaceError):
                 yield from cur.callproc('inc', [1])
+            self.assertIsNone(conn._waiter)
 
         self.loop.run_until_complete(go())
 
