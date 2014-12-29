@@ -6,6 +6,7 @@ python:
 
 install:
   - sudo apt-get update -qq
+  - service postgresql stop
   - sudo apt-get remove -y postgresql  # drop default 9.1
   - sudo apt-get install -y postgresql
   - sudo apt-get install -y postgresql-contrib
