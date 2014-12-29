@@ -6,6 +6,7 @@ python:
 
 install:
   - sudo apt-get update -qq
+  - sudo apt-get install -y postgresql
   - sudo apt-get install -y postgresql-contrib
   - python setup.py install
   - pip install pyflakes
@@ -25,8 +26,8 @@ script:
   - python runtests.py -v
   - python setup.py check -rms
 
-addons:
-  postgresql: "9.4"
+# addons:
+#   postgresql: "9.4"
 
 env:
   global:
