@@ -9,7 +9,7 @@ before_install:
   - sudo /etc/init.d/postgresql stop
   - sudo apt-get install -y postgresql-contrib-${PG}
   - sudo /etc/init.d/postgresql start ${PG}
-  - sleep 10  # to wait for postgres server start
+  - sleep 5  # to wait for postgres server start
 
 install:
   - python setup.py install
@@ -41,9 +41,9 @@ env:
     - USE_SA=0 PYTHONASYNCIODEBUG=1 PG=9.3
     - USE_SA=1 PYTHONASYNCIODEBUG=0 PG=9.3
     - USE_SA=0 PYTHONASYNCIODEBUG=0 PG=9.3
-    - USE_SA=1 PYTHONASYNCIODEBUG=1 PG=9.4
-    - USE_SA=0 PYTHONASYNCIODEBUG=1 PG=9.4
-    - USE_SA=1 PYTHONASYNCIODEBUG=0 PG=9.4
-    - USE_SA=0 PYTHONASYNCIODEBUG=0 PG=9.4
+#    - USE_SA=1 PYTHONASYNCIODEBUG=1 PG=9.4
+#    - USE_SA=0 PYTHONASYNCIODEBUG=1 PG=9.4
+#    - USE_SA=1 PYTHONASYNCIODEBUG=0 PG=9.4
+#    - USE_SA=0 PYTHONASYNCIODEBUG=0 PG=9.4
 
 cache: apt
