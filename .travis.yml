@@ -9,6 +9,7 @@ before_install:
   - sudo /etc/init.d/postgresql stop
   - sudo apt-get install -y postgresql-contrib-${PG}
   - sudo /etc/init.d/postgresql start ${PG}
+  - sleep 10  # to wait for postgres server start
 
 install:
   - python setup.py install
