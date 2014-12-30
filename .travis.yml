@@ -8,7 +8,7 @@ before_install:
   - sudo apt-get update
   - sudo /etc/init.d/postgresql stop
   - sudo apt-get install -y postgresql-contrib-9.3
-  - sudo /etc/init.d/postgresql start 9.4
+  - sudo /etc/init.d/postgresql start 9.3
 
 install:
   - python setup.py install
