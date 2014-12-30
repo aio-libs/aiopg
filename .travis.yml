@@ -7,7 +7,7 @@ python:
 before_install:
   - sudo apt-get update
   - sudo /etc/init.d/postgresql stop
-  - sudo apt-get install -y postgresql-contrib-9.4
+  - sudo apt-get install -y postgresql-contrib-9.3
   - sudo /etc/init.d/postgresql start 9.4
 
 install:
@@ -29,8 +29,8 @@ script:
   - python runtests.py -v
   - python setup.py check -rms
 
-addons:
-  postgresql: "9.4"
+#addons:
+#  postgresql: "9.4"
 
 env:
   global:
