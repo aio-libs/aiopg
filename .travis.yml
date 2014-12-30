@@ -7,8 +7,8 @@ python:
 before_install:
   - sudo apt-get update
   - sudo /etc/init.d/postgresql stop
-  - sudo apt-get install -y postgresql-contrib-9.3
-  - sudo /etc/init.d/postgresql start 9.3
+  - sudo apt-get install -y postgresql-contrib-${PG}
+  - sudo /etc/init.d/postgresql start ${PG}
 
 install:
   - python setup.py install
@@ -36,9 +36,9 @@ env:
   global:
     - PYTHON=python
   matrix:
-    - USE_SA=1 PYTHONASYNCIODEBUG=1
-    - USE_SA=0 PYTHONASYNCIODEBUG=1
-    - USE_SA=1 PYTHONASYNCIODEBUG=0
-    - USE_SA=0 PYTHONASYNCIODEBUG=0
+    - USE_SA=1 PYTHONASYNCIODEBUG=1 PG=9.3
+    - USE_SA=0 PYTHONASYNCIODEBUG=1 PG=9.3
+    - USE_SA=1 PYTHONASYNCIODEBUG=0 PG=9.3
+    - USE_SA=0 PYTHONASYNCIODEBUG=0 PG=9.3
 
 cache: apt
