@@ -1,4 +1,4 @@
-Copyright (c) 2013, 2014, Nikolay Kim and Andrew Svetlov
+Copyright (c) 2014, 2015, Andrew Svetlov
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
