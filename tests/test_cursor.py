@@ -52,7 +52,27 @@ class TestCursor(unittest.TestCase):
             conn = yield from self.connect()
             cur = yield from conn.cursor()
             self.assertEqual(None, cur.description)
-            # FIXME: add test for description after .execute
+            yield from cur.execute('SELECT * from tbl;')
+
+            self.assertEqual(len(cur.description), 2,
+                             'cursor.description describes too many columns')
+
+            self.assertEqual(len(cur.description[0]), 7,
+                             'cursor.description[x] tuples must have '
+                             '7 elements')
+
+            self.assertEqual(cur.description[0][0].lower(), 'id',
+                             'cursor.description[x][0] must return column '
+                             'name')
+
+            self.assertEqual(cur.description[1][0].lower(), 'name',
+                             'cursor.description[x][0] must return column '
+                             'name')
+
+            # Make sure self.description gets reset, cursor should be
+            # set to None in case of none resulting queries like DDL
+            yield from cur.execute('DROP TABLE IF EXISTS foobar;')
+            self.assertEqual(None, cur.description)
 
         self.loop.run_until_complete(go())
 
