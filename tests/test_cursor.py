@@ -5,7 +5,6 @@ import psycopg2.tz
 import time
 import unittest
 
-
 from aiopg.connection import TIMEOUT
 
 
@@ -463,9 +462,10 @@ class TestCursor(unittest.TestCase):
             cur = yield from conn.cursor()
             yield from cur.execute("SELECT * FROM tbl")
             data = [(1, 'a'), (2, 'b'), (3, 'c')]
-            for item, tst in zip(cur, data):
-                self.assertEqual(item, tst)
-
+            fetched_data = []
+            for item in cur:
+                fetched_data.append(item)
+            self.assertEquals(fetched_data, data)
         self.loop.run_until_complete(go())
 
     def test_echo(self):
