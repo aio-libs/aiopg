@@ -26,7 +26,7 @@ def get_release():
             if match is not None:
                 return match.group(1)
         else:
-            raise RuntimeError('Cannot find version in aiozmq/__init__.py')
+            raise RuntimeError('Cannot find version in aiopg/__init__.py')
 
 
 def get_version(release):
