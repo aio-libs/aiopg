@@ -276,7 +276,7 @@ class SAConnection:
     def commit_prepared(self, xid, *, is_prepared=True):
         """Commit prepared twophase transaction."""
         if is_prepared:
-            self.execute("COMMIT PREPARED '%s'" % xid)
+            yield from self.execute("COMMIT PREPARED '%s'" % xid)
         else:
             yield from self._commit_impl()
 
