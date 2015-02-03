@@ -10,7 +10,7 @@ from .pool import create_pool, Pool
 __all__ = ('connect', 'create_pool', 'Connection', 'Cursor', 'Pool',
            'version', 'version_info', 'DEFAULT_TIMEOUT')
 
-__version__ = '0.6.0'
+__version__ = '0.6.1'
 
 version = __version__ + ' , Python ' + sys.version
 
