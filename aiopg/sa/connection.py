@@ -26,14 +26,12 @@ class SAConnection:
         query - a SQL query string or any sqlalchemy expression.
 
         *multiparams/**params - represent bound parameter values to be
-        used in the execution.  Typically, the format is either a
-        collection of one or more dictionaries passed to
-        *multiparams:
+        used in the execution.  Typically, the format is a dictionary
+        passed to *multiparams:
 
             yield from conn.execute(
                 table.insert(),
                 {"id":1, "value":"v1"},
-                {"id":2, "value":"v2"}
             )
 
         ...or individual key/values interpreted by **params::
@@ -42,12 +40,12 @@ class SAConnection:
                 table.insert(), id=1, value="v1"
             )
 
-        In the case that a plain SQL string is passed, a collection of
-        tuples or individual values in \*multiparams may be passed::
+        In the case that a plain SQL string is passed, a tuple or
+        individual values in \*multiparams may be passed::
 
             yield from conn.execute(
                 "INSERT INTO table (id, value) VALUES (%d, %s)",
-                (1, "v1"), (2, "v2")
+                (1, "v1")
             )
 
             yield from conn.execute(
@@ -60,23 +58,21 @@ class SAConnection:
 
         """
         cursor = yield from self._connection.cursor()
+        distilled_params = _distill_params(multiparams, params)
+        if len(distilled_params) > 1:
+            raise exc.ArgumentError("aiopg doesn't support executemany")
+        elif distilled_params:
+            distilled_params = distilled_params[0]
 
         if isinstance(query, str):
-            distilled_params = _distill_params(multiparams, params)
             result_map = None
-            if len(distilled_params) > 1:
-                raise exc.ArgumentError("aiopg doesn't support executemany")
-            elif distilled_params:
-                distilled_params = distilled_params[0]
             yield from cursor.execute(query, distilled_params)
         elif isinstance(query, ClauseElement):
-            if multiparams or params:
-                raise exc.ArgumentError("Don't mix sqlalchemy clause "
-                                        "and execution with parameters")
             compiled = query.compile(dialect=self._dialect)
             # parameters = compiled.params
             if not isinstance(query, DDLElement):
-                compiled_parameters = [compiled.construct_params()]
+                compiled_parameters = [compiled.construct_params(
+                    distilled_params)]
                 processed_parameters = []
                 processors = compiled._bind_processors
                 for compiled_params in compiled_parameters:

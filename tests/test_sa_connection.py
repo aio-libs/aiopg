@@ -85,6 +85,20 @@ class TestSAConnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
+    def test_execute_sa_insert_with_miltiple_dicts(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            yield from conn.execute(tbl.insert(), {"id": 2, "name": "second"})
+
+            res = yield from conn.execute(tbl.select())
+            rows = list(res)
+            self.assertEqual(2, len(rows))
+            self.assertEqual((1, 'first'), rows[0])
+            self.assertEqual((2, 'second'), rows[1])
+
+        self.loop.run_until_complete(go())
+
     def test_scalar(self):
         @asyncio.coroutine
         def go():
