@@ -1,10 +1,17 @@
 CHANGES
 -------
 
+0.6.0 (2015-02-03)
+^^^^^^^^^^^^^^^^^^
+
+* Accept dict, list, tuple, named and positional parameters in
+  `SAConnection.execute()`
+
 0.5.2 (2014-12-08)
 ^^^^^^^^^^^^^^^^^^
 
-* Minor release, fixes a bug that leaves connection in broken state after `cursor.execute()` failure.
+* Minor release, fixes a bug that leaves connection in broken state
+  after `cursor.execute()` failure.
 
 0.5.1 (2014-10-31)
 ^^^^^^^^^^^^^^^^^^
