@@ -2,6 +2,7 @@ import asyncio
 import weakref
 
 from sqlalchemy.sql import ClauseElement
+from sqlalchemy.sql.dml import UpdateBase
 from sqlalchemy.sql.ddl import DDLElement
 
 from . import exc
@@ -58,21 +59,29 @@ class SAConnection:
 
         """
         cursor = yield from self._connection.cursor()
-        distilled_params = _distill_params(multiparams, params)
-        if len(distilled_params) > 1:
+        dp = _distill_params(multiparams, params)
+        if len(dp) > 1:
             raise exc.ArgumentError("aiopg doesn't support executemany")
-        elif distilled_params:
-            distilled_params = distilled_params[0]
+        elif dp:
+            dp = dp[0]
 
         if isinstance(query, str):
             result_map = None
-            yield from cursor.execute(query, distilled_params)
+            yield from cursor.execute(query, dp)
         elif isinstance(query, ClauseElement):
             compiled = query.compile(dialect=self._dialect)
             # parameters = compiled.params
             if not isinstance(query, DDLElement):
+                if dp and isinstance(dp, (list, tuple)):
+                    if isinstance(query, UpdateBase):
+                        dp = {c.key: pval
+                              for c, pval in zip(query.table.c, dp)}
+                    else:
+                        raise exc.ArgumentError("Don't mix sqlalchemy SELECT "
+                                                "clause with positional "
+                                                "parameters")
                 compiled_parameters = [compiled.construct_params(
-                    distilled_params)]
+                    dp)]
                 processed_parameters = []
                 processors = compiled._bind_processors
                 for compiled_params in compiled_parameters:
@@ -85,6 +94,9 @@ class SAConnection:
                     processed_parameters)
                 result_map = compiled.result_map
             else:
+                if dp:
+                    raise exc.ArgumentError("Don't mix sqlalchemy DDL clause "
+                                            "and execution with parameters")
                 post_processed_params = [compiled.construct_params()]
                 result_map = None
             yield from cursor.execute(str(compiled), post_processed_params[0])
