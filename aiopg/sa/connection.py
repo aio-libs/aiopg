@@ -30,7 +30,7 @@ class SAConnection:
         collection of one or more dictionaries passed to
         *multiparams:
 
-            conn.execute(
+            yield from conn.execute(
                 table.insert(),
                 {"id":1, "value":"v1"},
                 {"id":2, "value":"v2"}
@@ -38,19 +38,19 @@ class SAConnection:
 
         ...or individual key/values interpreted by **params::
 
-            conn.execute(
+            yield from conn.execute(
                 table.insert(), id=1, value="v1"
             )
 
         In the case that a plain SQL string is passed, a collection of
         tuples or individual values in \*multiparams may be passed::
 
-            conn.execute(
+            yield from conn.execute(
                 "INSERT INTO table (id, value) VALUES (%d, %s)",
                 (1, "v1"), (2, "v2")
             )
 
-            conn.execute(
+            yield from conn.execute(
                 "INSERT INTO table (id, value) VALUES (%s, %s)",
                 1, "v1"
             )
