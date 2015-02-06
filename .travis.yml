@@ -16,6 +16,8 @@ install:
   - pip install pyflakes
   - pip install pep8
   - pip install docutils
+  - pip install coverage
+  - pip install coveralls
   - test $USE_SA == 1 && pip install sqlalchemy || true
 
 before_script:
@@ -27,7 +29,7 @@ before_script:
 script:
   - pep8 aiopg examples tests
   - pyflakes .
-  - python runtests.py -v
+  - python runtests.py --coverage -v
   - python setup.py check -rms
 
 #addons:
@@ -47,3 +49,6 @@ env:
 #    - USE_SA=0 PYTHONASYNCIODEBUG=0 PG=9.4
 
 cache: apt
+
+after_script:
+  - coveralls
