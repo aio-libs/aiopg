@@ -1,5 +1,5 @@
 aiopg
-=====
+=======
 .. image:: https://travis-ci.org/aio-libs/aiopg.svg?branch=master
     :target: https://travis-ci.org/aio-libs/aiopg
 .. image:: https://coveralls.io/repos/aio-libs/aiopg/badge.svg
@@ -12,7 +12,7 @@ asynchronous features of the Psycopg database driver.
 Example
 -------
 
-.. code:: python
+::
 
    import asyncio
    from aiopg.pool import create_pool
@@ -37,7 +37,7 @@ Example
 Example of SQLAlchemy optional integration
 -------------------------------------------
 
-.. code:: python
+::
 
    import asyncio
    from aiopg.sa import create_engine
