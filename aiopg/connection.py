@@ -18,11 +18,11 @@ TIMEOUT = 60.
 def _enable_hstore(conn):
     cur = yield from conn.cursor()
     yield from cur.execute("""\
-SELECT t.oid, typarray
-FROM pg_type t JOIN pg_namespace ns
-    ON typnamespace = ns.oid
-WHERE typname = 'hstore';
-""")
+        SELECT t.oid, typarray
+        FROM pg_type t JOIN pg_namespace ns
+            ON typnamespace = ns.oid
+        WHERE typname = 'hstore';
+        """)
     rv0, rv1 = [], []
     for oids in (yield from cur.fetchall()):
         rv0.append(oids[0])
