@@ -1,6 +1,6 @@
 CHANGES
 -------
-0.6.1
+0.7.0
 ^^^^^
 
 * Drop iteration protocol support in cursor.

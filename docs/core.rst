@@ -448,7 +448,7 @@ Cursor
    .. warning::
 
       :class:`Cursor` objects do **not** support iteration, since
-      version 0.6.1.
+      version 0.7.
 
       Iterable protocol in :class:`Cursor` hides ``yield from`` from user,
       witch should be explicit. Moreover iteration support is optional,
