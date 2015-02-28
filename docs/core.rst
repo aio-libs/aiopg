@@ -445,19 +445,14 @@ Cursor
 
    .. _cursor-iterable:
 
-   .. note::
+   .. warning::
 
-      :class:`Cursor` objects are iterable, so, instead of calling
-      explicitly :meth:`Cursor.fetchone` in a loop, the object itself can
-      be used::
+      :class:`Cursor` objects do **not** support iteration, since
+      version 0.6.1.
 
-         >>> cur.execute("SELECT * FROM test;")
-         >>> for record in cur:
-         ...     print(record)
-         ...
-         (1, 100, "abc'def")
-         (2, None, 'dada')
-         (3, 42, 'bar')
+      Iterable protocol in :class:`Cursor` hides ``yield from`` from user,
+      witch should be explicit. Moreover iteration support is optional,
+      according to PEP-249 (https://www.python.org/dev/peps/pep-0249/#iter).
 
    .. method:: fetchone()
 

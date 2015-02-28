@@ -5,7 +5,6 @@ import psycopg2.tz
 import time
 import unittest
 
-
 from aiopg.connection import TIMEOUT
 
 
@@ -453,18 +452,6 @@ class TestCursor(unittest.TestCase):
             t2 = time.time()
             dt = t2 - t1
             self.assertTrue(0.09 <= dt <= 0.11, dt)
-
-        self.loop.run_until_complete(go())
-
-    def test_iter(self):
-        @asyncio.coroutine
-        def go():
-            conn = yield from self.connect()
-            cur = yield from conn.cursor()
-            yield from cur.execute("SELECT * FROM tbl")
-            data = [(1, 'a'), (2, 'b'), (3, 'c')]
-            for item, tst in zip(cur, data):
-                self.assertEqual(item, tst)
 
         self.loop.run_until_complete(go())
 

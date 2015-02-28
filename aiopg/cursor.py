@@ -360,10 +360,3 @@ class Cursor:
     def timeout(self):
         """Return default timeout for cursor operations."""
         return self._timeout
-
-    def __iter__(self):
-        item = yield from self.fetchone()
-        if item is None:
-            raise StopIteration
-        else:
-            return item
