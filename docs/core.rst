@@ -190,7 +190,7 @@ Example::
        A list containing all the database messages sent to the client during
        the session::
 
-           >>> cur.execute("CREATE TABLE foo (id serial PRIMARY KEY);")
+           >>> yield from cur.execute("CREATE TABLE foo (id serial PRIMARY KEY);")
            >>> pprint(conn.notices)
            ['NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "foo_pkey" for table "foo"\n',
             'NOTICE:  CREATE TABLE will create implicit sequence "foo_id_seq" for serial column "foo.id"\n']
@@ -424,7 +424,7 @@ Cursor
 
       The returned string is always a bytes string::
 
-         >>> cur.mogrify("INSERT INTO test (num, data) VALUES (%s, %s)", (42, 'bar'))
+         >>> yield from cur.mogrify("INSERT INTO test (num, data) VALUES (%s, %s)", (42, 'bar'))
          "INSERT INTO test (num, data) VALUES (42, E'bar')"
 
    .. method:: setinputsizes(sizes)
@@ -459,8 +459,8 @@ Cursor
       Fetch the next row of a query result set, returning a single tuple,
       or ``None`` when no more data is available::
 
-         >>> cur.execute("SELECT * FROM test WHERE id = %s", (3,))
-         >>> cur.fetchone()
+         >>> yield from cur.execute("SELECT * FROM test WHERE id = %s", (3,))
+         >>> yield from cur.fetchone()
          (3, 42, 'bar')
 
       A :exc:`psycopg2.ProgrammingError` is raised if the previous
@@ -480,12 +480,12 @@ Cursor
       due to the specified number of rows not being available, fewer rows
       may be returned::
 
-         >>> cur.execute("SELECT * FROM test;")
-         >>> cur.fetchmany(2)
+         >>> yield from cur.execute("SELECT * FROM test;")
+         >>> yield from cur.fetchmany(2)
          [(1, 100, "abc'def"), (2, None, 'dada')]
-         >>> cur.fetchmany(2)
+         >>> yield from cur.fetchmany(2)
          [(3, 42, 'bar')]
-         >>> cur.fetchmany(2)
+         >>> yield from cur.fetchmany(2)
          []
 
       A :exc:`psycopg2.ProgrammingError` is raised if the previous call to
@@ -504,8 +504,8 @@ Cursor
       of tuples.  An empty list is returned if there is no more record to
       fetch::
 
-         >>> cur.execute("SELECT * FROM test;")
-         >>> cur.fetchall()
+         >>> yield from cur.execute("SELECT * FROM test;")
+         >>> yield from cur.fetchall()
          [(1, 100, "abc'def"), (2, None, 'dada'), (3, 42, 'bar')]
 
       A :exc:`psycopg2.ProgrammingError` is raised if the previous
@@ -533,7 +533,7 @@ Cursor
           probably to catch both exceptions in your code::
 
              try:
-                 cur.scroll(1000 * 1000)
+                 yield from cur.scroll(1000 * 1000)
              except (ProgrammingError, IndexError), exc:
                  deal_with_it(exc)
 
@@ -599,7 +599,7 @@ Cursor
       backend (including bound arguments) as bytes string. ``None`` if no
       query has been executed yet::
 
-         >>> cur.execute("INSERT INTO test (num, data) VALUES (%s, %s)", (42, 'bar'))
+         >>> yield from cur.execute("INSERT INTO test (num, data) VALUES (%s, %s)", (42, 'bar'))
          >>> cur.query
          "INSERT INTO test (num, data) VALUES (42, E'bar')"
 
@@ -608,7 +608,7 @@ Cursor
       Read-only attribute containing the message returned by the last
       command::
 
-         >>> cur.execute("INSERT INTO test (num, data) VALUES (%s, %s)", (42, 'bar'))
+         >>> yield from cur.execute("INSERT INTO test (num, data) VALUES (%s, %s)", (42, 'bar'))
          >>> cur.statusmessage
          'INSERT 0 1'
 
