@@ -1,4 +1,5 @@
 .idea
+*.iml
 *.pyc
 __pycache__
 dist
