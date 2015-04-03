@@ -1,9 +1,15 @@
 import asyncio
 
-import psycopg2
-from psycopg2.extensions import (
-    POLL_OK, POLL_READ, POLL_WRITE, POLL_ERROR)
-from psycopg2 import extras
+try:
+    import psycopg2cffi as psycopg2
+    from psycopg2cffi.extensions import (
+        POLL_OK, POLL_READ, POLL_WRITE, POLL_ERROR)
+    from psycopg2cffi import extras
+except ImportError:
+    import psycopg2
+    from psycopg2.extensions import (
+        POLL_OK, POLL_READ, POLL_WRITE, POLL_ERROR)
+    from psycopg2 import extras
 
 from .cursor import Cursor
 

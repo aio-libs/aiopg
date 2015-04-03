@@ -3,7 +3,10 @@ import asyncio
 import unittest
 
 from aiopg import connect
-from psycopg2.extras import Json
+try:
+    from psycopg2cffi.extras import Json
+except ImportError:
+    from psycopg2.extras import Json
 
 
 class TestComplexPGTypesConnection(unittest.TestCase):

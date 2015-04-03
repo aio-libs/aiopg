@@ -1,6 +1,9 @@
 import asyncio
 
-import psycopg2
+try:
+    import psycopg2cffi as psycopg2
+except ImportError:
+    import psycopg2
 
 from .log import logger
 

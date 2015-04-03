@@ -1,7 +1,11 @@
 import asyncio
 import aiopg
-import psycopg2
-import psycopg2.extras
+try:
+    import psycopg2cffi as psycopg2
+    import psycopg2cffi.extras as psycopg2_extras
+except ImportError:
+    import psycopg2
+    import psycopg2.extras as psycopg2_extras
 import socket
 import random
 import unittest
@@ -109,7 +113,7 @@ class TestConnection(unittest.TestCase):
         def go():
             conn = yield from self.connect()
             cur = yield from conn.cursor(
-                cursor_factory=psycopg2.extras.DictCursor)
+                cursor_factory=psycopg2_extras.DictCursor)
             yield from cur.execute('SELECT 1 AS a')
             ret = yield from cur.fetchone()
             self.assertEqual(1, ret['a'])
@@ -219,9 +223,9 @@ class TestConnection(unittest.TestCase):
         @asyncio.coroutine
         def go():
             conn = yield from self.connect(
-                cursor_factory=psycopg2.extras.DictCursor)
+                cursor_factory=psycopg2_extras.DictCursor)
 
-            self.assertIs(psycopg2.extras.DictCursor, conn.cursor_factory)
+            self.assertIs(psycopg2_extras.DictCursor, conn.cursor_factory)
 
         self.loop.run_until_complete(go())
 

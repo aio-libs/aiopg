@@ -2,7 +2,10 @@ import asyncio
 import unittest
 from unittest import mock
 
-from psycopg2.extensions import TRANSACTION_STATUS_INTRANS
+try:
+    from psycopg2cffi.extensions import TRANSACTION_STATUS_INTRANS
+except ImportError:
+    from psycopg2.extensions import TRANSACTION_STATUS_INTRANS
 
 import aiopg
 from aiopg.connection import Connection, TIMEOUT

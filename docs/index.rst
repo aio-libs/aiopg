@@ -4,10 +4,11 @@
    contain the root `toctree` directive.
 
 aiopg
-=================================
+=====
 
 .. _GitHub: https://github.com/aio-libs/aiopg
 .. _asyncio: http://docs.python.org/3.4/library/asyncio.html
+.. _psycopg2cffi: https://pypi.python.org/pypi/psycopg2cffi
 
 
 **aiopg** is a library for accessing a :term:`PostgreSQL` database
@@ -22,6 +23,7 @@ Features
   :ref:`aiopg-core-cursor` and :ref:`aiopg-core-pool` objects.
 - Implements *optional* support for charming :term:`sqlalchemy`
   functional sql layer.
+- You can use psycopg2cffi_ instead of psycopg2.
 
 
 Basics
@@ -109,7 +111,7 @@ convinient.
 
 
 Installation
---------------------
+------------
 
 .. code::
 
@@ -154,6 +156,7 @@ Dependencies
 - Python 3.3 and :mod:`asyncio` or Python 3.4+
 - psycopg2
 - aiopg.sa requires :term:`sqlalchemy`.
+- (Optional) psycopg2cffi_
 
 Authors and License
 -------------------

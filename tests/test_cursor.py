@@ -1,7 +1,11 @@
 import asyncio
 import aiopg
-import psycopg2
-import psycopg2.tz
+try:
+    import psycopg2cffi as psycopg2
+    import psycopg2cffi.tz as psycopg2_tz
+except ImportError:
+    import psycopg2
+    import psycopg2.tz as psycopg2_tz
 import time
 import unittest
 
@@ -327,10 +331,10 @@ class TestCursor(unittest.TestCase):
         def go():
             conn = yield from self.connect()
             cur = yield from conn.cursor()
-            self.assertIs(psycopg2.tz.FixedOffsetTimezone, cur.tzinfo_factory)
+            self.assertIs(psycopg2_tz.FixedOffsetTimezone, cur.tzinfo_factory)
 
-            cur.tzinfo_factory = psycopg2.tz.LocalTimezone
-            self.assertIs(psycopg2.tz.LocalTimezone, cur.tzinfo_factory)
+            cur.tzinfo_factory = psycopg2_tz.LocalTimezone
+            self.assertIs(psycopg2_tz.LocalTimezone, cur.tzinfo_factory)
 
         self.loop.run_until_complete(go())
 
