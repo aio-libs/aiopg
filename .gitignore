@@ -8,3 +8,4 @@ build
 .coverage
 htmlcov
 docs/_build
+pyvenv*/
