@@ -1,4 +1,5 @@
 import asyncio
+
 from aiopg.sa import create_engine
 import sqlalchemy as sa
 import random
@@ -8,12 +9,20 @@ import datetime
 metadata = sa.MetaData()
 
 users = sa.Table('users', metadata,
-                 sa.Column('id', sa.Integer, sa.Sequence('user_id_seq'), primary_key=True),
+                 sa.Column(
+                     'id',
+                     sa.Integer,
+                     sa.Sequence('user_id_seq'),
+                     primary_key=True),
                  sa.Column('name', sa.String(255)),
                  sa.Column('birthday', sa.DateTime))
 
 emails = sa.Table('emails', metadata,
-                  sa.Column('id', sa.Integer, sa.Sequence('email_id_seq'), primary_key=True),
+                  sa.Column(
+                      'id',
+                      sa.Integer,
+                      sa.Sequence('email_id_seq'),
+                      primary_key=True),
                   sa.Column('user_id', None, sa.ForeignKey('users.id')),
                   sa.Column('email', sa.String(255), nullable=False),
                   sa.Column('private', sa.Boolean, nullable=False))
