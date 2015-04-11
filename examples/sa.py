@@ -8,12 +8,12 @@ import datetime
 metadata = sa.MetaData()
 
 users = sa.Table('users', metadata,
-                 sa.Column('id', sa.Integer, primary_key=True),
+                 sa.Column('id', sa.Integer, sa.Sequence('user_id_seq'), primary_key=True),
                  sa.Column('name', sa.String(255)),
                  sa.Column('birthday', sa.DateTime))
 
 emails = sa.Table('emails', metadata,
-                  sa.Column('id', sa.Integer, primary_key=True),
+                  sa.Column('id', sa.Integer, sa.Sequence('email_id_seq'), primary_key=True),
                   sa.Column('user_id', None, sa.ForeignKey('users.id')),
                   sa.Column('email', sa.String(255), nullable=False),
                   sa.Column('private', sa.Boolean, nullable=False))
@@ -24,6 +24,11 @@ def create_tables(engine):
     with (yield from engine) as conn:
         yield from conn.execute('DROP TABLE IF EXISTS emails')
         yield from conn.execute('DROP TABLE IF EXISTS users')
+        yield from conn.execute('DROP SEQUENCE IF EXISTS user_id_seq')
+        yield from conn.execute('DROP SEQUENCE IF EXISTS email_id_seq')
+        yield from conn.execute('CREATE SEQUENCE user_id_seq')
+        yield from conn.execute('CREATE SEQUENCE email_id_seq')
+
         yield from conn.execute('''CREATE TABLE users (
                                             id serial PRIMARY KEY,
                                             name varchar(255),
@@ -56,7 +61,8 @@ def fill_data(engine):
 
         for name in random.sample(names, len(names)):
             uid = yield from conn.scalar(
-                users.insert().values(name=name, birthday=gen_birthday()))
+                users.insert(returning=[users.c.id]).values(
+                    name=name, birthday=gen_birthday()))
             emails_count = int(random.paretovariate(2))
             for num in random.sample(range(10000), emails_count):
                 is_private = random.uniform(0, 1) < 0.8
