@@ -39,6 +39,7 @@ class TestConnection(unittest.TestCase):
         cur = yield from conn2.cursor()
         yield from cur.execute("DROP TABLE IF EXISTS foo")
         yield from conn2.close()
+        self.addCleanup(conn.close)
         return conn
 
     def test_connect(self):
