@@ -21,7 +21,8 @@ class TestEngine(unittest.TestCase):
         self.loop.run_until_complete(self.start())
 
     def tearDown(self):
-        self.engine.terminate()
+        self.engine.close()
+        self.loop.run_until_complete(self.engine.wait_closed())
         self.loop.close()
 
     @asyncio.coroutine
@@ -78,7 +79,8 @@ class TestEngine(unittest.TestCase):
         @asyncio.coroutine
         def go():
             engine = yield from self.make_engine(use_loop=False)
-            engine.terminate()
+            engine.close()
+            yield from engine.wait_closed()
 
         asyncio.set_event_loop(self.loop)
         try:
@@ -102,6 +104,8 @@ class TestEngine(unittest.TestCase):
             with self.assertRaises(sa.InvalidRequestError):
                 self.engine.release(conn)
             del tr
+            yield from conn.close()
+
         self.loop.run_until_complete(go())
 
     def test_timeout(self):
@@ -117,7 +121,8 @@ class TestEngine(unittest.TestCase):
             with self.assertRaises(asyncio.TimeoutError):
                 yield from conn.execute("SELECT pg_sleep(10)")
 
-            self.engine.terminate()
+            self.engine.close()
+            yield from self.engine.wait_closed()
 
         self.loop.run_until_complete(go())
 
@@ -129,6 +134,8 @@ class TestEngine(unittest.TestCase):
 
             with self.assertRaises(RuntimeError):
                 yield from engine.acquire()
+
+            yield from engine.wait_closed()
 
         self.loop.run_until_complete(go())
 
