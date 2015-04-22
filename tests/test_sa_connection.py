@@ -21,8 +21,10 @@ class TestSAConnection(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
+        self.raw_connection = None
 
     def tearDown(self):
+        self.raw_connection.close()
         self.loop.close()
 
     @asyncio.coroutine
@@ -33,6 +35,7 @@ class TestSAConnection(unittest.TestCase):
                                   host='127.0.0.1',
                                   loop=self.loop,
                                   **kwargs)
+        self.raw_connection = conn
         cur = yield from conn.cursor()
         yield from cur.execute("DROP TABLE IF EXISTS sa_tbl")
         yield from cur.execute("CREATE TABLE sa_tbl "
