@@ -485,3 +485,17 @@ class TestCursor(unittest.TestCase):
                 self.assertEqual(item, tst)
 
         self.loop.run_until_complete(go())
+
+    def test_echo_callproc(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect(echo=True)
+            cur = yield from conn.cursor()
+
+            # TODO: check log records
+            yield from cur.callproc('inc', [1])
+            ret = yield from cur.fetchone()
+            self.assertEqual((2,), ret)
+            cur.close()
+
+        self.loop.run_until_complete(go())

@@ -250,7 +250,7 @@ class Pool(asyncio.AbstractServer):
         conn = yield from self.acquire()
         return _ConnectionContextManager(self, conn)
 
-    if PY_34:
+    if PY_34:  # pragma: no branch
         def __del__(self):
             try:
                 self._free

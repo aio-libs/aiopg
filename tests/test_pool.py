@@ -1,6 +1,7 @@
 import asyncio
 import unittest
 from unittest import mock
+import sys
 
 from psycopg2.extensions import TRANSACTION_STATUS_INTRANS
 
@@ -524,5 +525,17 @@ class TestPool(unittest.TestCase):
             with self.assertRaises(asyncio.TimeoutError):
                 yield from asyncio.wait_for(pool.wait_closed(),
                                             0.1, loop=self.loop)
+
+        self.loop.run_until_complete(go())
+
+    @unittest.skipIf(sys.version_info < (3, 4),
+                     "Python 3.3 doesnt support __del__ calls from GC")
+    def test___del__(self):
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool()
+            self.pool = None  # drop reference
+            with self.assertWarns(ResourceWarning):
+                del pool
 
         self.loop.run_until_complete(go())
