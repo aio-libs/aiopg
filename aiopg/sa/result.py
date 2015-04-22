@@ -1,4 +1,5 @@
 import asyncio
+import warnings
 import weakref
 from collections.abc import Mapping, Sequence
 
@@ -311,6 +312,9 @@ class ResultProxy:
             self._weak = None
 
     def __iter__(self):
+        warnings.warn("Iteration over ResultProxy is deprecated",
+                      DeprecationWarning,
+                      stacklevel=2)
         while True:
             row = yield from self.fetchone()
             if row is None:

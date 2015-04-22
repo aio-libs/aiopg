@@ -1,9 +1,10 @@
 CHANGES
 -------
+
 0.7.0
 ^^^^^
 
-* Drop iteration protocol support in cursor.
+* Deprecate iteration protocol support in cursor and ResultProxy.
 
 * Release sa connection to pool on `.close()`.
 
