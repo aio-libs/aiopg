@@ -4,6 +4,8 @@ CHANGES
 0.7.0
 ^^^^^
 
+* Report ResourceWarning on non-closed connections.
+
 * Deprecate iteration protocol support in cursor and ResultProxy.
 
 * Release sa connection to pool on `.close()`.
