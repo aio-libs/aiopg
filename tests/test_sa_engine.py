@@ -121,8 +121,8 @@ class TestEngine(unittest.TestCase):
             with self.assertRaises(asyncio.TimeoutError):
                 yield from conn.execute("SELECT pg_sleep(10)")
 
-            self.engine.terminate()
-            yield from self.engine.wait_closed()
+            engine.terminate()
+            yield from engine.wait_closed()
 
         self.loop.run_until_complete(go())
 
