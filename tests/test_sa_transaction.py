@@ -3,6 +3,7 @@ from aiopg import connect, sa
 import functools
 
 import unittest
+from unittest import mock
 
 from sqlalchemy import MetaData, Table, Column, Integer, String
 
@@ -43,7 +44,6 @@ class TestTransaction(unittest.TestCase):
                                 "(id serial, name varchar(255))")
         yield from conn.execute("INSERT INTO sa_tbl2 (name)"
                                 "VALUES ('first')")
-        yield from self.connect(**kwargs)
 
     @asyncio.coroutine
     def connect(self, **kwargs):
@@ -53,7 +53,17 @@ class TestTransaction(unittest.TestCase):
                                   host='127.0.0.1',
                                   loop=self.loop,
                                   **kwargs)
-        ret = sa.SAConnection(conn, sa.engine._dialect)
+        self.addCleanup(conn.close)
+        engine = mock.Mock()
+        engine.dialect = sa.engine._dialect
+
+        @asyncio.coroutine
+        def release(*args):
+            return
+            yield
+        engine.release = release
+
+        ret = sa.SAConnection(conn, engine)
         return ret
 
     def test_without_transactions(self):

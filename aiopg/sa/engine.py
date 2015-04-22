@@ -124,7 +124,7 @@ class Engine:
     def acquire(self):
         """Get a connection from pool."""
         raw = yield from self._pool.acquire()
-        conn = SAConnection(raw, self._dialect)
+        conn = SAConnection(raw, self)
         return conn
 
     def release(self, conn):

@@ -2,6 +2,7 @@ import asyncio
 from aiopg import connect, sa, Cursor
 
 import unittest
+from unittest import mock
 
 from sqlalchemy import MetaData, Table, Column, Integer, String
 from sqlalchemy.schema import DropTable, CreateTable
@@ -39,7 +40,10 @@ class TestSAConnection(unittest.TestCase):
         yield from cur.execute("INSERT INTO sa_tbl (name)"
                                "VALUES ('first')")
         cur.close()
-        return sa.SAConnection(conn, sa.engine._dialect)
+
+        engine = mock.Mock(from_spec=sa.engine.Engine)
+        engine.dialect = sa.engine._dialect
+        return sa.SAConnection(conn, engine)
 
     def test_execute_text_select(self):
         @asyncio.coroutine

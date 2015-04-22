@@ -9,3 +9,4 @@ setuptools
 -e .[sa]
 sphinx
 readthedocs-sphinx-ext
+nose

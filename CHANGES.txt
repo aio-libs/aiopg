@@ -5,6 +5,8 @@ CHANGES
 
 * Drop iteration protocol support in cursor.
 
+* Release sa connection to pool on `.close()`.
+
 0.6.0 (2015-02-03)
 ^^^^^^^^^^^^^^^^^^
 
