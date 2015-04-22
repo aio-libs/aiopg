@@ -51,7 +51,11 @@ def connect(dsn=None, *, timeout=TIMEOUT, loop=None,
 
     waiter = asyncio.Future(loop=loop)
     conn = Connection(dsn, loop, timeout, waiter, bool(echo), **kwargs)
-    yield from conn._poll(waiter, timeout)
+    try:
+        yield from conn._poll(waiter, timeout)
+    except Exception:
+        conn.close()
+        raise
     if enable_json:
         extras.register_default_json(conn._conn)
     if enable_hstore:
