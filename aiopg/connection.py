@@ -395,7 +395,7 @@ class Connection:
         """Return echo mode status."""
         return self._echo
 
-    if PY_34:
+    if PY_34:  # pragma: no branch
         def __del__(self):
             if not self._conn.closed:
                 warnings.warn("Unclosed connection {!r}".format(self),
