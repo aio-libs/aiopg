@@ -1,4 +1,6 @@
 import asyncio
+import sys
+import warnings
 
 import psycopg2
 from psycopg2.extensions import (
@@ -11,7 +13,8 @@ from .cursor import Cursor
 __all__ = ('connect',)
 
 
-TIMEOUT = 60.
+TIMEOUT = 60.0
+PY_34 = sys.version_info >= (3, 4)
 
 
 @asyncio.coroutine
@@ -387,3 +390,10 @@ class Connection:
     def echo(self):
         """Return echo mode status."""
         return self._echo
+
+    if PY_34:
+        def __del__(self):
+            if not self._conn.closed:
+                warnings.warn("Unclosed connection {!r}".format(self),
+                              ResourceWarning)
+                self.close()

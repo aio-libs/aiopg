@@ -1,11 +1,16 @@
 import asyncio
 import collections
+import sys
+import warnings
 
 
 from psycopg2.extensions import TRANSACTION_STATUS_IDLE
 
 from .connection import connect, TIMEOUT
 from .log import logger
+
+
+PY_34 = sys.version_info >= (3, 4)
 
 
 @asyncio.coroutine
@@ -244,6 +249,18 @@ class Pool(asyncio.AbstractServer):
         #         conn.release()
         conn = yield from self.acquire()
         return _ConnectionContextManager(self, conn)
+
+    if PY_34:
+        def __del__(self):
+            if self._free:
+                left = 0
+                while self._free:
+                    conn = self._free.popleft()
+                    conn.close()
+                    left += 1
+                warnings.warn(
+                    "Unclosed {} connections in {!r}".format(left, self),
+                    ResourceWarning)
 
 
 class _ConnectionContextManager:
