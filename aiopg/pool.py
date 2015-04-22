@@ -252,6 +252,10 @@ class Pool(asyncio.AbstractServer):
 
     if PY_34:
         def __del__(self):
+            try:
+                self._free
+            except AttributeError:
+                return  # frame has been cleared, __dict__ is empty
             if self._free:
                 left = 0
                 while self._free:
