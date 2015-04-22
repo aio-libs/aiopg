@@ -1,8 +1,8 @@
 CHANGES
 -------
 
-0.7.0
-^^^^^
+0.7.0 (2015-04-22)
+^^^^^^^^^^^^^^^^^^
 
 * Get rid of resource leak on connection failure.
 
@@ -10,7 +10,7 @@ CHANGES
 
 * Deprecate iteration protocol support in cursor and ResultProxy.
 
-* Release sa connection to pool on `.close()`.
+* Release sa connection to pool on `connection.close()`.
 
 0.6.0 (2015-02-03)
 ^^^^^^^^^^^^^^^^^^
