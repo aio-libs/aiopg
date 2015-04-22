@@ -58,6 +58,9 @@ class TestSATypes(unittest.TestCase):
                 ret = yield from conn.execute(tbl.select())
                 item = yield from ret.fetchone()
                 self.assertEqual(data, item['json_val'])
+            engine.close()
+            yield from engine.wait_closed()
+
         self.loop.run_until_complete(go())
 
     def test_array(self):
@@ -71,6 +74,9 @@ class TestSATypes(unittest.TestCase):
                 ret = yield from conn.execute(tbl.select())
                 item = yield from ret.fetchone()
                 self.assertEqual(data, item['array_val'])
+            engine.close()
+            yield from engine.wait_closed()
+
         self.loop.run_until_complete(go())
 
     def test_hstore(self):
@@ -84,6 +90,9 @@ class TestSATypes(unittest.TestCase):
                 ret = yield from conn.execute(tbl.select())
                 item = yield from ret.fetchone()
                 self.assertEqual(data, item['hstore_val'])
+            engine.close()
+            yield from engine.wait_closed()
+
         self.loop.run_until_complete(go())
 
     def test_enum(self):
@@ -96,4 +105,7 @@ class TestSATypes(unittest.TestCase):
                 ret = yield from conn.execute(tbl.select())
                 item = yield from ret.fetchone()
                 self.assertEqual('second', item['enum_val'])
+            engine.close()
+            yield from engine.wait_closed()
+
         self.loop.run_until_complete(go())
