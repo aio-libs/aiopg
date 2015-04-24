@@ -3,23 +3,25 @@ import unittest
 
 import psycopg2
 from aiopg import sa
-
+from aiopg.sa import utils
 from sqlalchemy import MetaData, Table, Column, Integer
 from sqlalchemy.schema import CreateTable, DropTable
-
-
-meta = MetaData()
 
 
 def get_default():
     return 2
 
+
+def onupdate_default():
+    return 3
+
+meta = MetaData()
 tbl = Table('sa_tbl_defaults', meta,
             Column('id', Integer, nullable=False,
                    primary_key=True),
             Column('default_value', Integer, nullable=False, default=1),
             Column('default_callable', Integer, nullable=False,
-                   default=get_default)
+                   default=get_default, onupdate=onupdate_default)
             )
 
 
@@ -48,7 +50,7 @@ class TestSATypes(unittest.TestCase):
             yield from conn.execute(CreateTable(tbl))
         return engine
 
-    def test_defaults(self):
+    def test_insert_defaults_simple(self):
         @asyncio.coroutine
         def go():
             engine = yield from self.connect()
@@ -65,52 +67,33 @@ class TestSATypes(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-    def test_defaults_override(self):
-        @asyncio.coroutine
-        def get_column_default(conn, dialect, column):
-            default = column.default
-            if default.is_sequence:
-                sql = "select nextval('%s')" % \
-                    dialect.identifier_preparer.format_sequence(default)
-                return (yield from conn.scalar(sql))
-            elif default.is_clause_element:
-                return (yield from conn.scalar(default.arg))
-            elif default.is_callable:
-                return default.arg(dialect)
-            else:
-                return default.arg
-
-        @asyncio.coroutine
-        def get_table_defaults(conn, dialect, table):
-            result = {}
-            for column in table.c:
-                if column.default is not None:
-                    val = yield from get_column_default(conn, dialect, column)
-                    result[column.name] = val
-            return result
-
-        @asyncio.coroutine
-        def insert(conn, dialect, table, returning_id=False, **kwargs):
-            values = yield from get_table_defaults(conn, dialect, table)
-            values.update(kwargs)
-            if returning_id:
-                insertion = table.insert(returning=[table.id])
-            else:
-                insertion = table.insert()
-            return insertion.values(**values)
+    def test_defaults_factory(self):
 
         @asyncio.coroutine
         def go():
             engine = yield from self.connect()
 
             with (yield from engine) as conn:
-                ins = yield from insert(conn, engine.dialect, tbl)
-                yield from conn.execute(ins.values())
+                insert = yield from utils.insert(conn, engine.dialect, tbl)
+                yield from conn.execute(insert)
 
                 ret = yield from conn.execute(tbl.select())
                 item = yield from ret.fetchone()
+                item_id = item['id']
                 self.assertEqual(1, item['default_value'])
                 self.assertEqual(2, item['default_callable'])
+
+                update = yield from utils.update(conn, engine.dialect, tbl)
+                stmt = update.where(tbl.c.id == item_id). \
+                    values(default_value=4)
+                yield from conn.execute(stmt)
+
+                ret = yield from conn.execute(tbl.select())
+                item = yield from ret.fetchone()
+                self.assertEqual(1, item['id'] == item_id)
+                self.assertEqual(4, item['default_value'])
+                self.assertEqual(3, item['default_callable'])
+
             engine.close()
             yield from engine.wait_closed()
 
