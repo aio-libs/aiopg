@@ -50,23 +50,6 @@ class TestSATypes(unittest.TestCase):
             yield from conn.execute(CreateTable(tbl))
         return engine
 
-    def test_insert_defaults_simple(self):
-        @asyncio.coroutine
-        def go():
-            engine = yield from self.connect()
-
-            with (yield from engine) as conn:
-                yield from conn.execute(tbl.insert().values())
-
-                ret = yield from conn.execute(tbl.select())
-                item = yield from ret.fetchone()
-                self.assertEqual(1, item['default_value'])
-                self.assertEqual(2, item['default_callable'])
-            engine.close()
-            yield from engine.wait_closed()
-
-        self.loop.run_until_complete(go())
-
     def test_defaults_factory(self):
 
         @asyncio.coroutine
