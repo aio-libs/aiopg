@@ -8,5 +8,5 @@ wheel
 setuptools
 -e .[sa]
 sphinx
-readthedocs-sphinx-ext
+# readthedocs-sphinx-ext
 nose
