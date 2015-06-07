@@ -10,7 +10,7 @@ from .connection import connect, TIMEOUT
 from .log import logger
 
 
-PY_34 = sys.version_info >= (3, 4)
+PY_341 = sys.version_info >= (3, 4, 1)
 
 
 @asyncio.coroutine
@@ -250,7 +250,7 @@ class Pool(asyncio.AbstractServer):
         conn = yield from self.acquire()
         return _ConnectionContextManager(self, conn)
 
-    if PY_34:  # pragma: no branch
+    if PY_341:  # pragma: no branch
         def __del__(self):
             try:
                 self._free

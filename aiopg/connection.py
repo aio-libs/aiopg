@@ -14,7 +14,7 @@ __all__ = ('connect',)
 
 
 TIMEOUT = 60.0
-PY_34 = sys.version_info >= (3, 4)
+PY_341 = sys.version_info >= (3, 4, 1)
 
 
 @asyncio.coroutine
@@ -395,7 +395,7 @@ class Connection:
         """Return echo mode status."""
         return self._echo
 
-    if PY_34:  # pragma: no branch
+    if PY_341:  # pragma: no branch
         def __del__(self):
             if not self._conn.closed:
                 warnings.warn("Unclosed connection {!r}".format(self),
