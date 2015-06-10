@@ -1,7 +1,10 @@
 import asyncio
 import unittest
 
-import psycopg2
+try:
+    import psycopg2cffi as psycopg2
+except ImportError:
+    import psycopg2
 from aiopg import sa
 
 from sqlalchemy import MetaData, Table, Column, Integer

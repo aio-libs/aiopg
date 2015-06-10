@@ -7,7 +7,10 @@ from unittest import mock
 from sqlalchemy import MetaData, Table, Column, Integer, String
 from sqlalchemy.schema import DropTable, CreateTable
 
-import psycopg2
+try:
+    import psycopg2cffi as psycopg2
+except ImportError:
+    import psycopg2
 
 
 meta = MetaData()

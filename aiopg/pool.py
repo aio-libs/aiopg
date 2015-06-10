@@ -3,8 +3,10 @@ import collections
 import sys
 import warnings
 
-
-from psycopg2.extensions import TRANSACTION_STATUS_IDLE
+try:
+    from psycopg2cffi.extensions import TRANSACTION_STATUS_IDLE
+except ImportError:
+    from psycopg2.extensions import TRANSACTION_STATUS_IDLE
 
 from .connection import connect, TIMEOUT
 from .log import logger

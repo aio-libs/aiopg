@@ -1,4 +1,5 @@
 .idea
+*.iml
 *.pyc
 __pycache__
 dist
@@ -7,3 +8,4 @@ build
 .coverage
 htmlcov
 docs/_build
+pyvenv*/
