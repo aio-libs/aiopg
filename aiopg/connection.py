@@ -78,13 +78,14 @@ class Connection:
         self._loop = loop
         self._conn = psycopg2.connect(dsn, async=True, **kwargs)
         self._dsn = self._conn.dsn
-        assert self._conn.isexecuting(), "Is conn async at all???"
+        assert self._conn.isexecuting(), "Is conn an async at all???"
         self._fileno = self._conn.fileno()
         self._timeout = timeout
         self._waiter = waiter
         self._reading = False
         self._writing = False
         self._echo = echo
+        self._notifications = asyncio.Queue(loop=loop)
         self._ready()
 
     def _ready(self):
@@ -95,6 +96,9 @@ class Connection:
 
         try:
             state = self._conn.poll()
+            while self._conn.notifies:
+                notify = self._conn.notifies.pop(0)
+                self._notifications.put_nowait(notify)
         except (psycopg2.Warning, psycopg2.Error) as exc:
             if self._reading:
                 self._loop.remove_reader(self._fileno)
