@@ -85,7 +85,7 @@ class Connection:
         self._reading = False
         self._writing = False
         self._echo = echo
-        self._notifications = asyncio.Queue(loop=loop)
+        self._notifies = asyncio.Queue(loop=loop)
         self._ready()
 
     def _ready(self):
@@ -98,7 +98,7 @@ class Connection:
             state = self._conn.poll()
             while self._conn.notifies:
                 notify = self._conn.notifies.pop(0)
-                self._notifications.put_nowait(notify)
+                self._notifies.put_nowait(notify)
         except (psycopg2.Warning, psycopg2.Error) as exc:
             if self._reading:
                 self._loop.remove_reader(self._fileno)
@@ -405,3 +405,8 @@ class Connection:
                 warnings.warn("Unclosed connection {!r}".format(self),
                               ResourceWarning)
                 self.close()
+
+    @property
+    def notifies(self):
+        """Return notification queue."""
+        return self._notifies
