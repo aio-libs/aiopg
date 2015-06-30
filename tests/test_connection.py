@@ -405,6 +405,7 @@ class TestConnection(unittest.TestCase):
         def go():
             conn = yield from self.connect()
             impl = mock.Mock()
+            impl.notifies = []
             exc = psycopg2.ProgrammingError("something bad")
             impl.poll.side_effect = exc
             conn._conn = impl
@@ -426,6 +427,7 @@ class TestConnection(unittest.TestCase):
         def go():
             conn = yield from self.connect()
             impl = mock.Mock()
+            impl.notifies = []
             impl.poll.return_value = psycopg2.extensions.POLL_OK
             conn._conn = impl
             conn._writing = True
@@ -446,6 +448,7 @@ class TestConnection(unittest.TestCase):
         def go():
             conn = yield from self.connect()
             impl = mock.Mock()
+            impl.notifies = []
             impl.poll.return_value = psycopg2.extensions.POLL_ERROR
             conn._conn = impl
             conn._writing = True
@@ -473,6 +476,7 @@ class TestConnection(unittest.TestCase):
         def go():
             conn = yield from self.connect()
             impl = mock.Mock()
+            impl.notifies = []
             impl.poll.return_value = 9999
             conn._conn = impl
             conn._writing = True
