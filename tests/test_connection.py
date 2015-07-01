@@ -642,3 +642,23 @@ class TestConnection(unittest.TestCase):
                 del conn
 
         self.loop.run_until_complete(go())
+
+    def test_notifies(self):
+        @asyncio.coroutine
+        def go():
+            conn1 = yield from self.connect()
+            self.addCleanup(conn1.close)
+            cur1 = yield from conn1.cursor()
+            self.addCleanup(cur1.close)
+            conn2 = yield from self.connect()
+            self.addCleanup(conn2.close)
+            cur2 = yield from conn2.cursor()
+            self.addCleanup(cur2.close)
+            yield from cur1.execute('LISTEN test')
+            self.assertTrue(conn2.notifies.empty())
+            yield from cur2.execute("NOTIFY test, 'hello'")
+            val = yield from conn1.notifies.get()
+            self.assertEqual('test', val.channel)
+            self.assertEqual('hello', val.payload)
+
+        self.loop.run_until_complete(go())

@@ -82,17 +82,13 @@ class Connection:
         self._fileno = self._conn.fileno()
         self._timeout = timeout
         self._waiter = waiter
-        self._reading = False
         self._writing = False
         self._echo = echo
         self._notifies = asyncio.Queue(loop=loop)
-        self._ready()
+        self._loop.add_reader(self._fileno, self._ready)
 
     def _ready(self):
-        if self._waiter is None:
-            self._fatal_error("Fatal error on aiopg connection: "
-                              "bad state in _ready callback")
-            return
+        waiter = self._waiter
 
         try:
             state = self._conn.poll()
@@ -100,35 +96,23 @@ class Connection:
                 notify = self._conn.notifies.pop(0)
                 self._notifies.put_nowait(notify)
         except (psycopg2.Warning, psycopg2.Error) as exc:
-            if self._reading:
-                self._loop.remove_reader(self._fileno)
-                self._reading = False
             if self._writing:
                 self._loop.remove_writer(self._fileno)
                 self._writing = False
-            if not self._waiter.cancelled():
-                self._waiter.set_exception(exc)
+            if waiter is not None and not waiter.cancelled():
+                waiter.set_exception(exc)
         else:
             if state == POLL_OK:
-                if self._reading:
-                    self._loop.remove_reader(self._fileno)
-                    self._reading = False
                 if self._writing:
                     self._loop.remove_writer(self._fileno)
                     self._writing = False
-                if not self._waiter.cancelled():
-                    self._waiter.set_result(None)
+                if waiter is not None and not waiter.cancelled():
+                    waiter.set_result(None)
             elif state == POLL_READ:
-                if not self._reading:
-                    self._loop.add_reader(self._fileno, self._ready)
-                    self._reading = True
                 if self._writing:
                     self._loop.remove_writer(self._fileno)
                     self._writing = False
             elif state == POLL_WRITE:
-                if self._reading:
-                    self._loop.remove_reader(self._fileno)
-                    self._reading = False
                 if not self._writing:
                     self._loop.add_writer(self._fileno, self._ready)
                     self._writing = True
@@ -207,9 +191,7 @@ class Connection:
         """Remove the connection from the event_loop and close it."""
         # N.B. If connection contains uncommitted transaction the
         # transaction will be discarded
-        if self._reading:
-            self._loop.remove_reader(self._fileno)
-            self._reading = False
+        self._loop.remove_reader(self._fileno)
         if self._writing:
             self._loop.remove_writer(self._fileno)
             self._writing = False
