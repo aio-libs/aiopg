@@ -1,5 +1,6 @@
 import asyncio
 import aiopg
+import gc
 import psycopg2
 import psycopg2.extras
 import socket
@@ -49,7 +50,6 @@ class TestConnection(unittest.TestCase):
         def go():
             conn = yield from self.connect()
             self.assertIsInstance(conn, Connection)
-            self.assertFalse(conn._reading)
             self.assertFalse(conn._writing)
             self.assertIs(conn._conn, conn.raw)
             self.assertFalse(conn.echo)
@@ -378,11 +378,9 @@ class TestConnection(unittest.TestCase):
         @asyncio.coroutine
         def go():
             conn = yield from self.connect()
-            conn._reading = conn._writing = True
-            self.loop.add_reader(conn._fileno, conn._ready)
+            conn._writing = True
             self.loop.add_writer(conn._fileno, conn._ready)
             conn.close()
-            self.assertFalse(conn._reading)
             self.assertFalse(conn._writing)
             self.assertTrue(conn.closed)
 
@@ -640,6 +638,7 @@ class TestConnection(unittest.TestCase):
                                             loop=self.loop)
             with self.assertWarns(ResourceWarning):
                 del conn
+                gc.collect()
 
         self.loop.run_until_complete(go())
 
