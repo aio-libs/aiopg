@@ -284,6 +284,12 @@ Example::
       A read-only float representing default timeout for connection's
       operations.
 
+   .. attribute:: notifies
+
+      An :class:`asyncio.Queue` instance for received notifications.
+
+      .. seealso:: :ref:`aiopg-core-notifications`
+
    The :class:`Connection` class also has several methods not
    described here.  Those methods are not supported in asynchronous
    mode (:exc:`psycopg2.ProgrammingError` is raised).
@@ -875,3 +881,32 @@ into python :class:`dict` object::
    yield from cur.execute("SELECT val FROM tbl")
    item = yield from cur.fetchone()
    assert item == {'b': 'str', 'a': 1}
+
+
+.. _aiopg-core-notifications:
+
+Server-side notifications
+=========================
+
+Psycopg allows asynchronous interaction with other database sessions
+using the facilities offered by PostgreSQL commands `LISTEN`_ and
+`NOTIFY`_ . Please refer to the PostgreSQL documentation for examples
+about how to use this form of communication.
+
+Notifications are instances of the
+:class:`~psycopg2.extensions.Notify` object made available upon
+reception in the connection.notifies list. Notifications can be sent
+from Python code simply executing a NOTIFY_ command in an
+:meth:`Cursor.execute` call.
+
+Receiving part should establish listening on notification channel by
+`LISTEN`_ call and wait notification events from
+:attr:`Connection.notifies` queue.
+
+There is usage example:
+
+.. literalinclude:: ../examples/notify.py
+
+
+.. _LISTEN: http://www.postgresql.org/docs/current/static/sql-listen.html
+.. _NOTIFY: http://www.postgresql.org/docs/current/static/sql-notify.html

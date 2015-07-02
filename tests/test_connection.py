@@ -1,5 +1,6 @@
 import asyncio
 import aiopg
+import gc
 import psycopg2
 import psycopg2.extras
 import socket
@@ -11,6 +12,9 @@ import sys
 from aiopg.connection import Connection, TIMEOUT
 from aiopg.cursor import Cursor
 from unittest import mock
+
+
+PY_341 = sys.version_info >= (3, 4, 1)
 
 
 class TestConnection(unittest.TestCase):
@@ -49,7 +53,6 @@ class TestConnection(unittest.TestCase):
         def go():
             conn = yield from self.connect()
             self.assertIsInstance(conn, Connection)
-            self.assertFalse(conn._reading)
             self.assertFalse(conn._writing)
             self.assertIs(conn._conn, conn.raw)
             self.assertFalse(conn.echo)
@@ -355,34 +358,14 @@ class TestConnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-    def test_ready_without_waiter(self):
-
-        @asyncio.coroutine
-        def go():
-            conn = yield from self.connect()
-            conn._waiter = None
-            handler = mock.Mock()
-            self.loop.set_exception_handler(handler)
-            conn._ready()
-            handler.assert_called_with(
-                self.loop,
-                {'connection': conn,
-                 'message': 'Fatal error on aiopg connection: '
-                            'bad state in _ready callback'})
-            self.assertTrue(conn.closed)
-
-        self.loop.run_until_complete(go())
-
     def test_close2(self):
 
         @asyncio.coroutine
         def go():
             conn = yield from self.connect()
-            conn._reading = conn._writing = True
-            self.loop.add_reader(conn._fileno, conn._ready)
-            self.loop.add_writer(conn._fileno, conn._ready)
+            conn._writing = True
+            self.loop.add_writer(conn._fileno, conn._ready, conn._weakref)
             conn.close()
-            self.assertFalse(conn._reading)
             self.assertFalse(conn._writing)
             self.assertTrue(conn.closed)
 
@@ -405,13 +388,14 @@ class TestConnection(unittest.TestCase):
         def go():
             conn = yield from self.connect()
             impl = mock.Mock()
+            impl.notifies = []
             exc = psycopg2.ProgrammingError("something bad")
             impl.poll.side_effect = exc
             conn._conn = impl
             conn._writing = True
             waiter = conn._create_waiter('test')
 
-            conn._ready()
+            conn._ready(conn._weakref)
             self.assertFalse(conn._writing)
             return waiter
 
@@ -426,12 +410,13 @@ class TestConnection(unittest.TestCase):
         def go():
             conn = yield from self.connect()
             impl = mock.Mock()
+            impl.notifies = []
             impl.poll.return_value = psycopg2.extensions.POLL_OK
             conn._conn = impl
             conn._writing = True
             waiter = conn._create_waiter('test')
 
-            conn._ready()
+            conn._ready(conn._weakref)
             self.assertFalse(conn._writing)
             self.assertFalse(impl.close.called)
             return waiter
@@ -446,6 +431,7 @@ class TestConnection(unittest.TestCase):
         def go():
             conn = yield from self.connect()
             impl = mock.Mock()
+            impl.notifies = []
             impl.poll.return_value = psycopg2.extensions.POLL_ERROR
             conn._conn = impl
             conn._writing = True
@@ -453,7 +439,7 @@ class TestConnection(unittest.TestCase):
             handler = mock.Mock()
             self.loop.set_exception_handler(handler)
 
-            conn._ready()
+            conn._ready(conn._weakref)
             handler.assert_called_with(
                 self.loop,
                 {'connection': conn,
@@ -473,6 +459,7 @@ class TestConnection(unittest.TestCase):
         def go():
             conn = yield from self.connect()
             impl = mock.Mock()
+            impl.notifies = []
             impl.poll.return_value = 9999
             conn._conn = impl
             conn._writing = True
@@ -480,7 +467,7 @@ class TestConnection(unittest.TestCase):
             handler = mock.Mock()
             self.loop.set_exception_handler(handler)
 
-            conn._ready()
+            conn._ready(conn._weakref)
             handler.assert_called_with(
                 self.loop,
                 {'connection': conn,
@@ -624,7 +611,7 @@ class TestConnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-    @unittest.skipIf(sys.version_info < (3, 4),
+    @unittest.skipIf(not PY_341,
                      "Python 3.3 doesnt support __del__ calls from GC")
     def test___del__(self):
         @asyncio.coroutine
@@ -636,5 +623,26 @@ class TestConnection(unittest.TestCase):
                                             loop=self.loop)
             with self.assertWarns(ResourceWarning):
                 del conn
+                gc.collect()
+
+        self.loop.run_until_complete(go())
+
+    def test_notifies(self):
+        @asyncio.coroutine
+        def go():
+            conn1 = yield from self.connect()
+            self.addCleanup(conn1.close)
+            cur1 = yield from conn1.cursor()
+            self.addCleanup(cur1.close)
+            conn2 = yield from self.connect()
+            self.addCleanup(conn2.close)
+            cur2 = yield from conn2.cursor()
+            self.addCleanup(cur2.close)
+            yield from cur1.execute('LISTEN test')
+            self.assertTrue(conn2.notifies.empty())
+            yield from cur2.execute("NOTIFY test, 'hello'")
+            val = yield from conn1.notifies.get()
+            self.assertEqual('test', val.channel)
+            self.assertEqual('hello', val.payload)
 
         self.loop.run_until_complete(go())
