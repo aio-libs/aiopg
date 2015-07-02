@@ -1,6 +1,12 @@
 CHANGES
 -------
 
+0.8.0 (XXXX-XX-XX)
+^^^^^^^^^^^^^^^^^^
+
+* Add PostgreSQL notification support #58
+
+
 0.7.0 (2015-04-22)
 ^^^^^^^^^^^^^^^^^^
 
