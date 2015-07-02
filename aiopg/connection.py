@@ -1,4 +1,5 @@
 import asyncio
+import errno
 import sys
 import warnings
 import weakref
@@ -103,17 +104,24 @@ class Connection:
                 notify = self._conn.notifies.pop(0)
                 self._notifies.put_nowait(notify)
         except (psycopg2.Warning, psycopg2.Error) as exc:
-            if self._writing:
-                self._loop.remove_writer(self._fileno)
-                self._writing = False
-            if waiter is not None and not waiter.cancelled():
+            try:
+                if self._writing:
+                    self._writing = False
+                    self._loop.remove_writer(self._fileno)
+            except OSError as exc2:
+                if exc2.errno != errno.EBADF:
+                    # EBADF is ok for closed file descriptor
+                    # chain exception otherwise
+                    exc2.__cause__ = exc
+                    exc = exc2
+            if waiter is not None and not waiter.done():
                 waiter.set_exception(exc)
         else:
             if state == POLL_OK:
                 if self._writing:
                     self._loop.remove_writer(self._fileno)
                     self._writing = False
-                if waiter is not None and not waiter.cancelled():
+                if waiter is not None and not waiter.done():
                     waiter.set_result(None)
             elif state == POLL_READ:
                 if self._writing:
@@ -200,8 +208,8 @@ class Connection:
         # transaction will be discarded
         self._loop.remove_reader(self._fileno)
         if self._writing:
-            self._loop.remove_writer(self._fileno)
             self._writing = False
+            self._loop.remove_writer(self._fileno)
         self._conn.close()
         if self._waiter is not None and not self._waiter.done():
             self._waiter.set_exception(
