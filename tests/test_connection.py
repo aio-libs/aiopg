@@ -355,24 +355,6 @@ class TestConnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-    def test_ready_without_waiter(self):
-
-        @asyncio.coroutine
-        def go():
-            conn = yield from self.connect()
-            conn._waiter = None
-            handler = mock.Mock()
-            self.loop.set_exception_handler(handler)
-            conn._ready()
-            handler.assert_called_with(
-                self.loop,
-                {'connection': conn,
-                 'message': 'Fatal error on aiopg connection: '
-                            'bad state in _ready callback'})
-            self.assertTrue(conn.closed)
-
-        self.loop.run_until_complete(go())
-
     def test_close2(self):
 
         @asyncio.coroutine
