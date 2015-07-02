@@ -14,6 +14,14 @@ Low-level API
 .. literalinclude:: ../examples/simple.py
 
 
+.. _aiozmq-examples-notify:
+
+Usage of LISTEN/NOTIFY commands
+-------------------------------
+
+.. literalinclude:: ../examples/notify.py
+
+
 .. _aiozmq-examples-sa-simple:
 
 Simple sqlalchemy usage
