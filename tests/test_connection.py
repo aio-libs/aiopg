@@ -14,6 +14,9 @@ from aiopg.cursor import Cursor
 from unittest import mock
 
 
+PY_341 = sys.version_info >= (3, 4, 1)
+
+
 class TestConnection(unittest.TestCase):
 
     def setUp(self):
@@ -361,7 +364,7 @@ class TestConnection(unittest.TestCase):
         def go():
             conn = yield from self.connect()
             conn._writing = True
-            self.loop.add_writer(conn._fileno, conn._ready)
+            self.loop.add_writer(conn._fileno, conn._ready, conn._weakref)
             conn.close()
             self.assertFalse(conn._writing)
             self.assertTrue(conn.closed)
@@ -392,7 +395,7 @@ class TestConnection(unittest.TestCase):
             conn._writing = True
             waiter = conn._create_waiter('test')
 
-            conn._ready()
+            conn._ready(conn._weakref)
             self.assertFalse(conn._writing)
             return waiter
 
@@ -413,7 +416,7 @@ class TestConnection(unittest.TestCase):
             conn._writing = True
             waiter = conn._create_waiter('test')
 
-            conn._ready()
+            conn._ready(conn._weakref)
             self.assertFalse(conn._writing)
             self.assertFalse(impl.close.called)
             return waiter
@@ -436,7 +439,7 @@ class TestConnection(unittest.TestCase):
             handler = mock.Mock()
             self.loop.set_exception_handler(handler)
 
-            conn._ready()
+            conn._ready(conn._weakref)
             handler.assert_called_with(
                 self.loop,
                 {'connection': conn,
@@ -464,7 +467,7 @@ class TestConnection(unittest.TestCase):
             handler = mock.Mock()
             self.loop.set_exception_handler(handler)
 
-            conn._ready()
+            conn._ready(conn._weakref)
             handler.assert_called_with(
                 self.loop,
                 {'connection': conn,
@@ -608,7 +611,7 @@ class TestConnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-    @unittest.skipIf(sys.version_info < (3, 4),
+    @unittest.skipIf(not PY_341,
                      "Python 3.3 doesnt support __del__ calls from GC")
     def test___del__(self):
         @asyncio.coroutine

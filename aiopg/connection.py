@@ -1,6 +1,7 @@
 import asyncio
 import sys
 import warnings
+import weakref
 
 import psycopg2
 from psycopg2.extensions import (
@@ -85,9 +86,15 @@ class Connection:
         self._writing = False
         self._echo = echo
         self._notifies = asyncio.Queue(loop=loop)
-        self._loop.add_reader(self._fileno, self._ready)
+        self._weakref = weakref.ref(self)
+        self._loop.add_reader(self._fileno, self._ready, self._weakref)
 
-    def _ready(self):
+    @staticmethod
+    def _ready(weak_self):
+        self = weak_self()
+        if self is None:
+            return
+
         waiter = self._waiter
 
         try:
@@ -114,7 +121,7 @@ class Connection:
                     self._writing = False
             elif state == POLL_WRITE:
                 if not self._writing:
-                    self._loop.add_writer(self._fileno, self._ready)
+                    self._loop.add_writer(self._fileno, self._ready, weak_self)
                     self._writing = True
             elif state == POLL_ERROR:
                 self._fatal_error("Fatal error on aiopg connection: "
@@ -145,7 +152,7 @@ class Connection:
     @asyncio.coroutine
     def _poll(self, waiter, timeout):
         assert waiter is self._waiter, (waiter, self._waiter)
-        self._ready()
+        self._ready(self._weakref)
         try:
             yield from asyncio.wait_for(self._waiter, timeout, loop=self._loop)
         finally:
