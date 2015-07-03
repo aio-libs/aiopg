@@ -6,6 +6,8 @@ CHANGES
 
 * Add PostgreSQL notification support #58
 
+* Support pools with unlimited size #59
+
 
 0.7.0 (2015-04-22)
 ^^^^^^^^^^^^^^^^^^

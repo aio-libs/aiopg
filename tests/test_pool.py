@@ -539,3 +539,12 @@ class TestPool(unittest.TestCase):
                 del pool
 
         self.loop.run_until_complete(go())
+
+    def test_unlimited_size(self):
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool(maxsize=0)
+            self.assertEqual(10, pool.minsize)
+            self.assertIsNone(pool._free.maxlen)
+
+        self.loop.run_until_complete(go())
