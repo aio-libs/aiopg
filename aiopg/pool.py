@@ -39,7 +39,7 @@ class Pool(asyncio.AbstractServer):
                  enable_json, enable_hstore, echo, **kwargs):
         if minsize < 0:
             raise ValueError("minsize should be zero or greater")
-        if maxsize < minsize:
+        if maxsize < minsize and maxsize != 0:
             raise ValueError("maxsize should be not less than minsize")
         self._dsn = dsn
         self._minsize = minsize
@@ -50,7 +50,7 @@ class Pool(asyncio.AbstractServer):
         self._echo = echo
         self._conn_kwargs = kwargs
         self._acquiring = 0
-        self._free = collections.deque(maxlen=maxsize)
+        self._free = collections.deque(maxlen=maxsize or None)
         self._cond = asyncio.Condition(loop=loop)
         self._used = set()
         self._terminated = set()
