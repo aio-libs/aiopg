@@ -1,6 +1,7 @@
 import asyncio
 import errno
 import sys
+import traceback
 import warnings
 import weakref
 
@@ -76,6 +77,8 @@ class Connection:
 
     """
 
+    _source_traceback = None
+
     def __init__(self, dsn, loop, timeout, waiter, echo, **kwargs):
         self._loop = loop
         self._conn = psycopg2.connect(dsn, async=True, **kwargs)
@@ -89,6 +92,8 @@ class Connection:
         self._notifies = asyncio.Queue(loop=loop)
         self._weakref = weakref.ref(self)
         self._loop.add_reader(self._fileno, self._ready, self._weakref)
+        if loop.get_debug():
+            self._source_traceback = traceback.extract_stack(sys._getframe(1))
 
     @staticmethod
     def _ready(weak_self):
@@ -399,9 +404,15 @@ class Connection:
     if PY_341:  # pragma: no branch
         def __del__(self):
             if not self._conn.closed:
+                self.close()
                 warnings.warn("Unclosed connection {!r}".format(self),
                               ResourceWarning)
-                self.close()
+
+                context = {'connection': self,
+                           'message': 'Unclosed connection'}
+                if self._source_traceback is not None:
+                    context['source_traceback'] = self._source_traceback
+                self._loop.call_exception_handler(context)
 
     @property
     def notifies(self):

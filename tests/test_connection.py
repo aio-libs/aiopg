@@ -616,6 +616,8 @@ class TestConnection(unittest.TestCase):
     def test___del__(self):
         @asyncio.coroutine
         def go():
+            exc_handler = unittest.mock.Mock()
+            self.loop.set_exception_handler(exc_handler)
             conn = yield from aiopg.connect(database='aiopg',
                                             user='aiopg',
                                             password='passwd',
@@ -624,6 +626,12 @@ class TestConnection(unittest.TestCase):
             with self.assertWarns(ResourceWarning):
                 del conn
                 gc.collect()
+
+            msg = {'connection': unittest.mock.ANY,  # conn was deleted
+                   'message': 'Unclosed connection'}
+            if self.loop.get_debug():
+                msg['source_traceback'] = unittest.mock.ANY
+            exc_handler.assert_called_with(self.loop, msg)
 
         self.loop.run_until_complete(go())
 
