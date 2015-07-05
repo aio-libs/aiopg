@@ -38,5 +38,6 @@ clean:
 	rm -f .coverage
 	rm -rf coverage
 	rm -rf docs/_build
+	rm -rf .tox
 
 .PHONY: all pep test vtest testloop cov clean

@@ -10,3 +10,4 @@ setuptools
 sphinx
 # readthedocs-sphinx-ext
 nose
+tox
