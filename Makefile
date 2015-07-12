@@ -12,7 +12,7 @@ pep:
 	pep8 aiopg examples tests
 
 flake:
-	pyflakes .
+	pyflakes aiopg examples tests
 
 test: pep flake
 	$(PYTHON) runtests.py $(FILTER)
