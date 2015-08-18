@@ -41,8 +41,8 @@ Example of SQLAlchemy optional integration
 
    import asyncio
    from aiopg.sa import create_engine
+   from sqlalchemy.schema import CreateTable
    import sqlalchemy as sa
-
 
    metadata = sa.MetaData()
 
@@ -59,6 +59,7 @@ Example of SQLAlchemy optional integration
                                          password='passwd')
 
        with (yield from engine) as conn:
+           yield from conn.execute(CreateTable(tbl))
            yield from conn.execute(tbl.insert().values(val='abc'))
 
            res = yield from conn.execute(tbl.select())
