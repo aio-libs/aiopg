@@ -654,3 +654,18 @@ class TestConnection(unittest.TestCase):
             self.assertEqual('hello', val.payload)
 
         self.loop.run_until_complete(go())
+
+    def test_close_cursor_on_timeout_error(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            cur = yield from conn.cursor(timeout=0.01)
+            with self.assertRaises(asyncio.TimeoutError):
+                yield from cur.execute("SELECT pg_sleep(10)")
+
+            self.assertTrue(cur.closed)
+            self.assertFalse(conn.closed)
+
+            yield from conn.close()
+
+        self.loop.run_until_complete(go())

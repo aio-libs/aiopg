@@ -108,8 +108,12 @@ class Cursor:
         except:
             self._conn._waiter = None
             raise
-        else:
+        try:
             yield from self._conn._poll(waiter, timeout)
+        except asyncio.TimeoutError:
+            yield from self._conn.cancel()
+            self._impl.close()
+            raise
 
     @asyncio.coroutine
     def executemany(self, operation, seq_of_parameters):

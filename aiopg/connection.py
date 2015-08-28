@@ -286,7 +286,10 @@ class Connection:
         self._conn.cancel()
         if timeout is None:
             timeout = self._timeout
-        yield from self._poll(waiter, timeout)
+        try:
+            yield from self._poll(waiter, timeout)
+        except psycopg2.extensions.QueryCanceledError:
+            pass
 
     @asyncio.coroutine
     def reset(self):
