@@ -4,7 +4,7 @@ from aiopg.connection import TIMEOUT
 import unittest
 
 import pytest
-sa = pytest.importorskip("aiopg.sa")
+sa = pytest.importorskip("aiopg.sa")  # noqa
 
 from sqlalchemy import MetaData, Table, Column, Integer, String
 

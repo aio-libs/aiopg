@@ -1,7 +1,7 @@
 import unittest
 
 import pytest
-pytest.importorskip("aiopg.sa")
+pytest.importorskip("aiopg.sa")  # noqa
 
 from aiopg.sa.connection import _distill_params
 
