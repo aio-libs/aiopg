@@ -1,5 +1,3 @@
-import unittest
-
 import pytest
 pytest.importorskip("aiopg.sa")  # noqa
 
