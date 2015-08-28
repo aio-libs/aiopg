@@ -8,7 +8,7 @@ CHANGES
 
 * Support pools with unlimited size #59
 
-* Cancel current DB operation on asyncio timeout
+* Cancel current DB operation on asyncio timeout #66
 
 
 0.7.0 (2015-04-22)
