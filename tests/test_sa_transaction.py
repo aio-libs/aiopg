@@ -1,9 +1,12 @@
 import asyncio
-from aiopg import connect, sa
+from aiopg import connect
 import functools
 
 import unittest
 from unittest import mock
+
+import pytest
+sa = pytest.importorskip("aiopg.sa")
 
 from sqlalchemy import MetaData, Table, Column, Integer, String
 

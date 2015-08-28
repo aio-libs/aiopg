@@ -1,8 +1,10 @@
 import asyncio
-from aiopg import sa
 from aiopg.connection import TIMEOUT
 
 import unittest
+
+import pytest
+sa = pytest.importorskip("aiopg.sa")
 
 from sqlalchemy import MetaData, Table, Column, Integer, String
 

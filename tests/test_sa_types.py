@@ -2,7 +2,9 @@ import asyncio
 import unittest
 
 import psycopg2
-from aiopg import sa
+
+import pytest
+sa = pytest.importorskip("aiopg.sa")
 
 from sqlalchemy import MetaData, Table, Column, Integer
 from sqlalchemy.schema import CreateTable, DropTable

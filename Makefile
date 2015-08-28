@@ -1,9 +1,5 @@
 # Some simple testing tasks (sorry, UNIX only).
 
-PYTHON=python3
-
-FILTER=
-
 doc:
 	cd docs && make html
 	echo "open file://`pwd`/docs/_build/html/index.html"
@@ -15,16 +11,13 @@ flake:
 	pyflakes aiopg examples tests
 
 test: pep flake
-	$(PYTHON) runtests.py $(FILTER)
+	py.test -q
 
 vtest: pep flake
-	$(PYTHON) runtests.py -v $(FILTER)
-
-testloop: pep flake
-	$(PYTHON) runtests.py --forever $(FILTER)
+	py.test
 
 cov cover coverage: pep flake
-	$(PYTHON) runtests.py --coverage $(FILTER)
+	py.test --cov=aiopg --cov=tests --cov-report=html --cov-report=term
 
 clean:
 	find . -name __pycache__ |xargs rm -rf
@@ -40,4 +33,4 @@ clean:
 	rm -rf docs/_build
 	rm -rf .tox
 
-.PHONY: all pep test vtest testloop cov clean
+.PHONY: all pep test vtest cov clean

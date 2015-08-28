@@ -9,5 +9,6 @@ setuptools
 -e .[sa]
 sphinx
 # readthedocs-sphinx-ext
-nose
 tox
+pytest
+pytest-coverage

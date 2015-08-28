@@ -13,11 +13,7 @@ before_install:
 
 install:
   - python setup.py install
-  - pip install pyflakes
-  - pip install pep8
-  - pip install docutils
-  - pip install coverage
-  - pip install coveralls
+  - pip install -r requirements.txt
   - test $USE_SA == 1 && pip install sqlalchemy || true
 
 before_script:
@@ -27,9 +23,7 @@ before_script:
   - psql -c "create extension hstore;" -U postgres -d aiopg
 
 script:
-  - pep8 aiopg examples tests
-  - pyflakes .
-  - python runtests.py --coverage -v
+  - make cov
   - python setup.py check -rms
 
 #addons:
