@@ -108,6 +108,19 @@ class TestConnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
+    def test_with_connection_factory(self):
+        class Subclassed(aiopg.connection.Connection):
+            pass
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect(
+                aio_connection_factory=Subclassed,
+            )
+            self.assertIsInstance(conn, Subclassed)
+
+        self.loop.run_until_complete(go())
+
     def test_with_cursor_factory(self):
 
         @asyncio.coroutine

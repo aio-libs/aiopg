@@ -40,7 +40,8 @@ def _enable_hstore(conn):
 
 @asyncio.coroutine
 def connect(dsn=None, *, timeout=TIMEOUT, loop=None,
-            enable_json=True, enable_hstore=True, echo=False, **kwargs):
+            enable_json=True, enable_hstore=True, echo=False,
+            aio_connection_factory=None, **kwargs):
     """A factory for connecting to PostgreSQL.
 
     The coroutine accepts all parameters that psycopg2.connect() does
@@ -52,8 +53,13 @@ def connect(dsn=None, *, timeout=TIMEOUT, loop=None,
     if loop is None:
         loop = asyncio.get_event_loop()
 
+    if aio_connection_factory is None:
+        aio_connection_factory = Connection
+
     waiter = asyncio.Future(loop=loop)
-    conn = Connection(dsn, loop, timeout, waiter, bool(echo), **kwargs)
+    conn = aio_connection_factory(
+        dsn, loop, timeout, waiter, bool(echo), **kwargs
+    )
     try:
         yield from conn._poll(waiter, timeout)
     except Exception:
