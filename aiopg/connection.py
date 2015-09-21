@@ -180,7 +180,6 @@ class Connection:
     def _isexecuting(self):
         return self._conn.isexecuting()
 
-    @asyncio.coroutine
     def cursor(self, name=None, cursor_factory=None,
                scrollable=None, withhold=False, timeout=None):
         """A coroutine that returns a new cursor object using the connection.
@@ -196,11 +195,13 @@ class Connection:
         if timeout is None:
             timeout = self._timeout
 
-        impl = yield from self._cursor(name=name,
-                                       cursor_factory=cursor_factory,
-                                       scrollable=scrollable,
-                                       withhold=withhold)
-        return Cursor(self, impl, timeout, self._echo)
+        impl = self._cursor(name=name,
+                            cursor_factory=cursor_factory,
+                            scrollable=scrollable,
+                            withhold=withhold)
+        return _CursorContextManager(self, impl, timeout, self._echo)
+
+    cursor._is_coroutine = True
 
     @asyncio.coroutine
     def _cursor(self, name=None, cursor_factory=None,
@@ -427,3 +428,24 @@ class Connection:
     def notifies(self):
         """Return notification queue."""
         return self._notifies
+
+
+class _CursorContextManager:
+    def __init__(self, conn, impl, timeout, echo):
+        self._conn = conn
+        self._impl = impl
+        self._timeout = timeout
+        self._echo = echo
+
+    def __iter__(self):
+        impl = yield from self._impl
+        return Cursor(self._conn, impl, self._timeout, self._echo)
+
+    @asyncio.coroutine
+    def __aenter__(self):
+        self._cursor = yield from self
+        return self._cursor
+
+    @asyncio.coroutine
+    def __aexit__(self, type, value, traceback):
+        self._cursor.close()
