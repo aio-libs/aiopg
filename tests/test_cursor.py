@@ -401,7 +401,7 @@ class TestCursor(unittest.TestCase):
                 yield from cur.execute("SELECT pg_sleep(1)")
             t2 = time.time()
             dt = t2 - t1
-            self.assertTrue(0.08 <= dt <= 0.12, dt)
+            self.assertTrue(0.08 <= dt <= 0.15, dt)
 
         self.loop.run_until_complete(go())
 
@@ -418,7 +418,7 @@ class TestCursor(unittest.TestCase):
                 yield from cur.execute("SELECT pg_sleep(1)", timeout=timeout)
             t2 = time.time()
             dt = t2 - t1
-            self.assertTrue(0.08 <= dt <= 0.12, dt)
+            self.assertTrue(0.08 <= dt <= 0.15, dt)
 
         self.loop.run_until_complete(go())
 
@@ -435,7 +435,7 @@ class TestCursor(unittest.TestCase):
                 yield from cur.callproc("pg_sleep", [1])
             t2 = time.time()
             dt = t2 - t1
-            self.assertTrue(0.08 <= dt <= 0.12, dt)
+            self.assertTrue(0.08 <= dt <= 0.15, dt)
 
         self.loop.run_until_complete(go())
 
@@ -452,7 +452,7 @@ class TestCursor(unittest.TestCase):
                 yield from cur.callproc("pg_sleep", [1], timeout=timeout)
             t2 = time.time()
             dt = t2 - t1
-            self.assertTrue(0.08 <= dt <= 0.12, dt)
+            self.assertTrue(0.08 <= dt <= 0.15, dt)
 
         self.loop.run_until_complete(go())
 
