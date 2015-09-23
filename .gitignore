@@ -9,3 +9,4 @@ build
 htmlcov
 docs/_build
 .tox
+.cache
