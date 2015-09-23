@@ -11,13 +11,13 @@ flake:
 	pyflakes aiopg examples tests
 
 test: pep flake
-	py.test -q
+	py.test -q tests
 
 vtest: pep flake
-	py.test
+	py.test tests
 
 cov cover coverage: pep flake
-	py.test --cov=aiopg --cov=tests --cov-report=html --cov-report=term
+	py.test --cov=aiopg --cov=tests --cov-report=html --cov-report=term tests
 
 clean:
 	find . -name __pycache__ |xargs rm -rf

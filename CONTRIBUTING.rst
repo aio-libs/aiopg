@@ -23,7 +23,7 @@ In virtual environment you have to install *aiopg* itself and
 development tools (the second ones are needed for test suite run etc)::
 
    $ pip install -Ue .
-   $ pip install -U requirements.txt
+   $ pip install -Ur requirements.txt
 
 At the least you should create user and database for test suite::
 
