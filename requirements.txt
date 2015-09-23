@@ -4,6 +4,8 @@ ipdb
 ipython
 pep8
 pyflakes
+mccabe
+flake8
 wheel
 setuptools
 -e .[sa]
