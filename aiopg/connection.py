@@ -201,8 +201,6 @@ class Connection:
                             withhold=withhold)
         return _CursorContextManager(self, impl, timeout, self._echo)
 
-    cursor._is_coroutine = True
-
     @asyncio.coroutine
     def _cursor(self, name=None, cursor_factory=None,
                 scrollable=None, withhold=False):
