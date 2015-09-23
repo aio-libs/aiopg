@@ -31,7 +31,7 @@ Example::
 
 .. function:: connect(dsn=None, *, loop=None, timeout=60.0, \
                       enable_json=True, enable_hstore=True, echo=False, \
-                      **kwargs)
+                      aio_connection_factory=Connection, **kwargs)
 
    A :ref:`coroutine <coroutine>` that connects to PostgreSQL.
 
@@ -58,6 +58,9 @@ Example::
                              CREATE EXTENSION HSTORE
 
    :param bool echo: log executed SQL statement (``False`` by default).
+
+   :param class aio_connection_factory:  The connection factory to use.
+   (:class:`Connection` by default.)
 
    :returns: :class:`Connection` instance.
 
