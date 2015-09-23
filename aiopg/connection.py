@@ -434,6 +434,7 @@ class _CursorContextManager:
         self._impl = impl
         self._timeout = timeout
         self._echo = echo
+        self._cursor = None
 
     def __iter__(self):
         impl = yield from self._impl
