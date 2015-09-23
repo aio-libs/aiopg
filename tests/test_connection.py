@@ -231,40 +231,8 @@ class TestConnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-    def test_cursor_async_context_manager(self):
-
-        def go():
-            conn = yield from self.connect()
-
-            # The following code is equivalent to:
-            #
-            # async with conn.cursor() as cur:
-            #     await cur.execute('SELECT 1')
-            #
-            # However, this throws a syntax error in Python <3.5, so we have to
-            # use this shim.  Taken from
-            # https://www.python.org/dev/peps/pep-0492/#new-syntax
-
-            mgr = conn.cursor()
-            aexit = type(mgr).__aexit__
-            aenter = type(mgr).__aenter__(mgr)
-            exc = True
-
-            cur = yield from aenter
-            try:
-                yield from cur.execute('SELECT 1')
-            except:
-                if not (yield from aexit(mgr, *sys.exc_info())):
-                    raise
-            else:
-                yield from aexit(mgr, None, None, None)
-            self.assertTrue(cur.closed)
-
-        self.loop.run_until_complete(go())
-
     @pytest.mark.xfail
     def test_cursor_inspect(self):
-        import inspect
 
         def go():
             conn = yield from self.connect()
