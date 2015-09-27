@@ -40,3 +40,14 @@ class TestConnection(unittest.TestCase):
             self.assertTrue(cur.closed)
 
         self.loop.run_until_complete(go())
+
+    def test_cursor_await(self):
+
+        async def go():
+            conn = await self.connect()
+
+            cur = await conn.cursor()
+            await cur.execute('SELECT 1')
+            cur.close()
+
+        self.loop.run_until_complete(go())

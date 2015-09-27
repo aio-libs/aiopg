@@ -434,6 +434,8 @@ class _CursorContextManager:
         impl = yield from self._impl
         return Cursor(self._conn, impl, self._timeout, self._echo)
 
+    __await__ = __iter__
+
     @asyncio.coroutine
     def __aenter__(self):
         self._cursor = yield from self
