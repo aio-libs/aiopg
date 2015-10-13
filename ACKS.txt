@@ -4,5 +4,11 @@ Acknowledgements
 A number of people have contributed to *aiopg* by reporting problems,
 suggesting improvements or submitting changes. Some of these people are:
 
+Alexander <chersanya@gmail.com>
+Eugene Krevenets <hyzhak@ya.ru>
 Low Kian Seong <kianseong@gmail.com>
+Nikolay Novik <is.infinity@yahoo.com>
 Petr Viktorin  <encukou@gmail.com>
+R. Davis Murrey <rdmurray@bitdance.com>
+Theron Luhn <<theron@luhn.com>
+
