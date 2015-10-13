@@ -1,5 +1,5 @@
 aiopg
-=======
+=====
 .. image:: https://travis-ci.org/aio-libs/aiopg.svg?branch=master
     :target: https://travis-ci.org/aio-libs/aiopg
 .. image:: https://coveralls.io/repos/aio-libs/aiopg/badge.svg
@@ -76,4 +76,5 @@ Please use::
 
    $ python3 runtests.py
 
-for executing project's unittests
+for executing the project's unittests.  See CONTRIBUTING.rst for details
+on how to set up your environment to run the tests.
