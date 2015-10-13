@@ -534,7 +534,7 @@ class TestConnection(unittest.TestCase):
             s.send(b'garbage')
             s.detach()
             cur = yield from conn.cursor()
-            with self.assertRaises(psycopg2.OperationalError):
+            with self.assertRaises(psycopg2.DatabaseError):
                 yield from cur.execute('SELECT 1')
 
         self.loop.run_until_complete(go())
