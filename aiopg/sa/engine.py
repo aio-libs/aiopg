@@ -2,19 +2,14 @@ import asyncio
 import json
 
 import aiopg
+from .dialect import PGDialect_psycopg2_aio
 from .connection import SAConnection
 from .exc import InvalidRequestError
 from aiopg.connection import TIMEOUT
 
 
-try:
-    from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
-except ImportError:  # pragma: no cover
-    raise ImportError('aiopg.sa requires sqlalchemy')
-
-
-_dialect = PGDialect_psycopg2(json_serializer=json.dumps,
-                              json_deserializer=lambda x: x)
+_dialect = PGDialect_psycopg2_aio(json_serializer=json.dumps,
+                                  json_deserializer=lambda x: x)
 _dialect.implicit_returning = True
 _dialect.supports_native_enum = True
 _dialect.supports_smallserial = True  # 9.2+
@@ -159,6 +154,15 @@ class Engine:
         #         engine.release(conn)
         conn = yield from self.acquire()
         return _ConnectionContextManager(self, conn)
+
+    @asyncio.coroutine
+    def _run_visitor(self, visitorcallable, element,
+                     connection=None, **kwargs):
+        conn = yield from self.acquire()
+        try:
+            yield from conn._run_visitor(visitorcallable, element, **kwargs)
+        finally:
+            self.release(conn)
 
 
 class _ConnectionContextManager:
