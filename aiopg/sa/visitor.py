@@ -21,7 +21,8 @@ def traverse(obj, opts, visitors):
     """traverse and visit the given expression structure using the default
      iterator.
     """
-    yield from traverse_using(iterate(obj, opts), obj, visitors)
+    result = yield from traverse_using(iterate(obj, opts), obj, visitors)
+    return result
 
 
 class AsyncClauseVisitor(ClauseVisitor):
@@ -36,4 +37,5 @@ class AsyncClauseVisitor(ClauseVisitor):
     def traverse(self, obj):
         """traverse and visit the given expression structure."""
 
-        yield from traverse(obj, self.__traverse_options__, self._visitor_dict)
+        result = yield from traverse(obj, self.__traverse_options__, self._visitor_dict)
+        return result
