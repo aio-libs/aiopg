@@ -6,6 +6,7 @@ suggesting improvements or submitting changes. Some of these people are:
 
 Alexander <chersanya@gmail.com>
 Eugene Krevenets <hyzhak@ya.ru>
+Fantix King <>
 Low Kian Seong <kianseong@gmail.com>
 Nikolay Novik <is.infinity@yahoo.com>
 Petr Viktorin  <encukou@gmail.com>
