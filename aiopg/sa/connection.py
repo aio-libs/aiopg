@@ -185,6 +185,7 @@ class SAConnection:
             yield from cur.execute('ROLLBACK')
         finally:
             cur.close()
+            self._transaction = None
 
     @asyncio.coroutine
     def begin_nested(self):
