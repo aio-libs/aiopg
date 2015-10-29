@@ -4,28 +4,34 @@ Instruction for contributors
 Developer invironment
 ----------------------------
 
-At first please clone git repo::
+First clone the git repo::
 
    $ git clone git@github.com:aio-libs/aiopg.git
    $ cd aiopg
 
-After that you need to create and activate virtual environment.  I
-guess to use :term:`virtualenvwrapper` but just :term:`virtualenv` or
-:term:`venv` also ok::
+After that you need to create and activate a virtual environment.  I
+recommend using :term:`virtualenvwrapper` but just :term:`virtualenv` or
+:term:`venv` will also work.  For ``virtualenvwrapper``:: 
 
    $ mkvirtualenv aiopg -p `which python3`
 
-As for regular installation you need for :term:`libpq` library::
+For ``venv`` (for example; put the directory wherever you want)::
+
+   $ python3 -m venv ../venv_directory
+   $ source ../venv_directory/bin/activate
+
+Just as when doing a normal install, you need the :term:`libpq` library::
 
    $ sudo apt-get install libpq-dev
 
-In virtual environment you have to install *aiopg* itself and
-development tools (the second ones are needed for test suite run etc)::
+In the virtual environment you need to install *aiopg* itself and some
+additional development tools (the development tools are needed for running
+the test suite and other development tasks)::
 
    $ pip install -Ue .
    $ pip install -Ur requirements.txt
 
-At the least you should create user and database for test suite::
+You will also need to create a postgres user and database for the test suite::
 
     $ sudo -u postgres psql
 
@@ -33,30 +39,37 @@ At the least you should create user and database for test suite::
     # CREATE USER aiopg WITH PASSWORD 'passwd';
     # GRANT ALL PRIVILEGES ON DATABASE aiopg TO aiopg;
 
+    # \connect aiopg
     # CREATE EXTENSION hstore;
 
+You can use the ``setup_test_db.sql`` script to do the setup::
+
+    $ sudo -u postgres aiopg <setup_test_db.sql
 
 That's all.
 
-For running *aiopg* unittests please type::
+To run all of the *aiopg* tests do::
 
    $ make test
 
-The command runs :term:`pep8` and :term:`pyflakes` first and executes
-*aiopg* tests after style check.
+This command runs :term:`pep8` and :term:`pyflakes` first and then executes
+the *aiopg* unit tests.
 
 
-When you are working on solving some issue you probably want to run
+When you are working on solving an issue you will probably want to run
 some specific test, not the whole suite::
 
    $ python runtests.py test_initial_empty
 
-For debug sessions I prefer to use :term:`ipdb`, just insert that
-lines into your code in place where you want to catch execution process::
+For debug sessions I prefer to use :term:`ipdb`, which is installed
+as part of the development tools.  Insert the following line into your
+code in the place where you want to start interactively debugging the
+execution process::
 
    import ipdb; ipdb.set_trace()
 
-The library is covered by tests good enough. To run coverage report please use::
+The library is reasonably well covered by tests.  There is a make
+target for generating the coverage report::
 
    $ make cov
 
@@ -64,14 +77,11 @@ The library is covered by tests good enough. To run coverage report please use::
 Contribution
 -------------
 
-I like to get well-formed Pull Requiest on github_.
+I like to get well-formed Pull Requests on github_.  The pull request
+should include both the code fix and tests for the bug.
 
-With code fix and tests.
-
-But if you cannot make good test yourself but want to report about
-some problem -- please make an issue at
-https://github.com/aio-libs/aiopg/issues
-
+If you cannot make a good test yourself or want to report a problem,
+please open an issue at https://github.com/aio-libs/aiopg/issues.
 
 
 
