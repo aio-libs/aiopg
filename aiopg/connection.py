@@ -18,6 +18,7 @@ __all__ = ('connect',)
 
 TIMEOUT = 60.0
 PY_341 = sys.version_info >= (3, 4, 1)
+PY_35 = sys.version_info >= (3, 5)
 
 
 @asyncio.coroutine
@@ -422,25 +423,73 @@ class Connection:
         return self._notifies
 
 
-class _CursorContextManager:
-    def __init__(self, conn, impl, timeout, echo):
+if PY_35:
+    from collections.abc import Coroutine
+    base = Coroutine
+else:
+    base = object
+
+
+class _CursorContextManager(base):
+
+    __slots__ = ('_conn', '_coro', '_timeout', '_echo', '_cursor')
+
+    def __init__(self, conn, coro, timeout, echo):
         self._conn = conn
-        self._impl = impl
+        self._coro = coro
         self._timeout = timeout
         self._echo = echo
         self._cursor = None
 
+    def send(self, value):
+        return self._coro.send(value)
+
+    def throw(self, typ, val=None, tb=None):
+        if val is None:
+            return self._coro.throw(typ)
+        elif tb is None:
+            return self._coro.throw(typ, val)
+        else:
+            return self._coro.throw(typ, val, tb)
+
+    def close(self):
+        return self._coro.close()
+
+    @property
+    def gi_frame(self):
+        return self._coro.gi_frame
+
+    @property
+    def gi_running(self):
+        return self._coro.gi_running
+
+    @property
+    def gi_code(self):
+        return self._coro.gi_code
+
+    def __next__(self):
+        return self.send(None)
+
     def __iter__(self):
-        impl = yield from self._impl
+        impl = yield from self._coro
         return Cursor(self._conn, impl, self._timeout, self._echo)
 
-    __await__ = __iter__
+    if PY_35:
+        __await__ = __iter__
 
-    @asyncio.coroutine
-    def __aenter__(self):
-        self._cursor = yield from self
-        return self._cursor
+        @asyncio.coroutine
+        def __aenter__(self):
+            self._cursor = yield from self
+            return self._cursor
 
-    @asyncio.coroutine
-    def __aexit__(self, type, value, traceback):
-        self._cursor.close()
+        @asyncio.coroutine
+        def __aexit__(self, type, value, traceback):
+            self._cursor.close()
+
+
+if not PY_35:
+    try:
+        from asyncio import coroutines
+        coroutines._COROUTINE_TYPES += (_CursorContextManager,)
+    except:
+        pass
