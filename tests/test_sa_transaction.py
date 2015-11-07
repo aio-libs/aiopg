@@ -428,7 +428,16 @@ class TestTransaction(unittest.TestCase):
             res2 = yield from conn.scalar(tbl.count())
             self.assertEqual(2, res2)
 
-            yield from tr2.commit()
+            yield from tr2.rollback()
+            self.assertIsNone(conn._transaction)
+
+            tr3 = yield from conn.begin()
+            self.assertIs(tr3, conn._transaction)
+            yield from conn.execute(tbl.insert().values(name='b'))
+            res3 = yield from conn.scalar(tbl.count())
+            self.assertEqual(2, res3)
+
+            yield from tr3.commit()
             self.assertIsNone(conn._transaction)
 
         self.loop.run_until_complete(go())
