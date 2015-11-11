@@ -1,8 +1,8 @@
 Instruction for contributors
-===============================
+============================
 
-Developer invironment
-----------------------------
+Developer environment
+---------------------
 
 First clone the git repo::
 
@@ -75,7 +75,7 @@ target for generating the coverage report::
 
 
 Contribution
--------------
+------------
 
 I like to get well-formed Pull Requests on github_.  The pull request
 should include both the code fix and tests for the bug.
