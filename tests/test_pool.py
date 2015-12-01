@@ -589,7 +589,8 @@ class TestPool(unittest.TestCase):
                 with self.assertRaises(asyncio.TimeoutError):
                     yield from sleep(conn)
 
-            self.assertEqual(1, pool.freesize)
+            self.assertEqual(0, pool.freesize)
+            self.assertEqual(0, pool.size)
             with (yield from pool) as conn:
                 cur = yield from conn.cursor()
                 yield from cur.execute('SELECT 1;')
