@@ -572,3 +572,28 @@ class TestPool(unittest.TestCase):
                 self.assertEqual((1,), val)
 
         self.loop.run_until_complete(go())
+
+    def test_connection_in_good_state_after_timeout_inside_transaction(self):
+        @asyncio.coroutine
+        def sleep(conn):
+            cur = yield from conn.cursor()
+            yield from cur.execute('BEGIN;')
+            yield from cur.execute('SELECT pg_sleep(10);')
+
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool(minsize=1,
+                                               maxsize=1,
+                                               timeout=0.1)
+            with (yield from pool) as conn:
+                with self.assertRaises(asyncio.TimeoutError):
+                    yield from sleep(conn)
+
+            self.assertEqual(1, pool.freesize)
+            with (yield from pool) as conn:
+                cur = yield from conn.cursor()
+                yield from cur.execute('SELECT 1;')
+                val = yield from cur.fetchone()
+                self.assertEqual((1,), val)
+
+        self.loop.run_until_complete(go())
