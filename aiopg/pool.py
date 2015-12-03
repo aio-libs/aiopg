@@ -326,7 +326,7 @@ class _CursorContextManager:
 
     def __exit__(self, *args):
         try:
-            self._cur._impl.close()
+            self._cur.close()
             self._pool.release(self._conn)
         finally:
             self._pool = None
