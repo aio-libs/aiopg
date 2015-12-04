@@ -669,3 +669,29 @@ class TestConnection(unittest.TestCase):
             yield from conn.close()
 
         self.loop.run_until_complete(go())
+
+    def test_cleanup_if_poll_always_times_out(self):
+
+        @asyncio.coroutine
+        def mock_wait_for(fut, *args, **kw):
+            if fut.done() and fut.exception() is not None:
+                # Clear the Canceled exception so asyncio doesn't log it.
+                # (We're ignoring the fact that the cancel worked and
+                # synthetically raising a TimeoutError instead.)
+                yield from fut
+            raise asyncio.TimeoutError
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            cur = yield from conn.cursor(timeout=0.01)
+            with mock.patch('asyncio.wait_for', mock_wait_for):
+                with self.assertRaises(asyncio.TimeoutError):
+                    yield from cur.execute("SELECT pg_sleep(10)")
+
+            self.assertTrue(cur.closed)
+            self.assertFalse(conn.closed)
+
+            yield from conn.close()
+
+        self.loop.run_until_complete(go())
