@@ -44,7 +44,7 @@ You will also need to create a postgres user and database for the test suite::
 
 You can use the ``setup_test_db.sql`` script to do the setup::
 
-    $ sudo -u postgres aiopg <setup_test_db.sql
+    $ sudo -u postgres psql < setup_test_db.sql
 
 That's all.
 
