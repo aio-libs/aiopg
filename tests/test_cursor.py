@@ -76,6 +76,18 @@ class TestCursor(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
+    def test_context_manager(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            with (yield from conn.cursor()) as cur:
+                yield from cur.execute('SELECT 1')
+                ret = yield from cur.fetchone()
+                self.assertEqual((1,), ret)
+            self.assertTrue(cur.closed)
+
+        self.loop.run_until_complete(go())
+
     def test_raw(self):
 
         @asyncio.coroutine

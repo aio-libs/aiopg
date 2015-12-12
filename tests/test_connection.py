@@ -230,6 +230,18 @@ class TestConnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
+    def test_cursor_inspect(self):
+
+        def go():
+            conn = yield from self.connect()
+            self.assertTrue(asyncio.iscoroutine(conn.cursor()))
+
+        self.loop.run_until_complete(go())
+
+    def test_cursor_run_until_complete(self):
+        conn = self.loop.run_until_complete(self.connect())
+        self.loop.run_until_complete(conn.cursor())
+
     def test_notices(self):
 
         @asyncio.coroutine

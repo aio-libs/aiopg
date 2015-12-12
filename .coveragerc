@@ -1,7 +1,7 @@
 [run]
 branch = True
 source = aiopg, tests
-omit = site-packages
+omit = site-packages, tests/test_pep492.py
 
 [html]
 directory = htmlcov

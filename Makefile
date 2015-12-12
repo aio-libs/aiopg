@@ -4,19 +4,17 @@ doc:
 	cd docs && make html
 	@echo "open file://`pwd`/docs/_build/html/index.html"
 
-pep:
-	pep8 aiopg examples tests
-
 flake:
-	pyflakes aiopg examples tests
+	exclude=$$(python -c "import sys;sys.stdout.write('--exclude test_pep492.py') if sys.version_info[:3] < (3, 5, 0) else None"); \
+	flake8 aiopg examples tests $$exclude
 
-test: pep flake
+test: flake
 	py.test -q tests
 
-vtest: pep flake
+vtest: flake
 	py.test tests
 
-cov cover coverage: pep flake
+cov cover coverage: flake
 	py.test --cov=aiopg --cov=tests --cov-report=html --cov-report=term tests
 	@echo "open file://`pwd`/htmlcov/index.html"
 
@@ -34,4 +32,4 @@ clean:
 	rm -rf docs/_build
 	rm -rf .tox
 
-.PHONY: all pep test vtest cov clean
+.PHONY: all test vtest cov clean

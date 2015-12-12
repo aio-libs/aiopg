@@ -18,6 +18,7 @@ __all__ = ('connect',)
 
 TIMEOUT = 60.0
 PY_341 = sys.version_info >= (3, 4, 1)
+PY_35 = sys.version_info >= (3, 5)
 
 
 @asyncio.coroutine
@@ -189,7 +190,6 @@ class Connection:
     def _isexecuting(self):
         return self._conn.isexecuting()
 
-    @asyncio.coroutine
     def cursor(self, name=None, cursor_factory=None,
                scrollable=None, withhold=False, timeout=None):
         """A coroutine that returns a new cursor object using the connection.
@@ -205,11 +205,11 @@ class Connection:
         if timeout is None:
             timeout = self._timeout
 
-        impl = yield from self._cursor(name=name,
-                                       cursor_factory=cursor_factory,
-                                       scrollable=scrollable,
-                                       withhold=withhold)
-        return Cursor(self, impl, timeout, self._echo)
+        impl = self._cursor(name=name,
+                            cursor_factory=cursor_factory,
+                            scrollable=scrollable,
+                            withhold=withhold)
+        return _CursorContextManager(self, impl, timeout, self._echo)
 
     @asyncio.coroutine
     def _cursor(self, name=None, cursor_factory=None,
@@ -446,3 +446,75 @@ class Connection:
     def notifies(self):
         """Return notification queue."""
         return self._notifies
+
+
+if PY_35:
+    from collections.abc import Coroutine
+    base = Coroutine
+else:
+    base = object
+
+
+class _CursorContextManager(base):
+
+    __slots__ = ('_conn', '_coro', '_timeout', '_echo', '_cursor')
+
+    def __init__(self, conn, coro, timeout, echo):
+        self._conn = conn
+        self._coro = coro
+        self._timeout = timeout
+        self._echo = echo
+        self._cursor = None
+
+    def send(self, value):
+        return self._coro.send(value)
+
+    def throw(self, typ, val=None, tb=None):
+        if val is None:
+            return self._coro.throw(typ)
+        elif tb is None:
+            return self._coro.throw(typ, val)
+        else:
+            return self._coro.throw(typ, val, tb)
+
+    def close(self):
+        return self._coro.close()
+
+    @property
+    def gi_frame(self):
+        return self._coro.gi_frame
+
+    @property
+    def gi_running(self):
+        return self._coro.gi_running
+
+    @property
+    def gi_code(self):
+        return self._coro.gi_code
+
+    def __next__(self):
+        return self.send(None)
+
+    def __iter__(self):
+        impl = yield from self._coro
+        return Cursor(self._conn, impl, self._timeout, self._echo)
+
+    if PY_35:
+        __await__ = __iter__
+
+        @asyncio.coroutine
+        def __aenter__(self):
+            self._cursor = yield from self
+            return self._cursor
+
+        @asyncio.coroutine
+        def __aexit__(self, type, value, traceback):
+            self._cursor.close()
+
+
+if not PY_35:
+    try:
+        from asyncio import coroutines
+        coroutines._COROUTINE_TYPES += (_CursorContextManager,)
+    except:
+        pass
