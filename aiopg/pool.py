@@ -213,7 +213,7 @@ class Pool(asyncio.AbstractServer):
                 conn.close()
             else:
                 self._free.append(conn)
-            asyncio.Task(self._wakeup(), loop=self._loop)
+            asyncio.async(self._wakeup(), loop=self._loop)
 
     @asyncio.coroutine
     def cursor(self, name=None, cursor_factory=None,
@@ -326,7 +326,7 @@ class _CursorContextManager:
 
     def __exit__(self, *args):
         try:
-            self._cur._impl.close()
+            self._cur.close()
             self._pool.release(self._conn)
         finally:
             self._pool = None

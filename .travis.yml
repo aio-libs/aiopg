@@ -1,3 +1,4 @@
+sudo: required
 language: python
 
 python:
@@ -34,16 +35,22 @@ env:
   global:
     - PYTHON=python
   matrix:
-    - USE_SA=1 PYTHONASYNCIODEBUG=1 PG=9.3
-    - USE_SA=0 PYTHONASYNCIODEBUG=1 PG=9.3
-    - USE_SA=1 PYTHONASYNCIODEBUG=0 PG=9.3
-    - USE_SA=0 PYTHONASYNCIODEBUG=0 PG=9.3
+    - USE_SA=1 PYTHONASYNCIODEBUG=x PG=9.3
+    - USE_SA=0 PYTHONASYNCIODEBUG=x PG=9.3
+    - USE_SA=1 PYTHONASYNCIODEBUG= PG=9.3
+    - USE_SA=0 PYTHONASYNCIODEBUG= PG=9.3
 #    - USE_SA=1 PYTHONASYNCIODEBUG=1 PG=9.4
 #    - USE_SA=0 PYTHONASYNCIODEBUG=1 PG=9.4
 #    - USE_SA=1 PYTHONASYNCIODEBUG=0 PG=9.4
 #    - USE_SA=0 PYTHONASYNCIODEBUG=0 PG=9.4
 
-cache: apt
+cache:
+  apt
+  directories:
+  - $HOME/.cache/pip
+
+before_cache:
+  - rm -f $HOME/.cache/pip/log/debug.log
 
 after_script:
   - coveralls
