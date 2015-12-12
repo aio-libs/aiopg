@@ -166,8 +166,23 @@ class Connection:
     def _poll(self, waiter, timeout):
         assert waiter is self._waiter, (waiter, self._waiter)
         self._ready(self._weakref)
+
+        @asyncio.coroutine
+        def cancel():
+            if not self._isexecuting():
+                return
+            self._waiter = asyncio.Future(loop=self._loop)
+            self._conn.cancel()
+            try:
+                yield from self._waiter
+            except psycopg2.extensions.QueryCanceledError:
+                pass
+
         try:
             yield from asyncio.wait_for(self._waiter, timeout, loop=self._loop)
+        except (asyncio.CancelledError, asyncio.TimeoutError) as exc:
+            yield from asyncio.shield(cancel(), loop=self._loop)
+            raise exc
         finally:
             self._waiter = None
 
@@ -282,14 +297,24 @@ class Connection:
     @asyncio.coroutine
     def cancel(self, timeout=None):
         """Cancel the current database operation."""
-        waiter = self._create_waiter('cancel')
-        self._conn.cancel()
-        if timeout is None:
-            timeout = self._timeout
-        try:
-            yield from self._poll(waiter, timeout)
-        except psycopg2.extensions.QueryCanceledError:
-            pass
+        if timeout is not None:
+            warnings.warn('timeout parameter is deprecated and never used',
+                          DeprecationWarning)
+        if not self._isexecuting():
+            return
+        if self._waiter is not None:
+            self._waiter.cancel()
+
+        @asyncio.coroutine
+        def cancel():
+            self._waiter = asyncio.Future(loop=self._loop)
+            self._conn.cancel()
+            try:
+                yield from self._waiter
+            except psycopg2.extensions.QueryCanceledError:
+                pass
+
+        yield from asyncio.shield(cancel(), loop=self._loop)
 
     @asyncio.coroutine
     def reset(self):

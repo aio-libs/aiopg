@@ -340,7 +340,7 @@ class TestConnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-    def test_cancel(self):
+    def test_cancel_noop(self):
 
         @asyncio.coroutine
         def go():
@@ -354,7 +354,23 @@ class TestConnection(unittest.TestCase):
         @asyncio.coroutine
         def go():
             conn = yield from self.connect()
-            yield from conn.cancel(10)
+            with self.assertWarns(DeprecationWarning):
+                yield from conn.cancel(10)
+
+        self.loop.run_until_complete(go())
+
+    def test_cancel_pending_op(self):
+
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            cur = yield from conn.cursor()
+            task = asyncio.async(cur.execute("SELECT pg_sleep(10)"),
+                                 loop=self.loop)
+            yield from asyncio.sleep(0.01, loop=self.loop)
+            yield from conn.cancel()
+            with self.assertRaises(asyncio.CancelledError):
+                yield from task
 
         self.loop.run_until_complete(go())
 

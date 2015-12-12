@@ -2,7 +2,7 @@
 
 doc:
 	cd docs && make html
-	echo "open file://`pwd`/docs/_build/html/index.html"
+	@echo "open file://`pwd`/docs/_build/html/index.html"
 
 pep:
 	pep8 aiopg examples tests
@@ -18,6 +18,7 @@ vtest: pep flake
 
 cov cover coverage: pep flake
 	py.test --cov=aiopg --cov=tests --cov-report=html --cov-report=term tests
+	@echo "open file://`pwd`/htmlcov/index.html"
 
 clean:
 	find . -name __pycache__ |xargs rm -rf
