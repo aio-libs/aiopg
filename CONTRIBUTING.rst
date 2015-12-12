@@ -11,7 +11,7 @@ First clone the git repo::
 
 After that you need to create and activate a virtual environment.  I
 recommend using :term:`virtualenvwrapper` but just :term:`virtualenv` or
-:term:`venv` will also work.  For ``virtualenvwrapper``:: 
+:term:`venv` will also work.  For ``virtualenvwrapper``::
 
    $ mkvirtualenv aiopg -p `which python3`
 
