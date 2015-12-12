@@ -300,10 +300,10 @@ class Connection:
         if timeout is not None:
             warnings.warn('timeout parameter is deprecated and never used',
                           DeprecationWarning)
-        if not self._isexecuting():
-            return
         if self._waiter is not None:
             self._waiter.cancel()
+        if not self._isexecuting():
+            return
 
         @asyncio.coroutine
         def cancel():
