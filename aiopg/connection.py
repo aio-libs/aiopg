@@ -11,6 +11,7 @@ from psycopg2.extensions import (
 from psycopg2 import extras
 
 from .cursor import Cursor
+from .utils import _ContextManager, PY_35
 
 
 __all__ = ('connect',)
@@ -38,9 +39,8 @@ def _enable_hstore(conn):
     return tuple(rv0), tuple(rv1)
 
 
-@asyncio.coroutine
-def connect(dsn=None, *, timeout=TIMEOUT, loop=None,
-            enable_json=True, enable_hstore=True, echo=False, **kwargs):
+def connect(dsn=None, *, timeout=TIMEOUT, loop=None, enable_json=True,
+            enable_hstore=True, echo=False, **kwargs):
     """A factory for connecting to PostgreSQL.
 
     The coroutine accepts all parameters that psycopg2.connect() does
@@ -49,6 +49,15 @@ def connect(dsn=None, *, timeout=TIMEOUT, loop=None,
     Returns instantiated Connection object.
 
     """
+    coro = _connect(dsn=dsn, timeout=timeout, loop=loop,
+                    enable_json=enable_json, enable_hstore=enable_hstore,
+                    echo=echo, **kwargs)
+    return _ContextManager(coro)
+
+
+@asyncio.coroutine
+def _connect(dsn=None, *, timeout=TIMEOUT, loop=None, enable_json=True,
+             enable_hstore=True, echo=False, **kwargs):
     if loop is None:
         loop = asyncio.get_event_loop()
 
@@ -189,7 +198,6 @@ class Connection:
     def _isexecuting(self):
         return self._conn.isexecuting()
 
-    @asyncio.coroutine
     def cursor(self, name=None, cursor_factory=None,
                scrollable=None, withhold=False, timeout=None):
         """A coroutine that returns a new cursor object using the connection.
@@ -446,3 +454,12 @@ class Connection:
     def notifies(self):
         """Return notification queue."""
         return self._notifies
+
+    if PY_35:  # pragma: no branch
+        @asyncio.coroutine
+        def __aenter__(self):
+            return self
+
+        @asyncio.coroutine
+        def __aexit__(self, exc_type, exc_val, exc_tb):
+            self.close()
