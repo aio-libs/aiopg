@@ -45,7 +45,6 @@ env:
 #    - USE_SA=0 PYTHONASYNCIODEBUG=0 PG=9.4
 
 cache:
-  apt
   directories:
   - $HOME/.cache/pip
 
