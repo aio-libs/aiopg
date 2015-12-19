@@ -9,7 +9,7 @@ pep:
 
 flake:
 	exclude=$$(python -c "import sys;sys.stdout.write('--exclude tests/pep492') if sys.version_info[:3] < (3, 5, 0) else None"); \
-+	flake8 aiopg examples tests $$exclude
+	flake8 aiopg examples tests $$exclude
 
 test: flake
 	py.test -q tests
