@@ -18,7 +18,7 @@ vtest: flake
 	py.test tests
 
 cov cover coverage: flake
-	py.test --cov=aiopg --cov=tests --cov-report=html --cov-report=term tests
+	py.test --cov=aiopg --cov-report=html --cov-report=term tests
 	@echo "open file://`pwd`/htmlcov/index.html"
 
 clean:
