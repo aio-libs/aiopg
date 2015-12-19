@@ -210,18 +210,26 @@ class Connection:
         psycopg in asynchronous mode.
 
         """
-        if timeout is None:
-            timeout = self._timeout
-
-        impl = yield from self._cursor(name=name,
-                                       cursor_factory=cursor_factory,
-                                       scrollable=scrollable,
-                                       withhold=withhold)
-        return Cursor(self, impl, timeout, self._echo)
+        coro = self._cursor(name=name, cursor_factory=cursor_factory,
+                            scrollable=scrollable, withhold=withhold,
+                            timeout=timeout)
+        return _ContextManager(coro)
 
     @asyncio.coroutine
     def _cursor(self, name=None, cursor_factory=None,
-                scrollable=None, withhold=False):
+                scrollable=None, withhold=False, timeout=None):
+        if timeout is None:
+            timeout = self._timeout
+
+        impl = yield from self._cursor_impl(name=name,
+                                            cursor_factory=cursor_factory,
+                                            scrollable=scrollable,
+                                            withhold=withhold)
+        return Cursor(self, impl, timeout, self._echo)
+
+    @asyncio.coroutine
+    def _cursor_impl(self, name=None, cursor_factory=None,
+                     scrollable=None, withhold=False):
         if cursor_factory is None:
             impl = self._conn.cursor(name=name,
                                      scrollable=scrollable, withhold=withhold)
