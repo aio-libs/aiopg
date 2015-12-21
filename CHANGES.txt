@@ -10,6 +10,7 @@ CHANGES
 
 * Cancel current DB operation on asyncio timeout #66
 
+* Add async with support for Pool, Connection, Cursor #88
 
 0.7.0 (2015-04-22)
 ^^^^^^^^^^^^^^^^^^
