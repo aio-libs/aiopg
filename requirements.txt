@@ -2,8 +2,7 @@ coverage
 docutils
 ipdb
 ipython
-pep8
-pyflakes
+flake8
 wheel
 setuptools
 -e .[sa]

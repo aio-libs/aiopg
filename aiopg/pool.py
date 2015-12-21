@@ -8,17 +8,30 @@ from psycopg2.extensions import TRANSACTION_STATUS_IDLE
 
 from .connection import connect, TIMEOUT
 from .log import logger
+from .utils import (PY_35, _PoolContextManager, _PoolConnectionContextManager,
+                    _PoolCursorContextManager)
 
 
 PY_341 = sys.version_info >= (3, 4, 1)
 
 
-@asyncio.coroutine
 def create_pool(dsn=None, *, minsize=10, maxsize=10,
                 loop=None, timeout=TIMEOUT,
                 enable_json=True, enable_hstore=True,
                 echo=False,
                 **kwargs):
+    coro = _create_pool(dsn=dsn, minsize=minsize, maxsize=maxsize, loop=loop,
+                        timeout=timeout, enable_json=enable_json,
+                        enable_hstore=enable_hstore, echo=echo, **kwargs)
+    return _PoolContextManager(coro)
+
+
+@asyncio.coroutine
+def _create_pool(dsn=None, *, minsize=10, maxsize=10,
+                 loop=None, timeout=TIMEOUT,
+                 enable_json=True, enable_hstore=True,
+                 echo=False,
+                 **kwargs):
     if loop is None:
         loop = asyncio.get_event_loop()
 
@@ -89,6 +102,10 @@ class Pool(asyncio.AbstractServer):
                 conn = self._free.popleft()
                 yield from conn.close()
             self._cond.notify()
+
+    @property
+    def closed(self):
+        return self._closed
 
     def close(self):
         """Close pool.
@@ -215,6 +232,9 @@ class Pool(asyncio.AbstractServer):
                 self._free.append(conn)
             asyncio.async(self._wakeup(), loop=self._loop)
 
+    def get(self):
+        return _PoolConnectionContextManager(self, None)
+
     @asyncio.coroutine
     def cursor(self, name=None, cursor_factory=None,
                scrollable=None, withhold=False, *, timeout=None):
@@ -223,7 +243,7 @@ class Pool(asyncio.AbstractServer):
         cur = yield from conn.cursor(name=name, cursor_factory=cursor_factory,
                                      scrollable=scrollable, withhold=withhold,
                                      timeout=timeout)
-        return _CursorContextManager(self, conn, cur)
+        return _PoolCursorContextManager(self, conn, cur)
 
     def __enter__(self):
         raise RuntimeError(
@@ -248,7 +268,17 @@ class Pool(asyncio.AbstractServer):
         #     finally:
         #         conn.release()
         conn = yield from self.acquire()
-        return _ConnectionContextManager(self, conn)
+        return _PoolConnectionContextManager(self, conn)
+
+    if PY_35:  # pragma: no branch
+        @asyncio.coroutine
+        def __aenter__(self):
+            return self
+
+        @asyncio.coroutine
+        def __aexit__(self, exc_type, exc_val, exc_tb):
+            self.close()
+            yield from self.wait_closed()
 
     if PY_341:  # pragma: no branch
         def __del__(self):
@@ -265,70 +295,3 @@ class Pool(asyncio.AbstractServer):
                 warnings.warn(
                     "Unclosed {} connections in {!r}".format(left, self),
                     ResourceWarning)
-
-
-class _ConnectionContextManager:
-    """Context manager.
-
-    This enables the following idiom for acquiring and releasing a
-    connection around a block:
-
-        with (yield from pool) as conn:
-            cur = yield from conn.cursor()
-
-    while failing loudly when accidentally using:
-
-        with pool:
-            <block>
-    """
-
-    __slots__ = ('_pool', '_conn')
-
-    def __init__(self, pool, conn):
-        self._pool = pool
-        self._conn = conn
-
-    def __enter__(self):
-        return self._conn
-
-    def __exit__(self, *args):
-        try:
-            self._pool.release(self._conn)
-        finally:
-            self._pool = None
-            self._conn = None
-
-
-class _CursorContextManager:
-    """Context manager.
-
-    This enables the following idiom for acquiring and releasing a
-    cursor around a block:
-
-        with (yield from pool.cursor()) as cur:
-            yield from cur.execute("SELECT 1")
-
-    while failing loudly when accidentally using:
-
-        with pool:
-            <block>
-    """
-
-    __slots__ = ('_pool', '_conn', '_cur')
-
-    def __init__(self, pool, conn, cur):
-        self._pool = pool
-        self._conn = conn
-        self._cur = cur
-
-    def __enter__(self):
-        return self._cur
-
-    def __exit__(self, *args):
-        try:
-            self._cur.close()
-            self._pool.release(self._conn)
-        finally:
-            self._pool = None
-            self._conn = None
-            self._cur = None

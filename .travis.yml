@@ -15,7 +15,7 @@ before_install:
 
 install:
   - python setup.py install
-  - pip install -r requirements.txt
+  - pip install -Ur requirements.txt
   - test $USE_SA == 1 && pip install sqlalchemy || true
 
 before_script:
@@ -45,7 +45,6 @@ env:
 #    - USE_SA=0 PYTHONASYNCIODEBUG=0 PG=9.4
 
 cache:
-  apt
   directories:
   - $HOME/.cache/pip
 
