@@ -232,9 +232,6 @@ class Pool(asyncio.AbstractServer):
                 self._free.append(conn)
             asyncio.async(self._wakeup(), loop=self._loop)
 
-    def get(self):
-        return _PoolConnectionContextManager(self, None)
-
     @asyncio.coroutine
     def cursor(self, name=None, cursor_factory=None,
                scrollable=None, withhold=False, *, timeout=None):
