@@ -84,6 +84,28 @@ class _PoolContextManager(_ContextManager):
             self._obj = None
 
 
+class _PoolAcquireContextManager(_ContextManager):
+
+    __slots__ = ('_coro', '_conn', '_pool')
+
+    def __init__(self, coro, pool):
+        self._coro = coro
+        self._conn = None
+        self._pool = pool
+
+    if PY_35:
+        @asyncio.coroutine
+        def __aenter__(self):
+            self._conn = yield from self._coro
+            return self._conn
+
+        @asyncio.coroutine
+        def __aexit__(self, exc_type, exc, tb):
+            self._pool.release(self._conn)
+            self._pool = None
+            self._conn = None
+
+
 class _PoolConnectionContextManager:
     """Context manager.
 
