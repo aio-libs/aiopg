@@ -9,7 +9,7 @@ from psycopg2.extensions import TRANSACTION_STATUS_IDLE
 from .connection import connect, TIMEOUT
 from .log import logger
 from .utils import (PY_35, _PoolContextManager, _PoolConnectionContextManager,
-                    _PoolCursorContextManager)
+                    _PoolCursorContextManager, _PoolAcquireContextManager)
 
 
 PY_341 = sys.version_info >= (3, 4, 1)
@@ -151,8 +151,12 @@ class Pool(asyncio.AbstractServer):
 
         self._closed = True
 
-    @asyncio.coroutine
     def acquire(self):
+        coro = self._acquire()
+        return _PoolAcquireContextManager(coro, self)
+
+    @asyncio.coroutine
+    def _acquire(self):
         """Acquire free connection from the pool."""
         if self._closing:
             raise RuntimeError("Cannot acquire connection after closing pool")
