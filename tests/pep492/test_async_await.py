@@ -132,7 +132,7 @@ class TestAsyncWith(unittest.TestCase):
                                          database=self.database,
                                          password=self.password,
                                          loop=self.loop) as pool:
-                async with pool.get() as conn:
+                async with pool.acquire() as conn:
                     async with conn.cursor() as cursor:
                         await cursor.execute('SELECT 42;')
                         resp = await cursor.fetchone()
