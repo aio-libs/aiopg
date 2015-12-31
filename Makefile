@@ -8,8 +8,8 @@ pep:
 	pep8 aiopg examples tests
 
 flake:
-	exclude=$$(python -c "import sys;sys.stdout.write('--exclude tests/pep492') if sys.version_info[:3] < (3, 5, 0) else None"); \
-	flake8 aiopg examples tests $$exclude
+	extra=$$(python -c "import sys;sys.stdout.write('examples --exclude tests/pep492') if sys.version_info[:3] < (3, 5, 0) else None"); \
+	flake8 aiopg tests $$extra
 
 test: flake
 	py.test -q tests
