@@ -14,24 +14,23 @@ Example
 
 ::
 
-   import asyncio
-   from aiopg.pool import create_pool
+    import asyncio
+    import aiopg
 
-   dsn = 'dbname=jetty user=nick password=1234 host=localhost port=5432'
+    dsn = 'dbname=aiopg user=aiopg password=passwd host=127.0.0.1'
 
+    async def go():
+        pool = await aiopg.create_pool(dsn)
+        async with pool.acquire() as cur:
+            async with conn.cursor() as cur:
+                await cur.execute("SELECT 1")
+                ret = []
+                async for row in cur:
+                    ret.append(row)
+                assert ret == [(1,)]
 
-   @asyncio.coroutine
-   def test_select():
-       pool = yield from create_pool(dsn)
-
-       with (yield from pool) as conn:
-           cur = yield from conn.cursor()
-           yield from cur.execute('SELECT 1')
-           ret = yield from cur.fetchone()
-           assert ret == (1,), ret
-
-
-   asyncio.get_event_loop().run_until_complete(test_select())
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(go())
 
 
 Example of SQLAlchemy optional integration
@@ -68,6 +67,10 @@ Example of SQLAlchemy optional integration
 
 
    asyncio.get_event_loop().run_until_complete(go())
+
+
+For ``yield from`` based code see ``./examples`` folder, files with
+``old_style`` part in their names.
 
 .. _PostgreSQL: http://www.postgresql.org/
 .. _asyncio: http://docs.python.org/3.4/library/asyncio.html

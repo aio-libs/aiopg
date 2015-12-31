@@ -46,13 +46,15 @@ See example::
 
     dsn = 'dbname=aiopg user=aiopg password=passwd host=127.0.0.1'
 
-    @asyncio.coroutine
-    def go():
-        pool = yield from aiopg.create_pool(dsn)
-        with (yield from pool.cursor()) as cur:
-            yield from cur.execute("SELECT 1")
-            ret = yield from cur.fetchone()
-            assert ret == (1,)
+    async def go():
+        pool = await aiopg.create_pool(dsn)
+        async with pool.acquire() as cur:
+            async with conn.cursor() as cur:
+                await cur.execute("SELECT 1")
+                ret = []
+                async for row in cur:
+                    ret.append(row)
+                assert ret == [(1,)]
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(go())
@@ -65,6 +67,26 @@ please go to psycopg docs: http://initd.org/psycopg/docs/
 
           See :ref:`aiopg-core-transactions` about transaction usage
           in *autocommit mode*.
+
+.. note::
+
+   Throughout this documentation, examples utilize the `async/await` syntax
+   introduced by :pep:`492` that is only valid for Python 3.5+.
+
+   If you are using Python 3.4, please replace ``await`` with
+   ``yield from`` and ``async def`` with a ``@coroutine`` decorator.
+   For example, this::
+
+       async def coro(...):
+           ret = await f()
+
+   shoud be replaced by::
+
+       @asyncio.coroutine
+       def coro(...):
+           ret = yield from f()
+
+   see also :ref:`aiopg-examples-old-style` examples.
 
 SQLAlchemy and aiopg
 --------------------
