@@ -12,7 +12,7 @@ class TestAsyncWith(unittest.TestCase):
         self.database = 'aiopg'
         self.user = 'aiopg'
         self.host = '127.0.0.1'
-        self.password = 'aiopg'
+        self.password = 'passwd'
 
     def tearDown(self):
         self.loop.close()
