@@ -69,7 +69,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'aiopg'
-copyright = '2014, 2015, Andrew Svetlov'
+copyright = '2014-2016, Andrew Svetlov'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
