@@ -319,6 +319,11 @@ class SAConnection:
         self._connection = None
         self._engine = None
 
+    @asyncio.coroutine
+    def _run_visitor(self, visitorcallable, element, **kwargs):
+        yield from visitorcallable(self._dialect, self,
+                                   **kwargs).traverse_single(element)
+
 
 def _distill_params(multiparams, params):
     """Given arguments from the calling form *multiparams, **params,
