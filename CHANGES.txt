@@ -12,6 +12,8 @@ CHANGES
 
 * Add async with support for Pool, Connection, Cursor #88
 
+* Add async with for engine #90
+
 0.7.0 (2015-04-22)
 ^^^^^^^^^^^^^^^^^^
 
