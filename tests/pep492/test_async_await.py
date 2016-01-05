@@ -185,3 +185,21 @@ class TestAsyncWith(unittest.TestCase):
             assert engine.closed
 
         self.loop.run_until_complete(go())
+
+    def test_result_proxy_aiter(self):
+        async def go():
+            sql = 'SELECT generate_series(1, 5);'
+            result = []
+            async with create_engine(host=self.host, user=self.user,
+                                     database=self.database,
+                                     password=self.password,
+                                     loop=self.loop) as engine:
+                async with engine.acquire() as conn:
+                    async with conn.execute(sql) as cursor:
+                        async for v in cursor:
+                            result.append(v)
+                        assert result == [(1,), (2, ), (3, ), (4, ), (5, )]
+                    assert cursor.closed
+            assert conn.closed
+
+        self.loop.run_until_complete(go())
