@@ -2,6 +2,7 @@ import unittest
 import asyncio
 
 import aiopg
+from aiopg.sa import create_engine, SAConnection
 
 
 class TestAsyncWith(unittest.TestCase):
@@ -157,5 +158,30 @@ class TestAsyncWith(unittest.TestCase):
                 assert result == [(1,), (2, ), (3, ), (4, ), (5, )]
                 cursor.close()
             assert conn.closed
+
+        self.loop.run_until_complete(go())
+
+    def test_engine_context_manager(self):
+        async def go():
+            engine = await create_engine(host=self.host, user=self.user,
+                                         database=self.database,
+                                         password=self.password,
+                                         loop=self.loop)
+            async with engine:
+                conn = await engine.acquire()
+                assert isinstance(conn, SAConnection)
+                engine.release(conn)
+            assert engine.closed
+        self.loop.run_until_complete(go())
+
+    def test_create_engine_context_manager(self):
+        async def go():
+            async with create_engine(host=self.host, user=self.user,
+                                     database=self.database,
+                                     password=self.password,
+                                     loop=self.loop) as engine:
+                async with engine.acquire() as conn:
+                    assert isinstance(conn, SAConnection)
+            assert engine.closed
 
         self.loop.run_until_complete(go())
