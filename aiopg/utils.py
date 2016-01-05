@@ -84,6 +84,19 @@ class _PoolContextManager(_ContextManager):
             self._obj = None
 
 
+class _TransactionContextManager(_ContextManager):
+
+    if PY_35:
+
+        @asyncio.coroutine
+        def __aexit__(self, exc_type, exc, tb):
+            if exc_type:
+                yield from self._obj.rollback()
+            else:
+                yield from self._obj.commit()
+            self._obj = None
+
+
 class _PoolAcquireContextManager(_ContextManager):
 
     __slots__ = ('_coro', '_conn', '_pool')
