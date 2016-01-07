@@ -93,7 +93,8 @@ class _TransactionContextManager(_ContextManager):
             if exc_type:
                 yield from self._obj.rollback()
             else:
-                yield from self._obj.commit()
+                if self._obj.is_active:
+                    yield from self._obj.commit()
             self._obj = None
 
 

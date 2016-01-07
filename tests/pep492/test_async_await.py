@@ -250,3 +250,19 @@ class TestAsyncWith(unittest.TestCase):
                     assert not tr.is_active
             assert conn.closed
         self.loop.run_until_complete(go())
+
+    def test_transaction_context_manager_commit_once(self):
+        async def go():
+            async with create_engine(host=self.host, user=self.user,
+                                     database=self.database,
+                                     password=self.password,
+                                     loop=self.loop) as engine:
+                async with engine.acquire() as conn:
+                    async with conn.begin() as tr:
+                        # check that in context manager we do not execute
+                        # commit for second time. Two commits in row causes
+                        # InvalidRequestError exception
+                        await tr.commit()
+                    assert not tr.is_active
+            assert conn.closed
+        self.loop.run_until_complete(go())
