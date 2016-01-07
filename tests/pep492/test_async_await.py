@@ -264,5 +264,12 @@ class TestAsyncWith(unittest.TestCase):
                         # InvalidRequestError exception
                         await tr.commit()
                     assert not tr.is_active
+
+                    tr2 = await conn.begin()
+                    async with tr2:
+                        assert tr2.is_active
+                        # check for double commit one more time
+                        await tr2.commit()
+                    assert not tr2.is_active
             assert conn.closed
         self.loop.run_until_complete(go())

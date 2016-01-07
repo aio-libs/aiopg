@@ -95,7 +95,8 @@ class Transaction(object):
             if exc_type:
                 yield from self.rollback()
             else:
-                yield from self.commit()
+                if self._is_active:
+                    yield from self.commit()
 
 
 class RootTransaction(Transaction):
