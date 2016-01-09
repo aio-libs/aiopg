@@ -77,7 +77,7 @@ For ``yield from`` based code see ``./examples`` folder, files with
 
 Please use::
 
-   $ python3 runtests.py
+   $ make test
 
 for executing the project's unittests.  See CONTRIBUTING.rst for details
 on how to set up your environment to run the tests.

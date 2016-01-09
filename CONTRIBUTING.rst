@@ -59,7 +59,7 @@ the *aiopg* unit tests.
 When you are working on solving an issue you will probably want to run
 some specific test, not the whole suite::
 
-   $ python runtests.py test_initial_empty
+   $ py.test -s -k test_initial_empty
 
 For debug sessions I prefer to use :term:`ipdb`, which is installed
 as part of the development tools.  Insert the following line into your
