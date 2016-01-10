@@ -10,12 +10,6 @@ else:
     base = object
 
 
-try:
-    StopAsyncIteration
-except NameError:
-    StopAsyncIteration = Exception
-
-
 class _ContextManager(base):
 
     __slots__ = ('_coro', '_obj')

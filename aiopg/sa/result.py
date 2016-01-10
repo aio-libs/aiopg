@@ -9,14 +9,6 @@ from ..utils import PY_35
 from . import exc
 
 
-try:
-    StopAsyncIteration
-except NameError:
-    class StopAsyncIteration(Exception):
-        """Just stab for StopAsyncIteration from python 3.5"""
-        pass
-
-
 class RowProxy(Mapping):
 
     __slots__ = ('_result_proxy', '_row', '_processors', '_keymap')
@@ -342,7 +334,7 @@ class ResultProxy:
             if ret is not None:
                 return ret
             else:
-                raise StopAsyncIteration
+                raise StopAsyncIteration  # noqa
 
     def _non_result(self):
         if self._metadata is None:
