@@ -5,6 +5,7 @@ from collections.abc import Mapping, Sequence
 
 from sqlalchemy.sql import expression, sqltypes
 
+from ..utils import PY_35
 from . import exc
 
 
@@ -321,6 +322,19 @@ class ResultProxy:
                 raise StopIteration
             else:
                 yield row
+
+    if PY_35:  # pragma: no branch
+        @asyncio.coroutine
+        def __aiter__(self):
+            return self
+
+        @asyncio.coroutine
+        def __anext__(self):
+            ret = yield from self.fetchone()
+            if ret is not None:
+                return ret
+            else:
+                raise StopAsyncIteration  # noqa
 
     def _non_result(self):
         if self._metadata is None:

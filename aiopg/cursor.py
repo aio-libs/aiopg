@@ -7,14 +7,6 @@ from .log import logger
 from .utils import PY_35
 
 
-try:
-    StopAsyncIteration
-except NameError:
-    class StopAsyncIteration(Exception):
-        """Just stab for StopAsyncIteration from python 3.5"""
-        pass
-
-
 class Cursor:
 
     def __init__(self, conn, impl, timeout, echo):
@@ -397,7 +389,7 @@ class Cursor:
             if ret is not None:
                 return ret
             else:
-                raise StopAsyncIteration
+                raise StopAsyncIteration  # noqa
 
         @asyncio.coroutine
         def __aenter__(self):

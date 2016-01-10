@@ -9,6 +9,7 @@ from . import exc
 from .result import ResultProxy
 from .transaction import (RootTransaction, Transaction,
                           NestedTransaction, TwoPhaseTransaction)
+from ..utils import _ContextManager, _TransactionContextManager
 
 
 class SAConnection:
@@ -21,7 +22,6 @@ class SAConnection:
         self._engine = engine
         self._dialect = engine.dialect
 
-    @asyncio.coroutine
     def execute(self, query, *multiparams, **params):
         """Executes a SQL query with optional parameters.
 
@@ -59,6 +59,11 @@ class SAConnection:
         execution.
 
         """
+        coro = self._execute(query, *multiparams, **params)
+        return _ContextManager(coro)
+
+    @asyncio.coroutine
+    def _execute(self, query, *multiparams, **params):
         cursor = yield from self._connection.cursor()
         dp = _distill_params(multiparams, params)
         if len(dp) > 1:
@@ -126,7 +131,6 @@ class SAConnection:
     def connection(self):
         return self._connection
 
-    @asyncio.coroutine
     def begin(self):
         """Begin a transaction and return a transaction handle.
 
@@ -154,6 +158,11 @@ class SAConnection:
           .begin_twophase - use a two phase/XA transaction
 
         """
+        coro = self._begin()
+        return _TransactionContextManager(coro)
+
+    @asyncio.coroutine
+    def _begin(self):
         if self._transaction is None:
             self._transaction = RootTransaction(self)
             yield from self._begin_impl()

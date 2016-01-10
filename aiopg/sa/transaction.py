@@ -1,6 +1,7 @@
 import asyncio
 
 from . import exc
+from ..utils import PY_35
 
 
 class Transaction(object):
@@ -83,6 +84,19 @@ class Transaction(object):
     @asyncio.coroutine
     def _do_commit(self):
         pass
+
+    if PY_35:  # pragma: no branch
+        @asyncio.coroutine
+        def __aenter__(self):
+            return self
+
+        @asyncio.coroutine
+        def __aexit__(self, exc_type, exc_val, exc_tb):
+            if exc_type:
+                yield from self.rollback()
+            else:
+                if self._is_active:
+                    yield from self.commit()
 
 
 class RootTransaction(Transaction):

@@ -10,12 +10,6 @@ else:
     base = object
 
 
-try:
-    StopAsyncIteration
-except NameError:
-    StopAsyncIteration = Exception
-
-
 class _ContextManager(base):
 
     __slots__ = ('_coro', '_obj')
@@ -81,6 +75,20 @@ class _PoolContextManager(_ContextManager):
         def __aexit__(self, exc_type, exc, tb):
             self._obj.close()
             yield from self._obj.wait_closed()
+            self._obj = None
+
+
+class _TransactionContextManager(_ContextManager):
+
+    if PY_35:
+
+        @asyncio.coroutine
+        def __aexit__(self, exc_type, exc, tb):
+            if exc_type:
+                yield from self._obj.rollback()
+            else:
+                if self._obj.is_active:
+                    yield from self._obj.commit()
             self._obj = None
 
 
