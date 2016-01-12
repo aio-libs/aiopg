@@ -10,29 +10,26 @@ tbl = sa.Table('tbl', metadata,
                sa.Column('val', sa.String(255)))
 
 
-@asyncio.coroutine
-def create_table(engine):
-    with (yield from engine) as conn:
-        yield from conn.execute('DROP TABLE IF EXISTS tbl')
-        yield from conn.execute('''CREATE TABLE tbl (
-                                            id serial PRIMARY KEY,
-                                            val varchar(255))''')
+async def create_table(engine):
+    async with engine.acquire() as conn:
+        await conn.execute('DROP TABLE IF EXISTS tbl')
+        await conn.execute('''CREATE TABLE tbl (
+                                  id serial PRIMARY KEY,
+                                  val varchar(255))''')
 
 
-@asyncio.coroutine
-def go():
-    engine = yield from create_engine(user='aiopg',
-                                      database='aiopg',
-                                      host='127.0.0.1',
-                                      password='passwd')
+async def go():
+    async with create_engine(user='aiopg',
+                             database='aiopg',
+                             host='127.0.0.1',
+                             password='passwd') as engine:
 
-    yield from create_table(engine)
-    with (yield from engine) as conn:
-        yield from conn.execute(tbl.insert().values(val='abc'))
+        await create_table(engine)
+        async with engine.acquire() as conn:
+            await conn.execute(tbl.insert().values(val='abc'))
 
-        res = yield from conn.execute(tbl.select())
-        for row in res:
-            print(row.id, row.val)
+            async for row in await conn.execute(tbl.select()):
+                print(row.id, row.val)
 
 
 loop = asyncio.get_event_loop()
