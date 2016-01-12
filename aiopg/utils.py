@@ -68,6 +68,15 @@ class _ContextManager(base):
             self._obj = None
 
 
+class _SAConnectionContextManager(_ContextManager):
+
+    if PY_35:  # pragma: no branch
+        @asyncio.coroutine
+        def __aiter__(self):
+            result = yield from self._coro
+            return result
+
+
 class _PoolContextManager(_ContextManager):
 
     if PY_35:
