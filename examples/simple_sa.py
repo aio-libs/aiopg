@@ -28,7 +28,7 @@ async def go():
         async with engine.acquire() as conn:
             await conn.execute(tbl.insert().values(val='abc'))
 
-            async for row in await conn.execute(tbl.select()):
+            async for row in conn.execute(tbl.select()):
                 print(row.id, row.val)
 
 
