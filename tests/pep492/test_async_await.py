@@ -273,3 +273,18 @@ class TestAsyncWith(unittest.TestCase):
                     assert not tr2.is_active
             assert conn.closed
         self.loop.run_until_complete(go())
+
+    def test_sa_connection_execute(self):
+        async def go():
+            sql = 'SELECT generate_series(1, 5);'
+            result = []
+            async with create_engine(host=self.host, user=self.user,
+                                     database=self.database,
+                                     password=self.password,
+                                     loop=self.loop) as engine:
+                async with engine.acquire() as conn:
+                    async for value in conn.execute(sql):
+                        result.append(value)
+                    assert result == [(1,), (2, ), (3, ), (4, ), (5, )]
+            assert conn.closed
+        self.loop.run_until_complete(go())

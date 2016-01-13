@@ -9,7 +9,7 @@ from . import exc
 from .result import ResultProxy
 from .transaction import (RootTransaction, Transaction,
                           NestedTransaction, TwoPhaseTransaction)
-from ..utils import _ContextManager, _TransactionContextManager
+from ..utils import _SAConnectionContextManager, _TransactionContextManager
 
 
 class SAConnection:
@@ -60,7 +60,7 @@ class SAConnection:
 
         """
         coro = self._execute(query, *multiparams, **params)
-        return _ContextManager(coro)
+        return _SAConnectionContextManager(coro)
 
     @asyncio.coroutine
     def _execute(self, query, *multiparams, **params):
