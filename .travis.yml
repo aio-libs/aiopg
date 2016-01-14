@@ -54,6 +54,7 @@ before_cache:
 
 after_script:
   - coveralls
+  - python setup.py sdist bdist_wheel
 
 deploy:
   provider: pypi
