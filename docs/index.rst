@@ -107,18 +107,16 @@ so we introduce support for :term:`sqlalchemy` query builders::
                    sa.Column('id', sa.Integer, primary_key=True),
                    sa.Column('val', sa.String(255)))
 
-    @asyncio.coroutine
-    def go():
-        engine = yield from create_engine(user='aiopg',
-                                          database='aiopg',
-                                          host='127.0.0.1',
-                                          password='passwd')
+    async def go():
+        async with create_engine(user='aiopg',
+                                 database='aiopg',
+                                 host='127.0.0.1',
+                                 password='passwd') as engine:
 
-        with (yield from engine) as conn:
-            yield from conn.execute(tbl.insert().values(val='abc'))
+        async with engine.acquire() as conn:
+            await conn.execute(tbl.insert().values(val='abc'))
 
-            res = yield from conn.execute(tbl.select().where(tbl.c.val=='abc'))
-            for row in res:
+            async for row in conn.execute(tbl.select().where(tbl.c.val=='abc'))
                 print(row.id, row.val)
 
 
