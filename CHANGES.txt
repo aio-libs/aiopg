@@ -1,6 +1,15 @@
 CHANGES
 -------
 
+0.9.0 (2016-01-14)
+^^^^^^^^^^^^^^^^^^
+
+* Add async context managers for transactions #91
+
+* Support async iterator in ResultProxy #92
+
+* Add async with for engine #90
+
 0.8.0 (2015-12-31)
 ^^^^^^^^^^^^^^^^^^
 
@@ -11,8 +20,6 @@ CHANGES
 * Cancel current DB operation on asyncio timeout #66
 
 * Add async with support for Pool, Connection, Cursor #88
-
-* Add async with for engine #90
 
 0.7.0 (2015-04-22)
 ^^^^^^^^^^^^^^^^^^
