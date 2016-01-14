@@ -28,6 +28,7 @@ before_script:
 script:
   - make cov
   - python setup.py check -rms
+  - python setup.py sdist bdist_wheel
 
 #addons:
 #  postgresql: "9.4"
@@ -54,7 +55,6 @@ before_cache:
 
 after_script:
   - coveralls
-  - python setup.py sdist bdist_wheel
 
 deploy:
   provider: pypi
