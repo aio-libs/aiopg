@@ -77,7 +77,7 @@ async def count(engine):
                  .having(sa.func.count(emails.c.private) > 0))
 
         print("Users with public emails:")
-        async for row in await conn.execute(query):
+        async for row in conn.execute(query):
             print(row.name)
 
         print()
@@ -89,7 +89,7 @@ async def show_julia(engine):
         join = sa.join(emails, users, users.c.id == emails.c.user_id)
         query = (sa.select([users, emails], use_labels=True)
                  .select_from(join).where(users.c.name == 'Julia'))
-        async for row in await conn.execute(query):
+        async for row in conn.execute(query):
             print(row.users_name, row.users_birthday,
                   row.emails_email, row.emails_private)
         print()
