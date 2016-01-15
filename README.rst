@@ -50,20 +50,19 @@ Example of SQLAlchemy optional integration
        sa.Column('val', sa.String(255)))
 
 
-    async def go():
-        async with create_engine(user='aiopg',
-                                 database='aiopg',
-                                 host='127.0.0.1',
-                                 password='passwd') as engine:
+   async def go():
+       async with create_engine(user='aiopg',
+                                database='aiopg',
+                                host='127.0.0.1',
+                                password='passwd') as engine:
 
-        async with engine.acquire() as conn:
-            await conn.execute(tbl.insert().values(val='abc'))
+       async with engine.acquire() as conn:
+           await conn.execute(tbl.insert().values(val='abc'))
 
-            async for row in conn.execute(tbl.select())
-                print(row.id, row.val)
+           async for row in conn.execute(tbl.select()):
+               print(row.id, row.val)
 
    asyncio.get_event_loop().run_until_complete(go())
-
 
 For ``yield from`` based code see ``./examples`` folder, files with
 ``old_style`` part in their names.
