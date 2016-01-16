@@ -30,19 +30,27 @@ Example::
                    sa.Column('id', sa.Integer, primary_key=True),
                    sa.Column('val', sa.String(255)))
 
-    @asyncio.coroutine
-    def go():
-        engine = yield from create_engine(user='aiopg',
-                                          database='aiopg',
-                                          host='127.0.0.1',
-                                          password='passwd')
 
-        with (yield from engine) as conn:
-            yield from conn.execute(tbl.insert().values(val='abc'))
+    async def create_table(engine):
+        async with engine.acquire() as conn:
+            await conn.execute('DROP TABLE IF EXISTS tbl')
+            await conn.execute('''CREATE TABLE tbl (
+                                      id serial PRIMARY KEY,
+                                      val varchar(255))''')
 
-            res = yield from conn.execute(tbl.select())
-            for row in res:
-                print(row.id, row.val)
+
+    async def go():
+        async with create_engine(user='aiopg',
+                                 database='aiopg',
+                                 host='127.0.0.1',
+                                 password='passwd') as engine:
+
+            await create_table(engine)
+            async with engine.acquire() as conn:
+                await conn.execute(tbl.insert().values(val='abc'))
+
+                async for row in conn.execute(tbl.select()):
+                    print(row.id, row.val)
 
 
     loop = asyncio.get_event_loop()
@@ -173,7 +181,11 @@ Engine
 
       This method is a :ref:`coroutine <coroutine>`.
 
-      Returns a :class:`SAConnection` instance.
+      Returns a :class:`SAConnection` instance. Result of this method could
+      be used as async contex manager::
+
+            async with engine.acquire() as conn:
+                await conn.execute(tbl.insert().values(val='abc'))
 
    .. method:: release()
 
@@ -206,26 +218,26 @@ Connection
        to be used in the execution.  Typically, the format is either a
        dictionary passed to \*multiparams::
 
-           yield from conn.execute(
+           await conn.execute(
                table.insert(),
                {"id":1, "value":"v1"}
            )
 
        ...or individual key/values interpreted by \**params::
 
-           yield from conn.execute(
+           await conn.execute(
                table.insert(), id=1, value="v1"
            )
 
        In the case that a plain SQL string is passed, a tuple or
        individual values in \*multiparams may be passed::
 
-           yield from conn.execute(
+           await conn.execute(
                "INSERT INTO table (id, value) VALUES (%d, %s)",
                (1, "v1")
            )
 
-           yield from conn.execute(
+           await conn.execute(
                "INSERT INTO table (id, value) VALUES (%s, %s)",
                1, "v1"
            )
@@ -261,10 +273,10 @@ Connection
       an emulated transaction within the scope of the enclosing
       transaction, that is::
 
-          trans = yield from conn.begin()   # outermost transaction
-          trans2 = yield from conn.begin()  # "inner"
-          yield from trans2.commit()        # does nothing
-          yield from trans.commit()         # actually commits
+          trans = await conn.begin()   # outermost transaction
+          trans2 = await conn.begin()  # "inner"
+          await trans2.commit()        # does nothing
+          await trans.commit()         # actually commits
 
       Calls to :meth:`.Transaction.commit` only have an effect
       when invoked via the outermost :class:`.Transaction` object, though the
@@ -369,7 +381,7 @@ ResultProxy
    case-sensitive column name, or by :class:`sqlalchemy.schema.Column``
    object. e.g.::
 
-      for row in (yield from conn.execute(...)):
+      async for row in onn.execute(...):
           col1 = row[0]    # access via integer position
           col2 = row['col2']   # access via name
           col3 = row[mytable.c.mycol] # access via Column object.
@@ -530,17 +542,14 @@ Transaction objects
    calling the :meth:`SAConnection.begin` method of
    :class:`SAConnection`::
 
-       with (yield from engine) as conn:
-           trans = yield from conn.begin()
-           try:
-               yield from conn.execute("insert into x (a, b) values (1, 2)")
-           except Exception:
-               yield from trans.rollback()
-           else:
-               yield from trans.commit()
+       async with engine.acquire() as conn:
+           async with conn.begin() as tr:
+               await conn.execute("insert into x (a, b) values (1, 2)")
 
    The object provides :meth:`.rollback` and :meth:`.commit`
-   methods in order to control transaction boundaries.
+   methods in order to control transaction boundaries. Contex manager will
+   invoke :meth:`.rollback` in case of exception in contex managers code block
+   and :meth:`.commit` - in case of success.
 
    .. seealso::
 
