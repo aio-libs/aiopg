@@ -51,7 +51,7 @@ def _create_engine(dsn=None, *, minsize=10, maxsize=10, loop=None,
         real_dsn = conn.dsn
         return Engine(dialect, pool, real_dsn)
     finally:
-        pool.release(conn)
+        yield from pool.release(conn)
 
 
 class Engine:
@@ -150,7 +150,8 @@ class Engine:
             raise InvalidRequestError("Cannot release a connection with "
                                       "not finished transaction")
         raw = conn.connection
-        self._pool.release(raw)
+        fut = self._pool.release(raw)
+        return fut
 
     def __enter__(self):
         raise RuntimeError(
