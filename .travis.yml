@@ -28,7 +28,6 @@ before_script:
 script:
   - make cov
   - python setup.py check -rms
-  - python setup.py sdist bdist_wheel
 
 #addons:
 #  postgresql: "9.4"
@@ -60,7 +59,7 @@ deploy:
   provider: pypi
   user: andrew.svetlov
   password:
-    secure: ZQKbdPT9BlNqP5CTbWRQyeyig7Bpf7wsnYVQIQPOZc9Ec74A+dsbagstR1sPkAO+d+5PN0pZMovvmU7OQhSVPAnJ74nsN90/fL4ux3kqYecMbevv0rJg20hMXSSkwMEIpjUsMdMjJvZAcaKytGWmKL0qAlOJHhixd1pBbWyuIUE=
+    secure: "GpbzbKVaDaIUF24S05LK18vDedNR7kQ8g5Y/5a+qH+HD5w4C8eZSnHkbtAC9s0Fs4Ih8oxEoxaAcFq1rErEL2eBGofDVyFEGR2mwsIoIV3YgGNpYzxKBP5UjMQRp9ciFMpRsTWFYAOiEhoqY6IQJXgL8PKebs3PsCE7AE+blE3Y="
   distributions: "sdist bdist_wheel"
   on:
     tags: true
