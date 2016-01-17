@@ -118,7 +118,7 @@ class _PoolAcquireContextManager(_ContextManager):
 
         @asyncio.coroutine
         def __aexit__(self, exc_type, exc, tb):
-            self._pool.release(self._conn)
+            yield from self._pool.release(self._conn)
             self._pool = None
             self._conn = None
 
@@ -165,7 +165,7 @@ class _PoolConnectionContextManager:
         @asyncio.coroutine
         def __aexit__(self, exc_type, exc_val, exc_tb):
             try:
-                self._pool.release(self._conn)
+                yield from self._pool.release(self._conn)
             finally:
                 self._pool = None
                 self._conn = None

@@ -234,7 +234,11 @@ class Pool(asyncio.AbstractServer):
                 conn.close()
             else:
                 self._free.append(conn)
-            asyncio.async(self._wakeup(), loop=self._loop)
+            fut = asyncio.async(self._wakeup(), loop=self._loop)
+        else:
+            fut = asyncio.Future(loop=self._loop)
+            fut.set_result(None)
+        return fut
 
     @asyncio.coroutine
     def cursor(self, name=None, cursor_factory=None,
