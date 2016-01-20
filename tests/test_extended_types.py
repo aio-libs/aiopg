@@ -1,4 +1,5 @@
 import asyncio
+import uuid
 
 import unittest
 
@@ -25,7 +26,7 @@ class TestComplexPGTypesConnection(unittest.TestCase):
         cur = yield from conn.cursor()
         yield from cur.execute("DROP TABLE IF EXISTS tbl")
         yield from cur.execute("""CREATE TABLE tbl (
-                                      id SERIAL,
+                                      id UUID,
                                       val JSON)""")
         cur.close()
         self.addCleanup(conn.close)
@@ -36,13 +37,15 @@ class TestComplexPGTypesConnection(unittest.TestCase):
         def go():
             conn = yield from self.connect()
             data = {'a': 1, 'b': 'str'}
+            _id = uuid.uuid1()
             cur = yield from conn.cursor()
             try:
-                yield from cur.execute("INSERT INTO tbl (val) VALUES (%s)",
-                                       [Json(data)])
+                yield from cur.execute(
+                    "INSERT INTO tbl (id, val) VALUES (%s, %s)",
+                    [_id, Json(data)])
                 yield from cur.execute("SELECT * FROM tbl")
                 item = yield from cur.fetchone()
-                self.assertEqual((1, {'b': 'str', 'a': 1}), item)
+                self.assertEqual((_id, {'b': 'str', 'a': 1}), item)
             finally:
                 cur.close()
                 yield from conn.close()

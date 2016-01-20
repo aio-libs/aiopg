@@ -40,7 +40,7 @@ def _enable_hstore(conn):
 
 
 def connect(dsn=None, *, timeout=TIMEOUT, loop=None, enable_json=True,
-            enable_hstore=True, echo=False, **kwargs):
+            enable_hstore=True, enable_uuid=True, echo=False, **kwargs):
     """A factory for connecting to PostgreSQL.
 
     The coroutine accepts all parameters that psycopg2.connect() does
@@ -51,13 +51,13 @@ def connect(dsn=None, *, timeout=TIMEOUT, loop=None, enable_json=True,
     """
     coro = _connect(dsn=dsn, timeout=timeout, loop=loop,
                     enable_json=enable_json, enable_hstore=enable_hstore,
-                    echo=echo, **kwargs)
+                    enable_uuid=enable_uuid, echo=echo, **kwargs)
     return _ContextManager(coro)
 
 
 @asyncio.coroutine
 def _connect(dsn=None, *, timeout=TIMEOUT, loop=None, enable_json=True,
-             enable_hstore=True, echo=False, **kwargs):
+             enable_hstore=True, enable_uuid=True, echo=False, **kwargs):
     if loop is None:
         loop = asyncio.get_event_loop()
 
@@ -70,6 +70,8 @@ def _connect(dsn=None, *, timeout=TIMEOUT, loop=None, enable_json=True,
         raise
     if enable_json:
         extras.register_default_json(conn._conn)
+    if enable_uuid:
+        extras.register_uuid(conn_or_curs=conn._conn)
     if enable_hstore:
         oids = yield from _enable_hstore(conn)
         if oids is not None:
