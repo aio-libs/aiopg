@@ -30,7 +30,8 @@ Example::
 
 
 .. function:: connect(dsn=None, *, loop=None, timeout=60.0, \
-                      enable_json=True, enable_hstore=True, echo=False, \
+                      enable_json=True, enable_hstore=True, enable_uuid=True, \
+                      echo=False, \
                       **kwargs)
 
    A :ref:`coroutine <coroutine>` that connects to PostgreSQL.
@@ -56,6 +57,10 @@ Example::
                          installed in database first::
 
                              CREATE EXTENSION HSTORE
+
+   :param bool enable_uuid: enable uuid column types for connection.
+
+                         ``True`` by default.
 
    :param bool echo: log executed SQL statement (``False`` by default).
 

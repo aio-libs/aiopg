@@ -17,19 +17,20 @@ PY_341 = sys.version_info >= (3, 4, 1)
 
 def create_pool(dsn=None, *, minsize=10, maxsize=10,
                 loop=None, timeout=TIMEOUT,
-                enable_json=True, enable_hstore=True,
+                enable_json=True, enable_hstore=True, enable_uuid=True,
                 echo=False,
                 **kwargs):
     coro = _create_pool(dsn=dsn, minsize=minsize, maxsize=maxsize, loop=loop,
                         timeout=timeout, enable_json=enable_json,
-                        enable_hstore=enable_hstore, echo=echo, **kwargs)
+                        enable_hstore=enable_hstore, enable_uuid=enable_uuid,
+                        echo=echo, **kwargs)
     return _PoolContextManager(coro)
 
 
 @asyncio.coroutine
 def _create_pool(dsn=None, *, minsize=10, maxsize=10,
                  loop=None, timeout=TIMEOUT,
-                 enable_json=True, enable_hstore=True,
+                 enable_json=True, enable_hstore=True, enable_uuid=True,
                  echo=False,
                  **kwargs):
     if loop is None:
@@ -37,7 +38,7 @@ def _create_pool(dsn=None, *, minsize=10, maxsize=10,
 
     pool = Pool(dsn, minsize, maxsize, loop, timeout,
                 enable_json=enable_json, enable_hstore=enable_hstore,
-                echo=echo,
+                enable_uuid=enable_uuid, echo=echo,
                 **kwargs)
     if minsize > 0:
         with (yield from pool._cond):
@@ -49,7 +50,7 @@ class Pool(asyncio.AbstractServer):
     """Connection pool"""
 
     def __init__(self, dsn, minsize, maxsize, loop, timeout, *,
-                 enable_json, enable_hstore, echo, **kwargs):
+                 enable_json, enable_hstore, enable_uuid, echo, **kwargs):
         if minsize < 0:
             raise ValueError("minsize should be zero or greater")
         if maxsize < minsize and maxsize != 0:
@@ -60,6 +61,7 @@ class Pool(asyncio.AbstractServer):
         self._timeout = timeout
         self._enable_json = enable_json
         self._enable_hstore = enable_hstore
+        self._enable_uuid = enable_uuid
         self._echo = echo
         self._conn_kwargs = kwargs
         self._acquiring = 0
@@ -181,6 +183,7 @@ class Pool(asyncio.AbstractServer):
                     self._dsn, loop=self._loop, timeout=self._timeout,
                     enable_json=self._enable_json,
                     enable_hstore=self._enable_hstore,
+                    enable_uuid=self._enable_uuid,
                     echo=self._echo,
                     **self._conn_kwargs)
                 # raise exception if pool is closing
@@ -198,6 +201,7 @@ class Pool(asyncio.AbstractServer):
                     self._dsn, loop=self._loop, timeout=self._timeout,
                     enable_json=self._enable_json,
                     enable_hstore=self._enable_hstore,
+                    enable_uuid=self._enable_uuid,
                     echo=self._echo,
                     **self._conn_kwargs)
                 # raise exception if pool is closing
