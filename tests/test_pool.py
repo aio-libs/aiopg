@@ -297,6 +297,28 @@ class TestPool(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
+    @mock.patch("aiopg.pool.logger")
+    def test_release_with_invalid_status_wait_release(self, m_log):
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool()
+            conn = yield from pool.acquire()
+            self.assertEqual(9, pool.freesize)
+            self.assertEqual({conn}, pool._used)
+            cur = yield from conn.cursor()
+            yield from cur.execute('BEGIN')
+            cur.close()
+
+            yield from pool.release(conn)
+            self.assertEqual(9, pool.freesize)
+            self.assertFalse(pool._used)
+            self.assertTrue(conn.closed)
+            m_log.warning.assert_called_with(
+                "Invalid transaction status on released connection: %d",
+                TRANSACTION_STATUS_INTRANS)
+
+        self.loop.run_until_complete(go())
+
     def test__fill_free(self):
         @asyncio.coroutine
         def go():
@@ -511,6 +533,19 @@ class TestPool(unittest.TestCase):
             yield from pool.wait_closed()
 
             pool.release(conn)
+
+        self.loop.run_until_complete(go())
+
+    def test_release_terminated_pool_with_wait_release(self):
+
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool()
+            conn = yield from pool.acquire()
+            pool.terminate()
+            yield from pool.wait_closed()
+
+            yield from pool.release(conn)
 
         self.loop.run_until_complete(go())
 
