@@ -217,8 +217,6 @@ class Pool(asyncio.AbstractServer):
 
     def release(self, conn):
         """Release free connection back to the connection pool.
-
-        This is NOT a coroutine.
         """
         fut = asyncio.Future(loop=self._loop)
         fut.set_result(None)

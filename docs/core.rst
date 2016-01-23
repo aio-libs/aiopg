@@ -803,9 +803,16 @@ The basic usage is::
 
    .. method:: release(conn)
 
-      Reverts connection *conn* to *free pool* for future recycling.
+      A :ref:`coroutine <coroutine>` that reverts connection *conn* to
+      *free pool* for future recycling.
 
-      .. warning:: The method is not a :ref:`coroutine <coroutine>`.
+      .. versionchanged:: 0.10
+
+         The mathod is converted into a coroutine to get exception
+         context in case of errors.
+
+         The change is backward compatible though since technically
+         it's a regular method returning a future instance.
 
    .. method:: cursor(name=None, cursor_factory=None, scrollable=None, \
                withhold=False, *, timeout=None)
