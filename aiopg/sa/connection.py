@@ -1,5 +1,4 @@
 import asyncio
-import weakref
 
 from sqlalchemy.sql import ClauseElement
 from sqlalchemy.sql.dml import UpdateBase
@@ -18,7 +17,6 @@ class SAConnection:
         self._connection = connection
         self._transaction = None
         self._savepoint_seq = 0
-        self._weak_results = weakref.WeakSet()
         self._engine = engine
         self._dialect = engine.dialect
 
@@ -108,9 +106,7 @@ class SAConnection:
                                     "SQLAlchemy data "
                                     "selection/modification clause")
 
-        ret = ResultProxy(self, cursor, self._dialect)
-        self._weak_results.add(ret)
-        return ret
+        return ResultProxy(self, cursor, self._dialect)
 
     @asyncio.coroutine
     def scalar(self, query, *multiparams, **params):

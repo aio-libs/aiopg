@@ -315,21 +315,6 @@ class TestSAConnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-    def test_weakrefs(self):
-        @asyncio.coroutine
-        def go():
-            conn = yield from self.connect()
-            self.assertEqual(0, len(conn._weak_results))
-            res = yield from conn.execute("SELECT 1")
-            self.assertEqual(1, len(conn._weak_results))
-            cur = res.cursor
-            self.assertFalse(cur.closed)
-            del res
-            self.assertTrue(cur.closed)
-            self.assertEqual(0, len(conn._weak_results))
-
-        self.loop.run_until_complete(go())
-
     def test_fetchall(self):
         @asyncio.coroutine
         def go():
