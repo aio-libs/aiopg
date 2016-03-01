@@ -5,8 +5,8 @@ from psycopg2.extras import Json
 
 
 @pytest.mark.run_loop
-def test_uuid(connect):
-    conn = yield from connect()
+def test_uuid(make_connection):
+    conn = yield from make_connection()
     _id = uuid.uuid1()
     cur = yield from conn.cursor()
     try:
@@ -22,8 +22,8 @@ def test_uuid(connect):
 
 
 @pytest.mark.run_loop
-def test_json(connect):
-    conn = yield from connect()
+def test_json(make_connection):
+    conn = yield from make_connection()
     data = {'a': 1, 'b': 'str'}
     cur = yield from conn.cursor()
     try:

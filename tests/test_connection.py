@@ -17,6 +17,21 @@ from unittest import mock
 PY_341 = sys.version_info >= (3, 4, 1)
 
 
+@pytest.fixture
+def connect(make_connection):
+
+    @asyncio.coroutine
+    def go(**kwargs):
+        conn = yield from make_connection(**kwargs)
+        conn2 = yield from make_connection(**kwargs)
+        cur = yield from conn2.cursor()
+        yield from cur.execute("DROP TABLE IF EXISTS foo")
+        yield from conn2.close()
+        return conn
+
+    return go
+
+
 @pytest.mark.run_loop
 def test_connect(connect):
     conn = yield from connect()

@@ -74,7 +74,7 @@ def pytest_ignore_collect(path, config):
 
 
 @pytest.yield_fixture()
-def connect(loop):
+def make_connection(loop):
 
     conn = None
 
