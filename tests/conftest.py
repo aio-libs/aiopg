@@ -104,6 +104,28 @@ def make_connection(loop):
         loop.run_until_complete(conn.close())
 
 
+@pytest.yield_fixture()
+def create_pool(loop):
+    pool = None
+
+    @asyncio.coroutine
+    def go(*, no_loop=False, **kwargs):
+        nonlocal pool
+        useloop = None if no_loop else loop
+        pool = yield from aiopg.create_pool(database='aiopg',
+                                            user='aiopg',
+                                            password='passwd',
+                                            host='127.0.0.1',
+                                            loop=useloop,
+                                            **kwargs)
+        return pool
+
+    yield go
+
+    if pool is not None:
+        pool.terminate()
+
+
 class _AssertWarnsContext:
     """A context manager used to implement TestCase.assertWarns* methods."""
 
