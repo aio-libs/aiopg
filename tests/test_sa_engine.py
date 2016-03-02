@@ -1,8 +1,6 @@
 import asyncio
 from aiopg.connection import TIMEOUT
 
-import unittest
-
 import pytest
 sa = pytest.importorskip("aiopg.sa")  # noqa
 
@@ -15,174 +13,140 @@ tbl = Table('sa_tbl3', meta,
             Column('name', String(255)))
 
 
-class TestEngine(unittest.TestCase):
-    def setUp(self):
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(None)
-        self.engine = self.loop.run_until_complete(self.make_engine())
-        self.loop.run_until_complete(self.start())
-
-    def tearDown(self):
-        self.engine.close()
-        self.loop.run_until_complete(self.engine.wait_closed())
-        self.loop.close()
-
+@pytest.fixture
+def engine(make_engine, loop):
     @asyncio.coroutine
-    def make_engine(self, use_loop=True, **kwargs):
-        if use_loop:
-            return (yield from sa.create_engine(database='aiopg',
-                                                user='aiopg',
-                                                password='passwd',
-                                                host='127.0.0.1',
-                                                loop=self.loop,
-                                                **kwargs))
-        else:
-            return (yield from sa.create_engine(database='aiopg',
-                                                user='aiopg',
-                                                password='passwd',
-                                                host='127.0.0.1',
-                                                **kwargs))
-
-    @asyncio.coroutine
-    def start(self):
-        with (yield from self.engine) as conn:
+    def start():
+        engine = yield from make_engine()
+        with (yield from engine) as conn:
             yield from conn.execute("DROP TABLE IF EXISTS sa_tbl3")
             yield from conn.execute("CREATE TABLE sa_tbl3 "
                                     "(id serial, name varchar(255))")
+        return engine
+    return loop.run_until_complete(start())
 
-    def test_dialect(self):
-        self.assertEqual(sa.engine._dialect, self.engine.dialect)
 
-    def test_name(self):
-        self.assertEqual('postgresql', self.engine.name)
+def test_dialect(engine):
+    assert sa.engine._dialect is engine.dialect
 
-    def test_driver(self):
-        self.assertEqual('psycopg2', self.engine.driver)
 
-    def test_dsn(self):
-        self.assertEqual(
-            'dbname=aiopg user=aiopg password=xxxxxx host=127.0.0.1',
-            self.engine.dsn)
+def test_name(engine):
+    assert 'postgresql' == engine.name
 
-    def test_minsize(self):
-        self.assertEqual(10, self.engine.minsize)
 
-    def test_maxsize(self):
-        self.assertEqual(10, self.engine.maxsize)
+def test_driver(engine):
+    assert 'psycopg2' == engine.driver
 
-    def test_size(self):
-        self.assertEqual(10, self.engine.size)
 
-    def test_freesize(self):
-        self.assertEqual(10, self.engine.freesize)
+def test_dsn(engine):
+    assert 'dbname=aiopg user=aiopg password=xxxxxx host=127.0.0.1' == \
+        engine.dsn
 
-    def test_make_engine_with_default_loop(self):
 
-        @asyncio.coroutine
-        def go():
-            engine = yield from self.make_engine(use_loop=False)
-            engine.close()
-            yield from engine.wait_closed()
+def test_minsize(engine):
+    assert 10 == engine.minsize
 
-        asyncio.set_event_loop(self.loop)
-        try:
-            self.loop.run_until_complete(go())
-        finally:
-            asyncio.set_event_loop(None)
 
-    def test_not_context_manager(self):
-        @asyncio.coroutine
-        def go():
-            with self.assertRaises(RuntimeError):
-                with self.engine:
-                    pass
-        self.loop.run_until_complete(go())
+def test_maxsize(engine):
+    assert 10 == engine.maxsize
 
-    def test_release_transacted(self):
-        @asyncio.coroutine
-        def go():
-            conn = yield from self.engine.acquire()
-            tr = yield from conn.begin()
-            with self.assertRaises(sa.InvalidRequestError):
-                self.engine.release(conn)
-            del tr
-            yield from conn.close()
 
-        self.loop.run_until_complete(go())
+def test_size(engine):
+    assert 10 == engine.size
 
-    def test_timeout(self):
-        self.assertEqual(TIMEOUT, self.engine.timeout)
 
-    def test_timeout_override(self):
-        @asyncio.coroutine
-        def go():
-            timeout = 1
-            engine = yield from self.make_engine(timeout=timeout)
-            self.assertEqual(timeout, engine.timeout)
-            conn = yield from engine.acquire()
-            with self.assertRaises(asyncio.TimeoutError):
-                yield from conn.execute("SELECT pg_sleep(10)")
+def test_freesize(engine):
+    assert 10 == engine.freesize
 
-            engine.terminate()
-            yield from engine.wait_closed()
 
-        self.loop.run_until_complete(go())
+@pytest.mark.run_loop
+def test_make_engine_with_default_loop(make_engine, loop):
+    asyncio.set_event_loop(loop)
+    engine = yield from make_engine(use_loop=False)
+    engine.close()
+    yield from engine.wait_closed()
 
-    def test_cannot_acquire_after_closing(self):
-        @asyncio.coroutine
-        def go():
-            engine = yield from self.make_engine()
-            engine.close()
 
-            with self.assertRaises(RuntimeError):
-                yield from engine.acquire()
+def test_not_context_manager(engine):
+    with pytest.raises(RuntimeError):
+        with engine:
+            pass
 
-            yield from engine.wait_closed()
 
-        self.loop.run_until_complete(go())
+@pytest.mark.run_loop
+def test_release_transacted(engine):
+    conn = yield from engine.acquire()
+    tr = yield from conn.begin()
+    with pytest.raises(sa.InvalidRequestError):
+        engine.release(conn)
+    del tr
+    yield from conn.close()
 
-    def test_wait_closed(self):
-        @asyncio.coroutine
-        def go():
-            engine = yield from self.make_engine()
 
-            c1 = yield from engine.acquire()
-            c2 = yield from engine.acquire()
-            self.assertEqual(10, engine.size)
-            self.assertEqual(8, engine.freesize)
+def test_timeout(engine):
+    assert TIMEOUT == engine.timeout
 
-            ops = []
 
-            @asyncio.coroutine
-            def do_release(conn):
-                yield from asyncio.sleep(0, loop=self.loop)
-                engine.release(conn)
-                ops.append('release')
+@pytest.mark.run_loop
+def test_timeout_override(make_engine):
+    timeout = 1
+    engine = yield from make_engine(timeout=timeout)
+    assert timeout == engine.timeout
+    conn = yield from engine.acquire()
+    with pytest.raises(asyncio.TimeoutError):
+        yield from conn.execute("SELECT pg_sleep(10)")
 
-            @asyncio.coroutine
-            def wait_closed():
-                yield from engine.wait_closed()
-                ops.append('wait_closed')
+    engine.terminate()
+    yield from engine.wait_closed()
 
-            engine.close()
-            yield from asyncio.gather(wait_closed(),
-                                      do_release(c1),
-                                      do_release(c2),
-                                      loop=self.loop)
-            self.assertEqual(['release', 'release', 'wait_closed'], ops)
-            self.assertEqual(0, engine.freesize)
 
-        self.loop.run_until_complete(go())
+@pytest.mark.run_loop
+def test_cannot_acquire_after_closing(make_engine):
+    engine = yield from make_engine()
+    engine.close()
 
-    def test_terminate_with_acquired_connections(self):
+    with pytest.raises(RuntimeError):
+        yield from engine.acquire()
 
-        @asyncio.coroutine
-        def go():
-            engine = yield from self.make_engine()
-            conn = yield from engine.acquire()
-            engine.terminate()
-            yield from engine.wait_closed()
+    yield from engine.wait_closed()
 
-            self.assertTrue(conn.closed)
 
-        self.loop.run_until_complete(go())
+@pytest.mark.run_loop
+def test_wait_closed(make_engine, loop):
+    engine = yield from make_engine()
+
+    c1 = yield from engine.acquire()
+    c2 = yield from engine.acquire()
+    assert 10 == engine.size
+    assert 8 == engine.freesize
+
+    ops = []
+
+    @asyncio.coroutine
+    def do_release(conn):
+        yield from asyncio.sleep(0, loop=loop)
+        engine.release(conn)
+        ops.append('release')
+
+    @asyncio.coroutine
+    def wait_closed():
+        yield from engine.wait_closed()
+        ops.append('wait_closed')
+
+    engine.close()
+    yield from asyncio.gather(wait_closed(),
+                              do_release(c1),
+                              do_release(c2),
+                              loop=loop)
+    assert ['release', 'release', 'wait_closed'] == ops
+    assert 0 == engine.freesize
+
+
+@pytest.mark.run_loop
+def test_terminate_with_acquired_connections(make_engine):
+    engine = yield from make_engine()
+    conn = yield from engine.acquire()
+    engine.terminate()
+    yield from engine.wait_closed()
+
+    assert conn.closed

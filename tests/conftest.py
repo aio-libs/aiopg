@@ -10,6 +10,7 @@ import warnings
 
 
 import aiopg
+from aiopg import sa
 
 
 @pytest.fixture
@@ -124,6 +125,34 @@ def create_pool(loop):
 
     if pool is not None:
         pool.terminate()
+
+
+@pytest.yield_fixture
+def make_engine(loop):
+    engine = None
+
+    @asyncio.coroutine
+    def go(*, use_loop=True, **kwargs):
+        if use_loop:
+            engine = (yield from sa.create_engine(database='aiopg',
+                                                  user='aiopg',
+                                                  password='passwd',
+                                                  host='127.0.0.1',
+                                                  loop=loop,
+                                                  **kwargs))
+        else:
+            engine = (yield from sa.create_engine(database='aiopg',
+                                                  user='aiopg',
+                                                  password='passwd',
+                                                  host='127.0.0.1',
+                                                  **kwargs))
+        return engine
+
+    yield go
+
+    if engine is not None:
+        engine.close()
+        loop.run_until_complete(engine.wait_closed())
 
 
 class _AssertWarnsContext:
