@@ -1,5 +1,4 @@
 import asyncio
-import unittest
 from unittest import mock
 import pytest
 import sys
