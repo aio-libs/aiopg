@@ -5,7 +5,6 @@ import psycopg2
 import psycopg2.extras
 import pytest
 import socket
-import unittest
 import time
 import sys
 
@@ -503,7 +502,7 @@ def test_echo(connect):
                     reason="Python 3.3 doesnt support __del__ calls from GC")
 @pytest.mark.run_loop
 def test___del__(loop, warning):
-    exc_handler = unittest.mock.Mock()
+    exc_handler = mock.Mock()
     loop.set_exception_handler(exc_handler)
     conn = yield from aiopg.connect(database='aiopg',
                                     user='aiopg',
@@ -514,10 +513,10 @@ def test___del__(loop, warning):
         del conn
         gc.collect()
 
-    msg = {'connection': unittest.mock.ANY,  # conn was deleted
+    msg = {'connection': mock.ANY,  # conn was deleted
            'message': 'Unclosed connection'}
     if loop.get_debug():
-        msg['source_traceback'] = unittest.mock.ANY
+        msg['source_traceback'] = mock.ANY
         exc_handler.assert_called_with(loop, msg)
 
 

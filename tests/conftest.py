@@ -74,6 +74,14 @@ def pytest_ignore_collect(path, config):
             return True
 
 
+@pytest.fixture
+def pg_params():
+    return dict(database='aiopg',
+                user='aiopg',
+                password='passwd',
+                host='127.0.0.1')
+
+
 @pytest.yield_fixture()
 def make_connection(loop):
 
@@ -153,6 +161,24 @@ def make_engine(loop):
     if engine is not None:
         engine.close()
         loop.run_until_complete(engine.wait_closed())
+
+
+@pytest.yield_fixture()
+def make_sa_connection(make_engine):
+    conn = None
+    engine = None
+
+    @asyncio.coroutine
+    def go(*, use_loop=True, **kwargs):
+        nonlocal conn, engine
+        engine = yield from make_engine(use_loop=use_loop, **kwargs)
+        conn = yield from engine.acquire()
+        return conn
+
+    yield go
+
+    if conn is not None:
+        engine.release(conn)
 
 
 class _AssertWarnsContext:
