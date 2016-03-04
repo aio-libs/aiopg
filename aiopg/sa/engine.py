@@ -24,7 +24,7 @@ _dialect.supports_sane_multi_rowcount = True  # psycopg 2.0.9+
 _dialect._has_native_hstore = True
 
 
-def create_engine(dsn=None, *, minsize=10, maxsize=10, loop=None,
+def create_engine(dsn=None, *, minsize=1, maxsize=10, loop=None,
                   dialect=_dialect, timeout=TIMEOUT, **kwargs):
     """A coroutine for Engine creation.
 
@@ -40,7 +40,7 @@ def create_engine(dsn=None, *, minsize=10, maxsize=10, loop=None,
 
 
 @asyncio.coroutine
-def _create_engine(dsn=None, *, minsize=10, maxsize=10, loop=None,
+def _create_engine(dsn=None, *, minsize=1, maxsize=10, loop=None,
                    dialect=_dialect, timeout=TIMEOUT, **kwargs):
     if loop is None:
         loop = asyncio.get_event_loop()

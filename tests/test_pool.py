@@ -14,10 +14,10 @@ from aiopg.pool import Pool
 def test_create_pool(create_pool):
     pool = yield from create_pool()
     assert isinstance(pool, Pool)
-    assert 10 == pool.minsize
+    assert 1 == pool.minsize
     assert 10 == pool.maxsize
-    assert 10 == pool.size
-    assert 10 == pool.freesize
+    assert 1 == pool.size
+    assert 1 == pool.freesize
     assert TIMEOUT == pool.timeout
     assert not pool.echo
 
@@ -48,7 +48,7 @@ def test_acquire(create_pool):
 
 @pytest.mark.run_loop
 def test_release(create_pool):
-    pool = yield from create_pool()
+    pool = yield from create_pool(minsize=10)
     conn = yield from pool.acquire()
     assert 9 == pool.freesize
     assert {conn} == pool._used
@@ -59,7 +59,7 @@ def test_release(create_pool):
 
 @pytest.mark.run_loop
 def test_release_closed(create_pool):
-    pool = yield from create_pool()
+    pool = yield from create_pool(minsize=10)
     conn = yield from pool.acquire()
     assert 9 == pool.freesize
     yield from conn.close()
@@ -84,7 +84,7 @@ def test_bad_context_manager_usage(create_pool):
 
 @pytest.mark.run_loop
 def test_context_manager(create_pool):
-    pool = yield from create_pool()
+    pool = yield from create_pool(minsize=10)
     with (yield from pool) as conn:
         assert isinstance(conn, Connection)
         assert 9 == pool.freesize
@@ -204,7 +204,7 @@ def test_parallel_tasks_more(create_pool, loop):
 
 @pytest.mark.run_loop
 def test_release_with_invalid_status(create_pool):
-    pool = yield from create_pool()
+    pool = yield from create_pool(minsize=10)
     conn = yield from pool.acquire()
     assert 9 == pool.freesize
     assert {conn} == pool._used
@@ -242,7 +242,7 @@ def test_cursor(create_pool):
 
 @pytest.mark.run_loop
 def test_release_with_invalid_status_wait_release(create_pool):
-    pool = yield from create_pool()
+    pool = yield from create_pool(minsize=10)
     conn = yield from pool.acquire()
     assert 9 == pool.freesize
     assert {conn} == pool._used
@@ -363,7 +363,7 @@ def test_true_parallel_tasks(create_pool, loop):
 
 @pytest.mark.run_loop
 def test_wait_closed(create_pool, loop):
-    pool = yield from create_pool()
+    pool = yield from create_pool(minsize=10)
 
     c1 = yield from pool.acquire()
     c2 = yield from pool.acquire()
@@ -479,7 +479,7 @@ def test___del__(loop, pg_params, warning):
 @pytest.mark.run_loop
 def test_unlimited_size(create_pool):
     pool = yield from create_pool(maxsize=0)
-    assert 10 == pool.minsize
+    assert 1 == pool.minsize
     assert pool._free.maxlen is None
 
 
