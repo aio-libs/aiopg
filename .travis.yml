@@ -16,7 +16,7 @@ install:
   - test $USE_SA == 1 && pip install sqlalchemy || true
 
 script:
-  - make cov
+  - make cov-ci
   - python setup.py check -rms
 
 env:
