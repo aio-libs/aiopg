@@ -470,12 +470,8 @@ def test_close_with_acquired_connections(create_pool, loop):
 @pytest.mark.skipif(sys.version_info < (3, 4),
                     reason="Python 3.3 doesnt support __del__ calls from GC")
 @pytest.mark.run_loop
-def test___del__(loop, warning):
-    pool = yield from aiopg.create_pool(database='aiopg',
-                                        user='aiopg',
-                                        password='passwd',
-                                        host='127.0.0.1',
-                                        loop=loop)
+def test___del__(loop, pg_params, warning):
+    pool = yield from aiopg.create_pool(loop=loop, **pg_params)
     with warning(ResourceWarning):
         del pool
 

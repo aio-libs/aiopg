@@ -415,16 +415,12 @@ def test_execute_twice(connect):
 
 
 @pytest.mark.run_loop
-def test_connect_to_unsupported_port(unused_port, loop):
+def test_connect_to_unsupported_port(unused_port, loop, pg_params):
     port = unused_port()
+    pg_params['port'] = port
 
     with pytest.raises(psycopg2.OperationalError):
-        yield from aiopg.connect(database='aiopg',
-                                 user='aiopg',
-                                 password='passwd',
-                                 host='127.0.0.1',
-                                 port=port,
-                                 loop=loop)
+        yield from aiopg.connect(loop=loop, **pg_params)
 
 
 @pytest.mark.run_loop
@@ -501,14 +497,10 @@ def test_echo(connect):
 @pytest.mark.skipif(not PY_341,
                     reason="Python 3.3 doesnt support __del__ calls from GC")
 @pytest.mark.run_loop
-def test___del__(loop, warning):
+def test___del__(loop, pg_params, warning):
     exc_handler = mock.Mock()
     loop.set_exception_handler(exc_handler)
-    conn = yield from aiopg.connect(database='aiopg',
-                                    user='aiopg',
-                                    password='passwd',
-                                    host='127.0.0.1',
-                                    loop=loop)
+    conn = yield from aiopg.connect(loop=loop, **pg_params)
     with warning(ResourceWarning):
         del conn
         gc.collect()
