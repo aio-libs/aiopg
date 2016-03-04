@@ -143,9 +143,12 @@ def test_set_session(connect):
 
 
 @pytest.mark.run_loop
-def test_dsn(connect):
+def test_dsn(connect, pg_params):
     conn = yield from connect()
-    assert 'dbname=aiopg user=aiopg password=xxxxxx host=127.0.0.1' == conn.dsn
+    pg_params['password'] = 'x' * len(pg_params['password'])
+    dsn = ('dbname={database} user={user} password={password} '
+           'host={host} port={port}').format_map(pg_params)
+    assert dsn == conn.dsn
 
 
 @pytest.mark.run_loop
@@ -160,8 +163,8 @@ def test_get_backend_pid(connect):
 def test_get_parameter_status(connect):
     conn = yield from connect()
 
-    ret = yield from conn.get_parameter_status('is_superuser')
-    assert 'off' == ret
+    ret = yield from conn.get_parameter_status('integer_datetimes')
+    assert 'on' == ret
 
 
 @pytest.mark.run_loop

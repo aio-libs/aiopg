@@ -1,4 +1,5 @@
 coverage
+docker-py
 docutils
 ipdb
 ipython
@@ -7,7 +8,6 @@ wheel
 setuptools
 -e .[sa]
 sphinx
-# readthedocs-sphinx-ext
 tox
 pytest
 pytest-cov

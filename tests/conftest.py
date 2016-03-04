@@ -2,18 +2,22 @@ import asyncio
 import collections
 import gc
 import logging
+import psycopg2
 import pytest
 import re
 import socket
 import sys
+import time
+import uuid
 import warnings
 
+from docker import Client as DockerClient
 
 import aiopg
 from aiopg import sa
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def unused_port():
     def f():
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -74,12 +78,78 @@ def pytest_ignore_collect(path, config):
             return True
 
 
+@pytest.fixture(scope='session')
+def session_id():
+    '''Unique session identifier, random string.'''
+    return str(uuid.uuid4())
+
+
+@pytest.fixture(scope='session')
+def docker():
+    return DockerClient(version='auto')
+
+
+def pytest_addoption(parser):
+    parser.addoption("--pg_tag", action="append", default=[],
+                     help=("Postgres server versions. "
+                           "May be used several times. "
+                           "Available values: 9.3, 9.4, 9.5, all"))
+
+
+def pytest_generate_tests(metafunc):
+    if 'pg_tag' in metafunc.fixturenames:
+        tags = set(metafunc.config.option.pg_tag)
+        if not tags:
+            tags = ['9.5']
+        elif 'all' in tags:
+            tags = ['9.3', '9.4', '9.5']
+        else:
+            tags = list(tags)
+        metafunc.parametrize("pg_tag", tags, scope='session')
+
+
+@pytest.yield_fixture(scope='session')
+def pg_server(unused_port, docker, session_id, pg_tag):
+    docker.pull('postgres:{}'.format(pg_tag))
+    port = unused_port()
+    container = docker.create_container(
+        image='postgres:{}'.format(pg_tag),
+        name='aiopg-test-server-{}-{}'.format(pg_tag, session_id),
+        ports=[5432],
+        detach=True,
+        host_config=docker.create_host_config(port_bindings={5432: port})
+    )
+    docker.start(container=container['Id'])
+    pg_params = dict(database='postgres',
+                     user='postgres',
+                     password='mysecretpassword',
+                     host='127.0.0.1',
+                     port=port)
+    delay = 0.001
+    for i in range(100):
+        try:
+            conn = psycopg2.connect(**pg_params)
+            cur = conn.cursor()
+            cur.execute("CREATE EXTENSION hstore;")
+            cur.close()
+            conn.close()
+            break
+        except psycopg2.Error:
+            time.sleep(delay)
+            delay *= 2
+    else:
+        pytest.fail("Cannot start postgres server")
+    container['port'] = port
+    container['pg_params'] = pg_params
+    yield container
+
+    docker.kill(container=container['Id'])
+    docker.remove_container(container['Id'])
+
+
 @pytest.fixture
-def pg_params():
-    return dict(database='aiopg',
-                user='aiopg',
-                password='passwd',
-                host='127.0.0.1')
+def pg_params(pg_server):
+    return dict(**pg_server['pg_params'])
 
 
 @pytest.yield_fixture()
