@@ -1,17 +1,13 @@
 sudo: required
 language: python
 
+services:
+  - docker
+
 python:
   - "3.3"
   - "3.4"
   - "3.5"
-
-before_install:
-  - sudo apt-get update
-  - sudo /etc/init.d/postgresql stop
-  - sudo apt-get install -y postgresql-contrib-${PG}
-  - sudo /etc/init.d/postgresql start ${PG}
-  - sleep 5  # to wait for postgres server start
 
 install:
   - python setup.py install
@@ -19,18 +15,9 @@ install:
   - pip install coveralls
   - test $USE_SA == 1 && pip install sqlalchemy || true
 
-before_script:
-  - psql -c "create database aiopg;" -U postgres
-  - psql -c "create user aiopg with password 'passwd';" -U postgres
-  - psql -c "grant all privileges on database aiopg to aiopg;" -U postgres
-  - psql -c "create extension hstore;" -U postgres -d aiopg
-
 script:
   - make cov
   - python setup.py check -rms
-
-#addons:
-#  postgresql: "9.4"
 
 env:
   global:

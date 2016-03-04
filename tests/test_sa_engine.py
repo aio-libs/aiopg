@@ -38,9 +38,11 @@ def test_driver(engine):
     assert 'psycopg2' == engine.driver
 
 
-def test_dsn(engine):
-    assert 'dbname=aiopg user=aiopg password=xxxxxx host=127.0.0.1' == \
-        engine.dsn
+def test_dsn(engine, pg_params):
+    pg_params['password'] = 'x' * len(pg_params['password'])
+    dsn = ('dbname={database} user={user} password={password} '
+           'host={host} port={port}').format_map(pg_params)
+    assert dsn == engine.dsn
 
 
 def test_minsize(engine):

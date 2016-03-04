@@ -24,27 +24,21 @@ Just as when doing a normal install, you need the :term:`libpq` library::
 
    $ sudo apt-get install libpq-dev
 
+**UPD**
+
+The latest ``aiopg`` test suite uses docker container for running
+Postgres server. See
+https://docs.docker.com/engine/installation/linux/ubuntulinux/ for
+instructions for Docker installing.
+
+No local Postgres server needed.
+
 In the virtual environment you need to install *aiopg* itself and some
 additional development tools (the development tools are needed for running
 the test suite and other development tasks)::
 
    $ pip install -Ue .
    $ pip install -Ur requirements.txt
-
-You will also need to create a postgres user and database for the test suite::
-
-    $ sudo -u postgres psql
-
-    # CREATE DATABASE aiopg;
-    # CREATE USER aiopg WITH PASSWORD 'passwd';
-    # GRANT ALL PRIVILEGES ON DATABASE aiopg TO aiopg;
-
-    # \connect aiopg
-    # CREATE EXTENSION hstore;
-
-You can use the ``setup_test_db.sql`` script to do the setup::
-
-    $ sudo -u postgres psql < setup_test_db.sql
 
 That's all.
 
