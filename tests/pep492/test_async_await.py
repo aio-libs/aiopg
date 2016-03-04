@@ -1,4 +1,3 @@
-import asyncio
 import pytest
 import aiopg
 import aiopg.sa
@@ -192,6 +191,7 @@ async def test_transaction_context_manager_error(pg_params, loop):
             assert str(ctx.value) == 'boom'
             assert not tr.is_active
     assert conn.closed
+
 
 @pytest.mark.run_loop
 async def test_transaction_context_manager_commit_once(pg_params, loop):
