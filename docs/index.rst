@@ -168,12 +168,12 @@ or have some suggestion for library improvement.
 The library uses `Travis <https://travis-ci.org/aio-libs/aiopg>`_ for
 Continious Integration.
 
-IRC channel
------------
+Discussion list
+---------------
 
-You can discuss the library on Freenode_ at **#aio-libs** channel.
+*aio-libs* google group: https://groups.google.com/forum/#!forum/aio-libs
 
-.. _Freenode: http://freenode.net
+Feel free to post your questions and ideas here.
 
 
 Dependencies
