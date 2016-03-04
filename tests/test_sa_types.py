@@ -1,5 +1,4 @@
 import asyncio
-import unittest
 
 import psycopg2
 
@@ -29,23 +28,11 @@ tbl2 = Table('sa_tbl_types2', meta,
              Column('enum_val', ENUM('first', 'second', name='simple_enum')))
 
 
-class TestSATypes(unittest.TestCase):
-
-    def setUp(self):
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(None)
-
-    def tearDown(self):
-        self.loop.close()
-
+@pytest.yield_fixture
+def connect(make_engine):
     @asyncio.coroutine
-    def connect(self, **kwargs):
-        engine = yield from sa.create_engine(database='aiopg',
-                                             user='aiopg',
-                                             password='passwd',
-                                             host='127.0.0.1',
-                                             loop=self.loop,
-                                             **kwargs)
+    def go(**kwargs):
+        engine = yield from make_engine(**kwargs)
         with (yield from engine) as conn:
             try:
                 yield from conn.execute(DropTable(tbl))
@@ -60,81 +47,65 @@ class TestSATypes(unittest.TestCase):
                                        ('first', 'second');""")
             try:
                 yield from conn.execute(CreateTable(tbl))
-                self.tbl = tbl
-                self.has_hstore = True
+                ret_tbl = tbl
+                has_hstore = True
             except psycopg2.ProgrammingError:
                 yield from conn.execute(CreateTable(tbl2))
-                self.tbl = tbl2
-                self.has_hstore = False
-        return engine
+                ret_tbl = tbl2
+                has_hstore = False
+        return engine, ret_tbl, has_hstore
 
-    def test_json(self):
-        @asyncio.coroutine
-        def go():
-            engine = yield from self.connect()
-            data = {'a': 1, 'b': 'name'}
-            with (yield from engine) as conn:
-                yield from conn.execute(
-                    self.tbl.insert().values(json_val=data))
+    yield go
 
-                ret = yield from conn.execute(self.tbl.select())
-                item = yield from ret.fetchone()
-                self.assertEqual(data, item['json_val'])
-            engine.close()
-            yield from engine.wait_closed()
 
-        self.loop.run_until_complete(go())
+@pytest.mark.run_loop
+def test_json(connect):
+    engine, tbl, has_hstore = yield from connect()
+    data = {'a': 1, 'b': 'name'}
+    with (yield from engine) as conn:
+        yield from conn.execute(
+            tbl.insert().values(json_val=data))
 
-    def test_array(self):
-        @asyncio.coroutine
-        def go():
-            engine = yield from self.connect()
-            data = [1, 2, 3]
-            with (yield from engine) as conn:
-                yield from conn.execute(
-                    self.tbl.insert().values(array_val=data))
+        ret = yield from conn.execute(tbl.select())
+        item = yield from ret.fetchone()
+        assert data == item['json_val']
 
-                ret = yield from conn.execute(self.tbl.select())
-                item = yield from ret.fetchone()
-                self.assertEqual(data, item['array_val'])
-            engine.close()
-            yield from engine.wait_closed()
 
-        self.loop.run_until_complete(go())
+@pytest.mark.run_loop
+def test_array(connect):
+    engine, tbl, has_hstore = yield from connect()
+    data = [1, 2, 3]
+    with (yield from engine) as conn:
+        yield from conn.execute(
+            tbl.insert().values(array_val=data))
 
-    def test_hstore(self):
-        @asyncio.coroutine
-        def go():
-            engine = yield from self.connect()
-            try:
-                if not self.has_hstore:
-                    raise unittest.SkipTest("hstore is not supported")
-                data = {'a': 'str', 'b': 'name'}
-                with (yield from engine) as conn:
-                    yield from conn.execute(
-                        self.tbl.insert().values(hstore_val=data))
+        ret = yield from conn.execute(tbl.select())
+        item = yield from ret.fetchone()
+        assert data == item['array_val']
 
-                    ret = yield from conn.execute(self.tbl.select())
-                    item = yield from ret.fetchone()
-                    self.assertEqual(data, item['hstore_val'])
-            finally:
-                engine.close()
-                yield from engine.wait_closed()
 
-        self.loop.run_until_complete(go())
+@pytest.mark.run_loop
+def test_hstore(connect):
+    engine, tbl, has_hstore = yield from connect()
+    if not has_hstore:
+        raise pytest.skip("hstore is not supported")
+    data = {'a': 'str', 'b': 'name'}
+    with (yield from engine) as conn:
+        yield from conn.execute(
+            tbl.insert().values(hstore_val=data))
 
-    def test_enum(self):
-        @asyncio.coroutine
-        def go():
-            engine = yield from self.connect()
-            with (yield from engine) as conn:
-                yield from conn.execute(
-                    self.tbl.insert().values(enum_val='second'))
+        ret = yield from conn.execute(tbl.select())
+        item = yield from ret.fetchone()
+        assert data == item['hstore_val']
 
-                ret = yield from conn.execute(self.tbl.select())
-                item = yield from ret.fetchone()
-                self.assertEqual('second', item['enum_val'])
-            engine.close()
-            yield from engine.wait_closed()
 
-        self.loop.run_until_complete(go())
+@pytest.mark.run_loop
+def test_enum(connect):
+    engine, tbl, has_hstore = yield from connect()
+    with (yield from engine) as conn:
+        yield from conn.execute(
+            tbl.insert().values(enum_val='second'))
+
+        ret = yield from conn.execute(tbl.select())
+        item = yield from ret.fetchone()
+        assert 'second' == item['enum_val']
