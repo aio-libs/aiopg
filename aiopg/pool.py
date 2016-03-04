@@ -15,7 +15,7 @@ from .utils import (PY_35, _PoolContextManager, _PoolConnectionContextManager,
 PY_341 = sys.version_info >= (3, 4, 1)
 
 
-def create_pool(dsn=None, *, minsize=10, maxsize=10,
+def create_pool(dsn=None, *, minsize=1, maxsize=10,
                 loop=None, timeout=TIMEOUT,
                 enable_json=True, enable_hstore=True, enable_uuid=True,
                 echo=False,
@@ -28,7 +28,7 @@ def create_pool(dsn=None, *, minsize=10, maxsize=10,
 
 
 @asyncio.coroutine
-def _create_pool(dsn=None, *, minsize=10, maxsize=10,
+def _create_pool(dsn=None, *, minsize=1, maxsize=10,
                  loop=None, timeout=TIMEOUT,
                  enable_json=True, enable_hstore=True, enable_uuid=True,
                  echo=False,

@@ -46,7 +46,7 @@ def test_dsn(engine, pg_params):
 
 
 def test_minsize(engine):
-    assert 10 == engine.minsize
+    assert 1 == engine.minsize
 
 
 def test_maxsize(engine):
@@ -54,11 +54,11 @@ def test_maxsize(engine):
 
 
 def test_size(engine):
-    assert 10 == engine.size
+    assert 1 == engine.size
 
 
 def test_freesize(engine):
-    assert 10 == engine.freesize
+    assert 1 == engine.freesize
 
 
 @pytest.mark.run_loop
@@ -115,7 +115,7 @@ def test_cannot_acquire_after_closing(make_engine):
 
 @pytest.mark.run_loop
 def test_wait_closed(make_engine, loop):
-    engine = yield from make_engine()
+    engine = yield from make_engine(minsize=10)
 
     c1 = yield from engine.acquire()
     c2 = yield from engine.acquire()
