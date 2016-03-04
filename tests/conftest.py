@@ -83,25 +83,17 @@ def pg_params():
 
 
 @pytest.yield_fixture()
-def make_connection(loop):
+def make_connection(loop, pg_params):
 
     conn = None
 
     @asyncio.coroutine
     def go(*, no_loop=False, **kwargs):
         nonlocal conn
+        pg_params.update(kwargs)
         useloop = None if no_loop else loop
-        conn = yield from aiopg.connect(database='aiopg',
-                                        user='aiopg',
-                                        password='passwd',
-                                        host='127.0.0.1',
-                                        loop=useloop,
-                                        **kwargs)
-        conn2 = yield from aiopg.connect(database='aiopg',
-                                         user='aiopg',
-                                         password='passwd',
-                                         host='127.0.0.1',
-                                         loop=useloop)
+        conn = yield from aiopg.connect(loop=useloop, **pg_params)
+        conn2 = yield from aiopg.connect(loop=useloop, **pg_params)
         cur = yield from conn2.cursor()
         yield from cur.execute("DROP TABLE IF EXISTS foo")
         yield from conn2.close()
@@ -114,19 +106,15 @@ def make_connection(loop):
 
 
 @pytest.yield_fixture()
-def create_pool(loop):
+def create_pool(loop, pg_params):
     pool = None
 
     @asyncio.coroutine
     def go(*, no_loop=False, **kwargs):
         nonlocal pool
+        pg_params.update(kwargs)
         useloop = None if no_loop else loop
-        pool = yield from aiopg.create_pool(database='aiopg',
-                                            user='aiopg',
-                                            password='passwd',
-                                            host='127.0.0.1',
-                                            loop=useloop,
-                                            **kwargs)
+        pool = yield from aiopg.create_pool(loop=useloop, **pg_params)
         return pool
 
     yield go
@@ -136,24 +124,16 @@ def create_pool(loop):
 
 
 @pytest.yield_fixture
-def make_engine(loop):
+def make_engine(loop, pg_params):
     engine = None
 
     @asyncio.coroutine
     def go(*, use_loop=True, **kwargs):
+        pg_params.update(kwargs)
         if use_loop:
-            engine = (yield from sa.create_engine(database='aiopg',
-                                                  user='aiopg',
-                                                  password='passwd',
-                                                  host='127.0.0.1',
-                                                  loop=loop,
-                                                  **kwargs))
+            engine = yield from sa.create_engine(loop=loop, **pg_params)
         else:
-            engine = (yield from sa.create_engine(database='aiopg',
-                                                  user='aiopg',
-                                                  password='passwd',
-                                                  host='127.0.0.1',
-                                                  **kwargs))
+            engine = yield from sa.create_engine(**pg_params)
         return engine
 
     yield go

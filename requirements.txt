@@ -10,4 +10,6 @@ sphinx
 # readthedocs-sphinx-ext
 tox
 pytest
-pytest-coverage
+pytest-cov
+pytest-sugar
+
