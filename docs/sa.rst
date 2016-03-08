@@ -298,11 +298,11 @@ Connection
          :meth:`.SAConnection.begin_twophase` - use a two phase (XA)
                  transaction
 
-   .. method:: begin_nested()
+   .. comethod:: begin_nested()
+      :coroutine:
+      :async-with:
 
       Begin a nested transaction and return a transaction handle.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
       The returned object is an instance of :class:`.NestedTransaction`.
 
@@ -315,12 +315,12 @@ Connection
 
          :meth:`.SAConnection.begin`, :meth:`.SAConnection.begin_twophase`.
 
-   .. method:: begin_twophase(xid=None)
+   .. comethod:: begin_twophase(xid=None)
+      :coroutine:
+      :async-with:
 
       Begin a two-phase or XA transaction and return a transaction
       handle.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
       The returned object is an instance of
       :class:`.TwoPhaseTransaction`, which in addition to the methods
@@ -333,34 +333,26 @@ Connection
       .. seealso::
          :meth:`.SAConnection.begin`, :meth:`.SAConnection.begin_twophase`.
 
-   .. method:: recover_twophase()
+   .. comethod:: recover_twophase()
 
       Return a list of prepared twophase transaction ids.
 
-      This method is a :ref:`coroutine <coroutine>`.
-
-   .. method:: rollback_prepared(xid)
+   .. comethod:: rollback_prepared(xid)
 
       Rollback prepared twophase transaction *xid*.
 
-      This method is a :ref:`coroutine <coroutine>`.
-
-   .. method:: commit_prepared(xid)
+   .. comethod:: commit_prepared(xid)
 
       Commit prepared twophase transaction *xid*.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
    .. attribute:: in_transaction
 
       The readonly property that returns ``True`` if a transaction is
       in progress.
 
-   .. method:: close()
+   .. comethod:: close()
 
       Close this :class:`SAConnection`.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
       This results in a release of the underlying database
       resources, that is, the :class:`aiopg.Connection` referenced
@@ -470,21 +462,17 @@ ResultProxy
       * all result rows are exhausted using the fetchXXX() methods.
       * cursor.description is None.
 
-   .. method:: fetchall()
+   .. comethod:: fetchall()
 
       Fetch all rows, just like :meth:`aiopg.Cursor.fetchall`.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
       The connection is closed after the call.
 
       Returns a list of :class:`RowProxy`.
 
-   .. method:: fetchone()
+   .. comethod:: fetchone()
 
       Fetch one row, just like :meth:`aiopg.Cursor.fetchone`.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
       If a row is present, the cursor remains open after this is called.
 
@@ -492,11 +480,9 @@ ResultProxy
 
       Returns an :class:`RowProxy` instance or ``None``.
 
-   .. method:: fetchmany(size=None)
+   .. comethod:: fetchmany(size=None)
 
       Fetch many rows, just like :meth:`aiopg.Cursor.fetchmany`.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
       If rows are present, the cursor remains open after this is called.
 
@@ -504,15 +490,13 @@ ResultProxy
 
       Returns a list of :class:`RowProxy`.
 
-   .. method:: first()
+   .. comethod:: first()
 
       Fetch the first row and then close the result set unconditionally.
 
-      This method is a :ref:`coroutine <coroutine>`.
-
       Returns ``None`` if no row is present or an :class:`RowProxy` instance.
 
-   .. method:: scalar()
+   .. comethod:: scalar()
 
       Fetch the first column of the first row, and close the result set.
 
@@ -571,11 +555,9 @@ Transaction objects
 
       A readonly property that returns :class:`SAConnection` for transaction.
 
-   .. method:: close()
+   .. comethod:: close()
 
       Close this :class:`Transaction`.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
       If this transaction is the base transaction in a begin/commit
       nesting, the transaction will :meth:`Transaction.rollback`.
@@ -584,17 +566,13 @@ Transaction objects
       This is used to cancel a :class:`Transaction` without affecting
       the scope of an enclosing transaction.
 
-   .. method:: rollback()
+   .. comethod:: rollback()
 
       Roll back this :class:`Transaction`.
 
-      This method is a :ref:`coroutine <coroutine>`.
-
-   .. method:: commit()
+   .. comethod:: commit()
 
       Commit this :class:`Transaction`.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
 
 .. class:: NestedTransaction
@@ -635,11 +613,9 @@ Transaction objects
 
       A readonly property that returns twophase transaction id.
 
-   .. method:: prepare()
+   .. comethod:: prepare()
 
       Prepare this :class:`TwoPhaseTransaction`.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
       After a PREPARE, the transaction can be committed.
 
