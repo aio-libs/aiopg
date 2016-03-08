@@ -69,12 +69,12 @@ Also we provide SQL transactions support. Please take a look on
 Engine
 ------
 
-.. function:: create_engine(dsn=None, *, minsize=10, maxsize=10, loop=None, \
-                            dialect=dialect, timeout=60, **kwargs)
+.. cofunction:: create_engine(dsn=None, *, minsize=1, maxsize=10, loop=None, \
+                              dialect=dialect, timeout=60, **kwargs)
+   :coroutine:
+   :async-with:
 
-   A :ref:`coroutine <coroutine>` for :class:`Engine` creation.
-
-   Returns :class:`Engine` instance with embedded connection pool.
+   Crate an :class:`Engine` instance with embedded connection pool.
 
    The pool has *minsize* opened connections to :term:`PostgreSQL` server.
 
@@ -124,7 +124,7 @@ Engine
 
    .. attribute:: minsize
 
-      A minimal size of the pool (*read-only*), ``10`` by default.
+      A minimal size of the pool (*read-only*), ``1`` by default.
 
    .. attribute:: maxsize
 
@@ -167,7 +167,7 @@ Engine
 
       .. warning:: The method is not a :ref:`coroutine <coroutine>`.
 
-   .. method:: wait_closed()
+   .. comethod:: wait_closed()
 
       A :ref:`coroutine <coroutine>` that waits for releasing and
       closing all acquired connections.
@@ -175,7 +175,9 @@ Engine
       Should be called after :meth:`close` for waiting for actual engine
       closing.
 
-   .. method:: acquire()
+   .. comethod:: acquire()
+      :coroutine:
+      :async-with:
 
       Get a connection from pool.
 
@@ -205,11 +207,11 @@ Connection
    The class provides methods for executing *SQL queries* and working with
    *SQL transactions*.
 
-   .. method:: execute(query, *multiparams, **params)
+   .. comethod:: execute(query, *multiparams, **params)
+      :coroutine:
+      :async-for:
 
       Executes a *SQL* *query* with optional parameters.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
       :param query: a SQL query string or any :term:`sqlalchemy`
                     expression (see :ref:`core_toplevel`)
@@ -242,14 +244,17 @@ Connection
                1, "v1"
            )
 
+      Result value for ``SELECT`` statements may be iterated immediately::
+
+           async for row conn.execute(tbl.select()):
+               print(row.id, row.name, row.surname)
+
       :returns: :class:`ResultProxy` instance with results of SQL
                 query execution.
 
-   .. method:: scalar(query, *multiparams, **params)
+   .. comethod:: scalar(query, *multiparams, **params)
 
       Executes a *SQL* *query* and returns a scalar value.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
       .. seealso:: :meth:`SAConnection.execute` and :meth:`ResultProxy.scalar`.
 
@@ -257,7 +262,9 @@ Connection
 
       The readonly property that returns ``True`` if connections is closed.
 
-   .. method:: begin()
+   .. comethod:: begin()
+      :coroutine:
+      :async-with:
 
       Begin a transaction and return a transaction handle.
 

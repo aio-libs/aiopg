@@ -47,8 +47,10 @@ def get_version(release):
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.viewcode', 'sphinx.ext.autodoc',
-              'sphinx.ext.intersphinx']
+extensions = ['sphinx.ext.viewcode',
+              'sphinx.ext.autodoc',
+              'sphinx.ext.intersphinx',
+              'sphinxcontrib.asyncio']
 
 intersphinx_mapping = {'python': ('http://docs.python.org/3', None),
                        'sqlalchemy': ('http://docs.sqlalchemy.org/en/rel_0_9/',

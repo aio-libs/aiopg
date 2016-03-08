@@ -14,7 +14,7 @@
 Connection
 ==========
 
-The library provides a way to connect to PostgreSQL database.
+The library provides a way to connect to :term:`PostgreSQL` database.
 
 Example::
 
@@ -29,12 +29,15 @@ Example::
       ret = yield from cur.fetchall()
 
 
-.. function:: connect(dsn=None, *, loop=None, timeout=60.0, \
-                      enable_json=True, enable_hstore=True, enable_uuid=True, \
-                      echo=False, \
-                      **kwargs)
+.. cofunction:: connect(dsn=None, *, loop=None, timeout=60.0, \
+                        enable_json=True, enable_hstore=True, \
+                        enable_uuid=True, \
+                        echo=False, \
+                        **kwargs)
+   :coroutine:
+   :async-with:
 
-   A :ref:`coroutine <coroutine>` that connects to PostgreSQL.
+   Make a connection to :term:`PostgreSQL` server.
 
    The function accepts all parameters that :func:`psycopg2.connect`
    does plus optional keyword-only *loop* and *timeout* parameters.
@@ -80,11 +83,12 @@ Example::
 
    The most important method is
 
-   .. method:: cursor(name=None, cursor_factory=None, \
-               scrollable=None, withhold=False, *, timeout=None)
+   .. comethod:: cursor(name=None, cursor_factory=None, \
+                 scrollable=None, withhold=False, *, timeout=None)
+      :coroutine:
+      :async-with:
 
-      A :ref:`coroutine <coroutine>` that creates a new cursor object
-      using the connection.
+      Creates a new cursor object using the connection.
 
       The only *cursor_factory* can be specified, all other
       parameters are not supported by :term:`psycopg2` in
@@ -108,9 +112,9 @@ Example::
 
       Immediatelly close the connection.
 
-      Close the connection now (rather than whenever `del` is executed).
+      Close the connection now (rather than whenever ``del`` is executed).
       The connection will be unusable from this point forward; an
-      `psycopg2.InterfaceError` will be raised if any operation is
+      :exc:`psycopg2.InterfaceError` will be raised if any operation is
       attempted with the connection.  The same applies to all cursor objects
       trying to use the connection.  Note that closing a connection without
       committing the changes first will cause any pending change to be
@@ -137,10 +141,9 @@ Example::
       The readonly property that underlying
       :class:`psycopg2.connection` instance.
 
-   .. method:: cancel(timeout=None)
+   .. comethod:: cancel(timeout=None)
 
-      A :ref:`coroutine <coroutine>` that cancels current database
-      operation.
+      Cancel current database operation.
 
       The method interrupts the processing of the current
       operation. If no query is being executed, it does nothing. You
@@ -400,7 +403,7 @@ Cursor
       A read-only float representing default timeout for cursor's
       operations.
 
-   .. method:: execute(operation, parameters=None, *, timeout=None)
+   .. comethod:: execute(operation, parameters=None, *, timeout=None)
 
       Prepare and execute a database operation (query or command).
 
@@ -414,7 +417,7 @@ Cursor
       :returns: ``None``. If a query was executed, the returned
                 values can be retrieved using |fetch*|_ methods.
 
-   .. method:: callproc(procname, parameters=None, *, timeout=None)
+   .. comethod:: callproc(procname, parameters=None, *, timeout=None)
 
       Call a stored database procedure with the given name. The sequence of
       parameters must contain one entry for each argument that the procedure
@@ -456,16 +459,22 @@ Cursor
 
    .. _cursor-iterable:
 
+   Cursor object supports *asynchronous iteration* starting from Python 3.5::
+
+       await cursor.execute('SELECT key, value FROM tbl;')
+       async for key, value in cursor:
+           ...
+
    .. warning::
 
-      :class:`Cursor` objects do **not** support iteration, since
-      version 0.7.
+      :class:`Cursor` objects do **not** support regular iteration
+      (using ``for`` statement) since version 0.7.
 
       Iterable protocol in :class:`Cursor` hides ``yield from`` from user,
       witch should be explicit. Moreover iteration support is optional,
       according to PEP-249 (https://www.python.org/dev/peps/pep-0249/#iter).
 
-   .. method:: fetchone()
+   .. comethod:: fetchone()
 
       Fetch the next row of a query result set, returning a single tuple,
       or ``None`` when no more data is available::
@@ -479,7 +488,7 @@ Cursor
       call was issued yet.
 
 
-   .. method:: fetchmany(size=cursor.arraysize)
+   .. comethod:: fetchmany(size=cursor.arraysize)
 
       Fetch the next set of rows of a query result, returning a list of
       tuples. An empty list is returned when no more rows are available.
@@ -509,7 +518,7 @@ Cursor
       :meth:`fetchmany` call to the next.
 
 
-   .. method:: fetchall()
+   .. comethod:: fetchall()
 
       Fetch all (remaining) rows of a query result, returning them as a list
       of tuples.  An empty list is returned if there is no more record to
@@ -524,7 +533,7 @@ Cursor
       call was issued yet.
 
 
-    .. method:: scroll(value, mode='relative')
+    .. comethod:: scroll(value, mode='relative')
 
        Scroll the cursor in the result set to a new position according
        to mode.
@@ -666,12 +675,13 @@ The basic usage is::
             assert ret == (1,), ret
 
 
-.. function:: create_pool(dsn=None, *, minsize=10, maxsize=10,\
-                          enable_json=True, enable_hstore=True, \
-                          loop=None, timeout=60.0, **kwargs)
+.. cofunction:: create_pool(dsn=None, *, minsize=1, maxsize=10,\
+                            enable_json=True, enable_hstore=True, \
+                            loop=None, timeout=60.0, **kwargs)
+   :coroutine:
+   :async-with:
 
-   A :ref:`coroutine <coroutine>` that creates a pool of connections to
-   :term:`PostgreSQL` database.
+   Create a pool of connections to :term:`PostgreSQL` database.
 
    The function accepts all parameters that :func:`psycopg2.connect`
    does plus optional keyword-only parameters *loop*, *minsize*, *maxsize*.
@@ -736,7 +746,7 @@ The basic usage is::
 
    .. attribute:: minsize
 
-      A minimal size of the pool (*read-only*), ``10`` by default.
+      A minimal size of the pool (*read-only*), ``1`` by default.
 
    .. attribute:: maxsize
 
@@ -785,18 +795,19 @@ The basic usage is::
 
       .. warning:: The method is not a :ref:`coroutine <coroutine>`.
 
-   .. method:: wait_closed()
+   .. comethod:: wait_closed()
 
-      A :ref:`coroutine <coroutine>` that waits for releasing and
-      closing all acquired connections.
+      Wait for releasing and closing all acquired connections.
 
       Should be called after :meth:`close` for waiting for actual pool
       closing.
 
-   .. method:: acquire()
+   .. comethod:: acquire()
+      :coroutine:
+      :async-with:
 
-      A :ref:`coroutine <coroutine>` that acquires a connection from
-      *free pool*. Creates new connection if needed and :attr:`size`
+      Acquire a connection from *free pool*.
+      Create a new connection if needed and :attr:`size`
       of pool is less than :attr:`maxsize`.
 
       Returns a :class:`Connection` instance.
@@ -808,14 +819,14 @@ The basic usage is::
 
       .. versionchanged:: 0.10
 
-         The mathod is converted into a coroutine to get exception
+         The method is converted into a coroutine to get exception
          context in case of errors.
 
          The change is backward compatible though since technically
          it's a regular method returning a future instance.
 
    .. method:: cursor(name=None, cursor_factory=None, scrollable=None, \
-               withhold=False, *, timeout=None)
+                      withhold=False, *, timeout=None)
 
       A :ref:`coroutine<coroutine>` that :meth:`acquires <acquire>` a
       connection and returns *context manager*.
