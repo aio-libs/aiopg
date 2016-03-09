@@ -1,7 +1,7 @@
 import os
 import re
 import sys
-from setuptools import setup, find_packages
+from setuptools import setup
 
 
 install_requires = ['psycopg2>=2.5.2']
@@ -59,7 +59,7 @@ setup(name='aiopg',
       url='http://aiopg.readthedocs.org',
       download_url='https://pypi.python.org/pypi/aiopg',
       license='BSD',
-      packages=find_packages(),
+      packages=['aiopg', 'aiopg.sa'],
       install_requires=install_requires,
       extras_require=extras_require,
       include_package_data=True)

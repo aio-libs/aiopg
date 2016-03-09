@@ -6,7 +6,9 @@ CHANGES
 
 * Refactor tests to use dockerized Postgres server #107
 
-* Reduce default pool minsize to 1 # 106
+* Reduce default pool minsize to 1 #106
+
+* Explicitly enumerate packages in setup.py #85
 
 0.9.2 (2016-01-31)
 ^^^^^^^^^^^^^^^^^^
