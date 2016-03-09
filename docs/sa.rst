@@ -69,12 +69,12 @@ Also we provide SQL transactions support. Please take a look on
 Engine
 ------
 
-.. function:: create_engine(dsn=None, *, minsize=10, maxsize=10, loop=None, \
-                            dialect=dialect, timeout=60, **kwargs)
+.. cofunction:: create_engine(dsn=None, *, minsize=1, maxsize=10, loop=None, \
+                              dialect=dialect, timeout=60, **kwargs)
+   :coroutine:
+   :async-with:
 
-   A :ref:`coroutine <coroutine>` for :class:`Engine` creation.
-
-   Returns :class:`Engine` instance with embedded connection pool.
+   Crate an :class:`Engine` instance with embedded connection pool.
 
    The pool has *minsize* opened connections to :term:`PostgreSQL` server.
 
@@ -124,7 +124,7 @@ Engine
 
    .. attribute:: minsize
 
-      A minimal size of the pool (*read-only*), ``10`` by default.
+      A minimal size of the pool (*read-only*), ``1`` by default.
 
    .. attribute:: maxsize
 
@@ -167,7 +167,7 @@ Engine
 
       .. warning:: The method is not a :ref:`coroutine <coroutine>`.
 
-   .. method:: wait_closed()
+   .. comethod:: wait_closed()
 
       A :ref:`coroutine <coroutine>` that waits for releasing and
       closing all acquired connections.
@@ -175,7 +175,9 @@ Engine
       Should be called after :meth:`close` for waiting for actual engine
       closing.
 
-   .. method:: acquire()
+   .. comethod:: acquire()
+      :coroutine:
+      :async-with:
 
       Get a connection from pool.
 
@@ -205,11 +207,11 @@ Connection
    The class provides methods for executing *SQL queries* and working with
    *SQL transactions*.
 
-   .. method:: execute(query, *multiparams, **params)
+   .. comethod:: execute(query, *multiparams, **params)
+      :coroutine:
+      :async-for:
 
       Executes a *SQL* *query* with optional parameters.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
       :param query: a SQL query string or any :term:`sqlalchemy`
                     expression (see :ref:`core_toplevel`)
@@ -242,14 +244,17 @@ Connection
                1, "v1"
            )
 
+      Result value for ``SELECT`` statements may be iterated immediately::
+
+           async for row conn.execute(tbl.select()):
+               print(row.id, row.name, row.surname)
+
       :returns: :class:`ResultProxy` instance with results of SQL
                 query execution.
 
-   .. method:: scalar(query, *multiparams, **params)
+   .. comethod:: scalar(query, *multiparams, **params)
 
       Executes a *SQL* *query* and returns a scalar value.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
       .. seealso:: :meth:`SAConnection.execute` and :meth:`ResultProxy.scalar`.
 
@@ -257,7 +262,9 @@ Connection
 
       The readonly property that returns ``True`` if connections is closed.
 
-   .. method:: begin()
+   .. comethod:: begin()
+      :coroutine:
+      :async-with:
 
       Begin a transaction and return a transaction handle.
 
@@ -291,11 +298,11 @@ Connection
          :meth:`.SAConnection.begin_twophase` - use a two phase (XA)
                  transaction
 
-   .. method:: begin_nested()
+   .. comethod:: begin_nested()
+      :coroutine:
+      :async-with:
 
       Begin a nested transaction and return a transaction handle.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
       The returned object is an instance of :class:`.NestedTransaction`.
 
@@ -308,12 +315,12 @@ Connection
 
          :meth:`.SAConnection.begin`, :meth:`.SAConnection.begin_twophase`.
 
-   .. method:: begin_twophase(xid=None)
+   .. comethod:: begin_twophase(xid=None)
+      :coroutine:
+      :async-with:
 
       Begin a two-phase or XA transaction and return a transaction
       handle.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
       The returned object is an instance of
       :class:`.TwoPhaseTransaction`, which in addition to the methods
@@ -326,34 +333,26 @@ Connection
       .. seealso::
          :meth:`.SAConnection.begin`, :meth:`.SAConnection.begin_twophase`.
 
-   .. method:: recover_twophase()
+   .. comethod:: recover_twophase()
 
       Return a list of prepared twophase transaction ids.
 
-      This method is a :ref:`coroutine <coroutine>`.
-
-   .. method:: rollback_prepared(xid)
+   .. comethod:: rollback_prepared(xid)
 
       Rollback prepared twophase transaction *xid*.
 
-      This method is a :ref:`coroutine <coroutine>`.
-
-   .. method:: commit_prepared(xid)
+   .. comethod:: commit_prepared(xid)
 
       Commit prepared twophase transaction *xid*.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
    .. attribute:: in_transaction
 
       The readonly property that returns ``True`` if a transaction is
       in progress.
 
-   .. method:: close()
+   .. comethod:: close()
 
       Close this :class:`SAConnection`.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
       This results in a release of the underlying database
       resources, that is, the :class:`aiopg.Connection` referenced
@@ -463,21 +462,17 @@ ResultProxy
       * all result rows are exhausted using the fetchXXX() methods.
       * cursor.description is None.
 
-   .. method:: fetchall()
+   .. comethod:: fetchall()
 
       Fetch all rows, just like :meth:`aiopg.Cursor.fetchall`.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
       The connection is closed after the call.
 
       Returns a list of :class:`RowProxy`.
 
-   .. method:: fetchone()
+   .. comethod:: fetchone()
 
       Fetch one row, just like :meth:`aiopg.Cursor.fetchone`.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
       If a row is present, the cursor remains open after this is called.
 
@@ -485,11 +480,9 @@ ResultProxy
 
       Returns an :class:`RowProxy` instance or ``None``.
 
-   .. method:: fetchmany(size=None)
+   .. comethod:: fetchmany(size=None)
 
       Fetch many rows, just like :meth:`aiopg.Cursor.fetchmany`.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
       If rows are present, the cursor remains open after this is called.
 
@@ -497,15 +490,13 @@ ResultProxy
 
       Returns a list of :class:`RowProxy`.
 
-   .. method:: first()
+   .. comethod:: first()
 
       Fetch the first row and then close the result set unconditionally.
 
-      This method is a :ref:`coroutine <coroutine>`.
-
       Returns ``None`` if no row is present or an :class:`RowProxy` instance.
 
-   .. method:: scalar()
+   .. comethod:: scalar()
 
       Fetch the first column of the first row, and close the result set.
 
@@ -564,11 +555,9 @@ Transaction objects
 
       A readonly property that returns :class:`SAConnection` for transaction.
 
-   .. method:: close()
+   .. comethod:: close()
 
       Close this :class:`Transaction`.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
       If this transaction is the base transaction in a begin/commit
       nesting, the transaction will :meth:`Transaction.rollback`.
@@ -577,17 +566,13 @@ Transaction objects
       This is used to cancel a :class:`Transaction` without affecting
       the scope of an enclosing transaction.
 
-   .. method:: rollback()
+   .. comethod:: rollback()
 
       Roll back this :class:`Transaction`.
 
-      This method is a :ref:`coroutine <coroutine>`.
-
-   .. method:: commit()
+   .. comethod:: commit()
 
       Commit this :class:`Transaction`.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
 
 .. class:: NestedTransaction
@@ -628,11 +613,9 @@ Transaction objects
 
       A readonly property that returns twophase transaction id.
 
-   .. method:: prepare()
+   .. comethod:: prepare()
 
       Prepare this :class:`TwoPhaseTransaction`.
-
-      This method is a :ref:`coroutine <coroutine>`.
 
       After a PREPARE, the transaction can be committed.
 
