@@ -52,7 +52,7 @@ See example::
             async with conn.cursor() as cur:
                 await cur.execute("SELECT 1")
                 ret = []
-                for row in await cur.fetchall():
+                async for row in cur:
                     ret.append(row)
                 assert ret == [(1,)]
 
