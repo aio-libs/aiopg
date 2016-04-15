@@ -47,12 +47,12 @@ See example::
     dsn = 'dbname=aiopg user=aiopg password=passwd host=127.0.0.1'
 
     async def go():
-        pool = await aiopg.create_pool(dsn)
-        async with pool.acquire() as cur:
+        pool = await aiopg.create_pool(psql_uri)
+        async with pool.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute("SELECT 1")
                 ret = []
-                async for row in cur:
+                for row in await cur.fetchall():
                     ret.append(row)
                 assert ret == [(1,)]
 
