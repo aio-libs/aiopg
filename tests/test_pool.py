@@ -527,3 +527,34 @@ def test_connection_in_good_state_after_timeout_in_transaction(create_pool):
         yield from cur.execute('SELECT 1;')
         val = yield from cur.fetchone()
         assert (1,) == val
+
+
+@pytest.mark.run_loop
+def test_drop_connection_if_timedout(create_pool, loop):
+
+    @asyncio.coroutine
+    def _set_global_conn_timeout(pool, t):
+        # Set timeout for client connection
+        # https://www.postgresql.org/docs/current/static/runtime-config-client.html
+        conn = yield from pool.acquire()
+        cur = yield from conn.cursor()
+        yield from cur.execute('set statement_timeout to %s;' % t)
+        pool.release(conn)
+        conn.close()
+
+    pool = yield from create_pool(minsize=3, maxsize=5)
+    yield from _set_global_conn_timeout(pool, 1)
+
+    try:
+        # sleep, more then connection timeout
+        yield from asyncio.sleep(3, loop=loop)
+        conn = yield from pool.acquire()
+        cur = yield from conn.cursor()
+        yield from cur.execute('SELECT 1;')
+        pool.release(conn)
+        conn.close()
+    finally:
+        # setup default timeouts
+        yield from _set_global_conn_timeout(pool, 28800)
+        pool.close()
+        yield from pool.wait_closed()
