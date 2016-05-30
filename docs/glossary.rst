@@ -83,7 +83,7 @@ Glossary
       :term:`venv` and :term:`virtualenv` does almost the same, *venv*
       has been developed after the *virtualenv*.
 
-      http://virtualenv.readthedocs.org/en/latest/
+      https://virtualenv.readthedocs.io/en/latest/
 
    virtualenvwrapper
 
@@ -96,4 +96,4 @@ Glossary
 
       virtualenvwrapper is my choice, highly recommend the tool to everyone.
 
-      http://virtualenvwrapper.readthedocs.org/en/latest/
+      https://virtualenvwrapper.readthedocs.io/en/latest/
