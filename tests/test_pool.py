@@ -4,6 +4,7 @@ import pytest
 import sys
 
 from psycopg2.extensions import TRANSACTION_STATUS_INTRANS
+from psycopg2 import DatabaseError
 
 import aiopg
 from aiopg.connection import Connection, TIMEOUT
@@ -530,31 +531,30 @@ def test_connection_in_good_state_after_timeout_in_transaction(create_pool):
 
 
 @pytest.mark.run_loop
-def test_drop_connection_if_timedout(create_pool, loop):
+def test_drop_connection_if_timedout(make_connection, pg_params,
+                                     create_pool, loop):
 
     @asyncio.coroutine
-    def _set_global_conn_timeout(pool, t):
-        # Set timeout for client connection
-        # https://www.postgresql.org/docs/current/static/runtime-config-client.html
-        conn = yield from pool.acquire()
+    def _kill_connectios():
+        # Drop all connections on server
+        conn = yield from make_connection()
         cur = yield from conn.cursor()
-        yield from cur.execute('set statement_timeout to %s;' % t)
-        pool.release(conn)
+        try:
+            yield from cur.execute("""WITH inactive_connections_list AS (
+            SELECT pid FROM  pg_stat_activity)
+            SELECT pg_terminate_backend(pid) FROM inactive_connections_list""")
+        except DatabaseError:
+            # Pass psycopg2.DatabaseError: server closed the connection unexpectedly
+            pass
         conn.close()
 
-    pool = yield from create_pool(minsize=3, maxsize=5)
-    yield from _set_global_conn_timeout(pool, 1)
-
-    try:
-        # sleep, more then connection timeout
-        yield from asyncio.sleep(3, loop=loop)
-        conn = yield from pool.acquire()
-        cur = yield from conn.cursor()
-        yield from cur.execute('SELECT 1;')
-        pool.release(conn)
-        conn.close()
-    finally:
-        # setup default timeouts
-        yield from _set_global_conn_timeout(pool, 28800)
-        pool.close()
-        yield from pool.wait_closed()
+    pool = yield from create_pool()
+    yield from _kill_connectios()
+    yield from asyncio.sleep(1, loop=loop)
+    conn = yield from pool.acquire()
+    cur = yield from conn.cursor()
+    yield from cur.execute('SELECT 1;')
+    pool.release(conn)
+    conn.close()
+    pool.close()
+    yield from pool.wait_closed()
