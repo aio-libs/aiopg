@@ -160,10 +160,11 @@ def make_connection(loop, pg_params):
     @asyncio.coroutine
     def go(*, no_loop=False, **kwargs):
         nonlocal conn
-        pg_params.update(kwargs)
+        params = pg_params.copy()
+        params.update(kwargs)
         useloop = None if no_loop else loop
-        conn = yield from aiopg.connect(loop=useloop, **pg_params)
-        conn2 = yield from aiopg.connect(loop=useloop, **pg_params)
+        conn = yield from aiopg.connect(loop=useloop, **params)
+        conn2 = yield from aiopg.connect(loop=useloop, **params)
         cur = yield from conn2.cursor()
         yield from cur.execute("DROP TABLE IF EXISTS foo")
         yield from conn2.close()
@@ -182,9 +183,10 @@ def create_pool(loop, pg_params):
     @asyncio.coroutine
     def go(*, no_loop=False, **kwargs):
         nonlocal pool
-        pg_params.update(kwargs)
+        params = pg_params.copy()
+        params.update(kwargs)
         useloop = None if no_loop else loop
-        pool = yield from aiopg.create_pool(loop=useloop, **pg_params)
+        pool = yield from aiopg.create_pool(loop=useloop, **params)
         return pool
 
     yield go
