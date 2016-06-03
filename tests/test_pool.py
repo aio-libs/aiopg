@@ -4,7 +4,6 @@ import pytest
 import sys
 
 from psycopg2.extensions import TRANSACTION_STATUS_INTRANS
-from psycopg2 import DatabaseError
 
 import aiopg
 from aiopg.connection import Connection, TIMEOUT
@@ -539,18 +538,19 @@ def test_drop_connection_if_timedout(make_connection, pg_params,
         # Drop all connections on server
         conn = yield from make_connection()
         cur = yield from conn.cursor()
-        try:
-            yield from cur.execute("""WITH inactive_connections_list AS (
-            SELECT pid FROM  pg_stat_activity)
-            SELECT pg_terminate_backend(pid) FROM inactive_connections_list""")
-        except DatabaseError:
-            # Pass psycopg2.DatabaseError: server closed the connection unexpectedly
-            pass
+        yield from cur.execute("""WITH inactive_connections_list AS (
+        SELECT pid FROM  pg_stat_activity WHERE pid <> pg_backend_pid())
+        SELECT pg_terminate_backend(pid) FROM inactive_connections_list""")
+        cur.close()
         conn.close()
 
-    pool = yield from create_pool()
+    pool = yield from create_pool(minsize=3)
     yield from _kill_connectios()
-    yield from asyncio.sleep(1, loop=loop)
+    yield from asyncio.sleep(0.5, loop=loop)
+
+    assert len(pool._free) == 3
+    assert all([c.closed for c in pool._free])
+
     conn = yield from pool.acquire()
     cur = yield from conn.cursor()
     yield from cur.execute('SELECT 1;')
