@@ -34,13 +34,12 @@ Example
 
 
 Example of SQLAlchemy optional integration
--------------------------------------------
+------------------------------------------
 
 ::
 
    import asyncio
    from aiopg.sa import create_engine
-   from sqlalchemy.schema import CreateTable
    import sqlalchemy as sa
 
    metadata = sa.MetaData()
@@ -49,6 +48,12 @@ Example of SQLAlchemy optional integration
        sa.Column('id', sa.Integer, primary_key=True),
        sa.Column('val', sa.String(255)))
 
+   async def create_table(engine):
+       async with engine.acquire() as conn:
+           await conn.execute('DROP TABLE IF EXISTS tbl')
+           await conn.execute('''CREATE TABLE tbl (
+                                     id serial PRIMARY KEY,
+                                     val varchar(255))''')
 
    async def go():
        async with create_engine(user='aiopg',
@@ -56,15 +61,16 @@ Example of SQLAlchemy optional integration
                                 host='127.0.0.1',
                                 password='passwd') as engine:
 
-       async with engine.acquire() as conn:
-           await conn.execute(tbl.insert().values(val='abc'))
+           async with engine.acquire() as conn:
+               await conn.execute(tbl.insert().values(val='abc'))
 
-           async for row in conn.execute(tbl.select()):
-               print(row.id, row.val)
+               async for row in conn.execute(tbl.select()):
+                   print(row.id, row.val)
 
-   asyncio.get_event_loop().run_until_complete(go())
+   loop = asyncio.get_event_loop()
+   loop.run_until_complete(go())
 
-For ``yield from`` based code see ``./examples`` folder, files with
+For ``yield from`` based code, see the ``./examples`` folder, files with
 ``old_style`` part in their names.
 
 .. _PostgreSQL: http://www.postgresql.org/
