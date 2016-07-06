@@ -64,7 +64,7 @@ def test_execute_sa_select(connect):
     conn = yield from connect()
     res = yield from conn.execute(tbl.select())
     assert isinstance(res.cursor, Cursor)
-    assert ('id', 'name'), res.keys()
+    assert ('id', 'name') == res.keys()
     rows = [r for r in res]
     assert res.closed
     assert res.cursor is None
