@@ -248,7 +248,10 @@ class Pool(asyncio.AbstractServer):
                 conn.close()
             else:
                 self._free.append(conn)
-            fut = asyncio.async(self._wakeup(), loop=self._loop)
+            try:
+                fut = asyncio.ensure_future(self._wakeup(), loop=self._loop)
+            except AttributeError:
+                fut = asyncio.async(self._wakeup(), loop=self._loop)
         return fut
 
     @asyncio.coroutine
