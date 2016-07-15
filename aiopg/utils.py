@@ -10,6 +10,12 @@ else:
     base = object
 
 
+try:
+    ensure_future = asyncio.ensure_future
+except AttributeError:
+    ensure_future = asyncio.async
+
+
 class _ContextManager(base):
 
     __slots__ = ('_coro', '_obj')

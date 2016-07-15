@@ -9,7 +9,8 @@ from psycopg2.extensions import TRANSACTION_STATUS_IDLE
 from .connection import connect, TIMEOUT
 from .log import logger
 from .utils import (PY_35, _PoolContextManager, _PoolConnectionContextManager,
-                    _PoolCursorContextManager, _PoolAcquireContextManager)
+                    _PoolCursorContextManager, _PoolAcquireContextManager,
+                    ensure_future)
 
 
 PY_341 = sys.version_info >= (3, 4, 1)
@@ -248,7 +249,7 @@ class Pool(asyncio.AbstractServer):
                 conn.close()
             else:
                 self._free.append(conn)
-            fut = asyncio.async(self._wakeup(), loop=self._loop)
+            fut = ensure_future(self._wakeup(), loop=self._loop)
         return fut
 
     @asyncio.coroutine

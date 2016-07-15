@@ -10,6 +10,7 @@ import sys
 
 from aiopg.connection import Connection, TIMEOUT
 from aiopg.cursor import Cursor
+from aiopg.utils import ensure_future
 from unittest import mock
 
 
@@ -277,7 +278,7 @@ def test_cancel_with_timeout(connect, warning):
 def test_cancel_pending_op(connect, loop):
     conn = yield from connect()
     cur = yield from conn.cursor()
-    task = asyncio.async(cur.execute("SELECT pg_sleep(10)"), loop=loop)
+    task = ensure_future(cur.execute("SELECT pg_sleep(10)"), loop=loop)
     yield from asyncio.sleep(0.01, loop=loop)
     yield from conn.cancel()
 
