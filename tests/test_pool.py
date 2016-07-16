@@ -530,11 +530,11 @@ def test_connection_in_good_state_after_timeout_in_transaction(create_pool):
 
 
 @pytest.mark.run_loop
-def test_drop_connection_if_timedout(make_connection, pg_params,
+def test_drop_connection_if_timedout(make_connection,
                                      create_pool, loop):
 
     @asyncio.coroutine
-    def _kill_connectios():
+    def _kill_connections():
         # Drop all connections on server
         conn = yield from make_connection()
         cur = yield from conn.cursor()
@@ -545,7 +545,7 @@ def test_drop_connection_if_timedout(make_connection, pg_params,
         conn.close()
 
     pool = yield from create_pool(minsize=3)
-    yield from _kill_connectios()
+    yield from _kill_connections()
     yield from asyncio.sleep(0.5, loop=loop)
 
     assert len(pool._free) == 3
@@ -558,3 +558,12 @@ def test_drop_connection_if_timedout(make_connection, pg_params,
     conn.close()
     pool.close()
     yield from pool.wait_closed()
+
+
+@pytest.mark.run_loop
+def test_close_running_cursor(create_pool, loop):
+    pool = yield from create_pool(minsize=3)
+
+    with pytest.raises(asyncio.TimeoutError):
+        with (yield from pool.cursor(timeout=0.1)) as cur:
+            yield from cur.execute('SELECT pg_sleep(10)')
