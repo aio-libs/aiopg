@@ -11,7 +11,7 @@ from psycopg2.extensions import (
 from psycopg2 import extras
 
 from .cursor import Cursor
-from .utils import _ContextManager, PY_35
+from .utils import _ContextManager, PY_35, create_future
 
 
 __all__ = ('connect',)
@@ -61,7 +61,7 @@ def _connect(dsn=None, *, timeout=TIMEOUT, loop=None, enable_json=True,
     if loop is None:
         loop = asyncio.get_event_loop()
 
-    waiter = asyncio.Future(loop=loop)
+    waiter = create_future(loop)
     conn = Connection(dsn, loop, timeout, waiter, bool(echo), **kwargs)
     try:
         yield from conn._poll(waiter, timeout)
@@ -170,7 +170,7 @@ class Connection:
         if self._waiter is not None:
             raise RuntimeError('%s() called while another coroutine is '
                                'already waiting for incoming data' % func_name)
-        self._waiter = asyncio.Future(loop=self._loop)
+        self._waiter = create_future(self._loop)
         return self._waiter
 
     @asyncio.coroutine
@@ -182,7 +182,7 @@ class Connection:
         def cancel():
             if not self._isexecuting():
                 return
-            self._waiter = asyncio.Future(loop=self._loop)
+            self._waiter = create_future(self._loop)
             self._conn.cancel()
             try:
                 yield from self._waiter
@@ -252,7 +252,7 @@ class Connection:
         if self._waiter is not None and not self._waiter.done():
             self._waiter.set_exception(
                 psycopg2.OperationalError("Connection closed"))
-        ret = asyncio.Future(loop=self._loop)
+        ret = create_future(self._loop)
         ret.set_result(None)
         return ret
 
@@ -325,7 +325,7 @@ class Connection:
 
         @asyncio.coroutine
         def cancel():
-            self._waiter = asyncio.Future(loop=self._loop)
+            self._waiter = create_future(self._loop)
             self._conn.cancel()
             try:
                 yield from self._waiter

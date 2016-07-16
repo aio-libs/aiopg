@@ -16,6 +16,13 @@ except AttributeError:
     ensure_future = asyncio.async
 
 
+def create_future(loop):
+    try:
+        return loop.create_future()
+    except AttributeError:
+        return asyncio.Future(loop=loop)
+
+
 class _ContextManager(base):
 
     __slots__ = ('_coro', '_obj')

@@ -10,7 +10,7 @@ from .connection import connect, TIMEOUT
 from .log import logger
 from .utils import (PY_35, _PoolContextManager, _PoolConnectionContextManager,
                     _PoolCursorContextManager, _PoolAcquireContextManager,
-                    ensure_future)
+                    ensure_future, create_future)
 
 
 PY_341 = sys.version_info >= (3, 4, 1)
@@ -229,7 +229,7 @@ class Pool(asyncio.AbstractServer):
     def release(self, conn):
         """Release free connection back to the connection pool.
         """
-        fut = asyncio.Future(loop=self._loop)
+        fut = create_future(self._loop)
         fut.set_result(None)
         if conn in self._terminated:
             assert conn.closed, conn
