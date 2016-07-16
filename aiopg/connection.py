@@ -449,7 +449,11 @@ class Connection:
 
     if PY_341:  # pragma: no branch
         def __del__(self):
-            if not self._conn.closed:
+            try:
+                _conn = self._conn
+            except AttributeError:
+                return
+            if _conn is not None and not _conn.closed:
                 self.close()
                 warnings.warn("Unclosed connection {!r}".format(self),
                               ResourceWarning)

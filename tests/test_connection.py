@@ -544,3 +544,10 @@ def test_close_cursor_on_timeout_error(connect):
     assert not conn.closed
 
     yield from conn.close()
+
+
+@pytest.mark.run_loop
+def test_issue_111_crash_on_connect_error(loop):
+    import aiopg.connection
+    with pytest.raises(psycopg2.OperationalError):
+        yield from aiopg.connection.connect('baddsn:1', loop=loop)
