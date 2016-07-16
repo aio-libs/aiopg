@@ -1,7 +1,7 @@
 CHANGES
 -------
 
-0.9.3 (XXXX-XX-XX)
+0.10.0 (XXXX-XX-XX)
 ^^^^^^^^^^^^^^^^^^
 
 * Refactor tests to use dockerized Postgres server #107
@@ -11,6 +11,8 @@ CHANGES
 * Explicitly enumerate packages in setup.py #85
 
 * Remove expired connections from pool on acquire #116
+
+* Don't crash when Connection is GC'ed #124
 
 0.9.2 (2016-01-31)
 ^^^^^^^^^^^^^^^^^^
