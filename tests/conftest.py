@@ -114,24 +114,20 @@ def pytest_generate_tests(metafunc):
 def pg_server(unused_port, docker, session_id, pg_tag, request):
     if not request.config.option.no_pull:
         docker.pull('postgres:{}'.format(pg_tag))
-    port = unused_port()
     container = docker.create_container(
         image='postgres:{}'.format(pg_tag),
         name='aiopg-test-server-{}-{}'.format(pg_tag, session_id),
         ports=[5432],
         detach=True,
-        host_config=docker.create_host_config(port_bindings={5432: port})
     )
-    # inspection = docker.inspect_container(container['Id'])
-    # import pprint
-    # pprint.pprint(inspection)
-    # host = inspection['NetworkSettings']['IPAddress']
     docker.start(container=container['Id'])
+    inspection = docker.inspect_container(container['Id'])
+    host = inspection['NetworkSettings']['IPAddress']
     pg_params = dict(database='postgres',
                      user='postgres',
                      password='mysecretpassword',
-                     host='127.0.0.1',
-                     port=port)
+                     host=host,
+                     port=5432)
     delay = 0.001
     for i in range(100):
         try:
@@ -146,7 +142,8 @@ def pg_server(unused_port, docker, session_id, pg_tag, request):
             delay *= 2
     else:
         pytest.fail("Cannot start postgres server")
-    container['port'] = port
+    container['host'] = host
+    container['port'] = 5432
     container['pg_params'] = pg_params
     yield container
 
