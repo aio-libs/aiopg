@@ -94,6 +94,8 @@ def pytest_addoption(parser):
                      help=("Postgres server versions. "
                            "May be used several times. "
                            "Available values: 9.3, 9.4, 9.5, all"))
+    parser.addoption("--no-pull", action="store_true", default=False,
+                     help="Don't perform docker images pulling")
 
 
 def pytest_generate_tests(metafunc):
@@ -109,8 +111,9 @@ def pytest_generate_tests(metafunc):
 
 
 @pytest.yield_fixture(scope='session')
-def pg_server(unused_port, docker, session_id, pg_tag):
-    docker.pull('postgres:{}'.format(pg_tag))
+def pg_server(unused_port, docker, session_id, pg_tag, request):
+    if not request.config.option.no_pull:
+        docker.pull('postgres:{}'.format(pg_tag))
     port = unused_port()
     container = docker.create_container(
         image='postgres:{}'.format(pg_tag),
@@ -119,6 +122,10 @@ def pg_server(unused_port, docker, session_id, pg_tag):
         detach=True,
         host_config=docker.create_host_config(port_bindings={5432: port})
     )
+    # inspection = docker.inspect_container(container['Id'])
+    # import pprint
+    # pprint.pprint(inspection)
+    # host = inspection['NetworkSettings']['IPAddress']
     docker.start(container=container['Id'])
     pg_params = dict(database='postgres',
                      user='postgres',
