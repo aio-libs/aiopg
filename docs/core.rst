@@ -873,14 +873,15 @@ Any call to library function, method or property can raise an exception.
 Transactions
 ============
 
-While :mod:`aiopg` works only in *autocommit mode* it is still
-possible to use SQL transactions.
-
-Just execute **BEGIN** and **COMMIT** statements manually.
+While :term:`psycopg2` asynchronous connections have to be in *autocommit mode* it is still
+possible to use SQL transactions executing **BEGIN** and **COMMIT** statements manually
+as `Psycopg Asynchronous Support docs`_ .
 
 :meth:`Connection.commit` and :meth:`Connection.rollback` methods are
 disabled and always raises :exc:`psycopg2.ProgrammingError` exception.
 
+
+.. _Psycopg Asynchronous Support docs: http://initd.org/psycopg/docs/advanced.html#asynchronous-support
 
 .. _aiopg-core-extension-type-translations:
 
