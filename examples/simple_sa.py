@@ -10,12 +10,11 @@ tbl = sa.Table('tbl', metadata,
                sa.Column('val', sa.String(255)))
 
 
-async def create_table(engine):
-    async with engine.acquire() as conn:
-        await conn.execute('DROP TABLE IF EXISTS tbl')
-        await conn.execute('''CREATE TABLE tbl (
-                                  id serial PRIMARY KEY,
-                                  val varchar(255))''')
+async def create_table(conn):
+    await conn.execute('DROP TABLE IF EXISTS tbl')
+    await conn.execute('''CREATE TABLE tbl (
+    id serial PRIMARY KEY,
+    val varchar(255))''')
 
 
 async def go():
@@ -23,8 +22,8 @@ async def go():
                              database='aiopg',
                              host='127.0.0.1',
                              password='passwd') as engine:
-
-        await create_table(engine)
+        async with engine.acquire() as conn:
+            await create_table(conn)
         async with engine.acquire() as conn:
             await conn.execute(tbl.insert().values(val='abc'))
 

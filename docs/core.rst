@@ -812,6 +812,8 @@ The basic usage is::
 
       Returns a :class:`Connection` instance.
 
+      .. warning:: nested ``acquire()`` might lead to deadlocks.
+
    .. method:: release(conn)
 
       A :ref:`coroutine <coroutine>` that reverts connection *conn* to
