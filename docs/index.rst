@@ -47,14 +47,14 @@ See example::
     dsn = 'dbname=aiopg user=aiopg password=passwd host=127.0.0.1'
 
     async def go():
-        pool = await aiopg.create_pool(dsn)
-        async with pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                await cur.execute("SELECT 1")
-                ret = []
-                async for row in cur:
-                    ret.append(row)
-                assert ret == [(1,)]
+        async with aiopg.create_pool(dsn) as pool:
+            async with pool.acquire() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute("SELECT 1")
+                    ret = []
+                    async for row in cur:
+                        ret.append(row)
+                    assert ret == [(1,)]
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(go())
@@ -112,12 +112,11 @@ so we introduce support for :term:`sqlalchemy` query builders::
                                  database='aiopg',
                                  host='127.0.0.1',
                                  password='passwd') as engine:
+            async with engine.acquire() as conn:
+                await conn.execute(tbl.insert().values(val='abc'))
 
-        async with engine.acquire() as conn:
-            await conn.execute(tbl.insert().values(val='abc'))
-
-            async for row in conn.execute(tbl.select().where(tbl.c.val=='abc'))
-                print(row.id, row.val)
+                async for row in conn.execute(tbl.select().where(tbl.c.val=='abc'))
+                    print(row.id, row.val)
 
 
     loop = asyncio.get_event_loop()

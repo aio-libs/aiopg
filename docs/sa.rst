@@ -189,6 +189,8 @@ Engine
             async with engine.acquire() as conn:
                 await conn.execute(tbl.insert().values(val='abc'))
 
+      .. warning:: nested ``acquire()`` might lead to deadlocks.
+
    .. method:: release()
 
       Revert back connection *conn* to pool.
