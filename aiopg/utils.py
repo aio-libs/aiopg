@@ -3,6 +3,8 @@ import sys
 
 
 PY_35 = sys.version_info >= (3, 5)
+PY_352 = sys.version_info >= (3, 5, 2)
+
 if PY_35:
     from collections.abc import Coroutine
     base = Coroutine
@@ -84,10 +86,14 @@ class _ContextManager(base):
 class _SAConnectionContextManager(_ContextManager):
 
     if PY_35:  # pragma: no branch
-        @asyncio.coroutine
-        def __aiter__(self):
-            result = yield from self._coro
-            return result
+        if PY_352:
+            def __aiter__(self):
+                return self._coro
+        else:
+            @asyncio.coroutine
+            def __aiter__(self):
+                result = yield from self._coro
+                return result
 
 
 class _PoolContextManager(_ContextManager):
