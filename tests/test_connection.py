@@ -551,3 +551,51 @@ def test_issue_111_crash_on_connect_error(loop):
     import aiopg.connection
     with pytest.raises(psycopg2.OperationalError):
         yield from aiopg.connection.connect('baddsn:1', loop=loop)
+
+
+@pytest.mark.run_loop
+def test_remove_reader_from_alive_fd(connect):
+    conn = yield from connect()
+    # keep a reference to underlying psycopg connection, and the fd alive
+    _conn = conn._conn  # noqa
+    fileno = conn._fileno
+
+    impl = mock.Mock()
+    exc = psycopg2.OperationalError('Test')
+    impl.poll.side_effect = exc
+    conn._conn = impl
+    conn._fileno = fileno
+
+    m_remove_reader = mock.Mock()
+    conn._loop.remove_reader = m_remove_reader
+
+    conn._ready(conn._weakref)
+    assert not m_remove_reader.called
+
+    conn.close()
+    assert m_remove_reader.called_with(fileno)
+
+
+@pytest.mark.run_loop
+def test_remove_reader_from_dead_fd(connect):
+    conn = yield from connect()
+    fileno = conn._conn.fileno()
+    _conn = conn._conn
+
+    impl = mock.Mock()
+    exc = psycopg2.OperationalError('Test')
+    impl.poll.side_effect = exc
+    conn._conn = impl
+    conn._fileno = fileno
+
+    _conn.close()
+
+    m_remove_reader = mock.Mock()
+    conn._loop.remove_reader = m_remove_reader
+
+    conn._ready(conn._weakref)
+    assert m_remove_reader.called_with(fileno)
+
+    m_remove_reader.reset_mock()
+    conn.close()
+    assert not m_remove_reader.called
