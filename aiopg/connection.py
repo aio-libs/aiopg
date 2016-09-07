@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import errno
 import fcntl
 import sys
@@ -126,11 +127,8 @@ class Connection:
                     fcntl.fcntl(self._fileno, fcntl.F_GETFD)
                 except OSError as os_exc:
                     if os_exc.errno == errno.EBADF:
-                        try:
+                        with contextlib.suppress(OSError):
                             self._loop.remove_reader(self._fileno)
-                        except OSError as os_exc2:
-                            if os_exc2.errno == errno.EBADF:
-                                pass
                 finally:
                     # forget a bad file descriptor, don't try to touch it
                     self._fileno = None
