@@ -8,12 +8,8 @@ install_requires = ['psycopg2>=2.5.2']
 
 PY_VER = sys.version_info
 
-if PY_VER >= (3, 4):
-    pass
-elif PY_VER >= (3, 3):
-    install_requires.append('asyncio')
-else:
-    raise RuntimeError("aiopg doesn't suppport Python earlier than 3.3")
+if PY_VER < (3, 4):
+    raise RuntimeError("aiopg doesn't suppport Python earlier than 3.4")
 
 
 def read(f):
@@ -37,8 +33,8 @@ classifiers = [
     'License :: OSI Approved :: BSD License',
     'Intended Audience :: Developers',
     'Programming Language :: Python :: 3',
-    'Programming Language :: Python :: 3.3',
     'Programming Language :: Python :: 3.4',
+    'Programming Language :: Python :: 3.5',
     'Operating System :: POSIX',
     'Operating System :: MacOS :: MacOS X',
     'Environment :: Web Environment',
