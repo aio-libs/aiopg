@@ -12,4 +12,5 @@ tox
 pytest
 pytest-cov
 pytest-sugar
+pytest-timeout
 sphinxcontrib-asyncio
