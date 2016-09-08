@@ -1,5 +1,7 @@
 import asyncio
+import contextlib
 import errno
+import fcntl
 import sys
 import traceback
 import warnings
@@ -120,10 +122,22 @@ class Connection:
                 notify = self._conn.notifies.pop(0)
                 self._notifies.put_nowait(notify)
         except (psycopg2.Warning, psycopg2.Error) as exc:
+            if self._fileno is not None:
+                try:
+                    fcntl.fcntl(self._fileno, fcntl.F_GETFD)
+                except OSError as os_exc:
+                    if os_exc.errno == errno.EBADF:
+                        with contextlib.suppress(OSError):
+                            self._loop.remove_reader(self._fileno)
+                finally:
+                    # forget a bad file descriptor, don't try to touch it
+                    self._fileno = None
+
             try:
                 if self._writing:
                     self._writing = False
-                    self._loop.remove_writer(self._fileno)
+                    if self._fileno is not None:
+                        self._loop.remove_writer(self._fileno)
             except OSError as exc2:
                 if exc2.errno != errno.EBADF:
                     # EBADF is ok for closed file descriptor
@@ -244,10 +258,11 @@ class Connection:
         """Remove the connection from the event_loop and close it."""
         # N.B. If connection contains uncommitted transaction the
         # transaction will be discarded
-        self._loop.remove_reader(self._fileno)
-        if self._writing:
-            self._writing = False
-            self._loop.remove_writer(self._fileno)
+        if self._fileno is not None:
+            self._loop.remove_reader(self._fileno)
+            if self._writing:
+                self._writing = False
+                self._loop.remove_writer(self._fileno)
         self._conn.close()
         if self._waiter is not None and not self._waiter.done():
             self._waiter.set_exception(
