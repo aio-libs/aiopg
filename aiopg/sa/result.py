@@ -5,7 +5,7 @@ from collections.abc import Mapping, Sequence
 
 from sqlalchemy.sql import expression, sqltypes
 
-from ..utils import PY_35
+from ..utils import PY_35, PY_352
 from . import exc
 
 
@@ -324,9 +324,12 @@ class ResultProxy:
                 yield row
 
     if PY_35:  # pragma: no branch
-        @asyncio.coroutine
+
         def __aiter__(self):
             return self
+
+        if not PY_352:
+            __aiter__ = asyncio.coroutine(__aiter__)
 
         @asyncio.coroutine
         def __anext__(self):
