@@ -4,7 +4,7 @@ import warnings
 import psycopg2
 
 from .log import logger
-from .utils import PY_35
+from .utils import PY_35, PY_352
 
 
 class Cursor:
@@ -379,9 +379,11 @@ class Cursor:
 
     if PY_35:  # pragma: no branch
 
-        @asyncio.coroutine
         def __aiter__(self):
             return self
+
+        if not PY_352:
+            __aiter__ = asyncio.coroutine(__aiter__)
 
         @asyncio.coroutine
         def __anext__(self):
