@@ -1,7 +1,7 @@
 CHANGES
 -------
 
-0.11.0 (2016-09-08)
+0.11.0 (2016-09-12)
 ^^^^^^^^^^^^^^^^^^^
 
 * Immediately remove callbacks from a closed file descriptor #139
