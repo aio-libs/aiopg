@@ -333,6 +333,10 @@ def test_ready_OK_with_waiter(connect, loop):
         impl = mock.Mock()
         impl.notifies = []
         impl.poll.return_value = psycopg2.extensions.POLL_OK
+
+        # keep a reference to underlying psycopg connection, and the fd alive,
+        # otherwise the event loop will fail under windows
+        old_conn = conn._conn
         conn._conn = impl
         conn._writing = True
         waiter = conn._create_waiter('test')
@@ -340,6 +344,8 @@ def test_ready_OK_with_waiter(connect, loop):
         conn._ready(conn._weakref)
         assert not conn._writing
         assert not impl.close.called
+
+        conn._conn = old_conn
         return waiter
 
     waiter = loop.run_until_complete(go())
@@ -543,7 +549,7 @@ def test_close_cursor_on_timeout_error(connect):
     assert cur.closed
     assert not conn.closed
 
-    yield from conn.close()
+    conn.close()
 
 
 @pytest.mark.run_loop
@@ -591,6 +597,7 @@ def test_remove_reader_from_dead_fd(connect):
     _conn.close()
 
     m_remove_reader = mock.Mock()
+    old_remove_reader = conn._loop.remove_reader
     conn._loop.remove_reader = m_remove_reader
 
     conn._ready(conn._weakref)
@@ -599,3 +606,5 @@ def test_remove_reader_from_dead_fd(connect):
     m_remove_reader.reset_mock()
     conn.close()
     assert not m_remove_reader.called
+    old_remove_reader(fileno)
+

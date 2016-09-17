@@ -1,11 +1,12 @@
 import asyncio
 import contextlib
 import errno
-import fcntl
+import select
 import sys
 import traceback
 import warnings
 import weakref
+import platform
 
 import psycopg2
 from psycopg2.extensions import (
@@ -21,6 +22,10 @@ __all__ = ('connect',)
 
 TIMEOUT = 60.0
 PY_341 = sys.version_info >= (3, 4, 1)
+
+# Windows specific error code, not in errno for some reason, and doesnt map
+# to OSError.errno EBADF
+WSAENOTSOCK = 10038
 
 
 @asyncio.coroutine
@@ -82,6 +87,13 @@ def _connect(dsn=None, *, timeout=TIMEOUT, loop=None, enable_json=True,
     return conn
 
 
+def _is_bad_descriptor_error(os_error):
+    if platform.system() == 'Windows':
+        return os_error.winerror == WSAENOTSOCK
+    else:
+        return os_error.errno == errno.EBADF
+
+
 class Connection:
     """Low-level asynchronous interface for wrapped psycopg2 connection.
 
@@ -124,14 +136,13 @@ class Connection:
         except (psycopg2.Warning, psycopg2.Error) as exc:
             if self._fileno is not None:
                 try:
-                    fcntl.fcntl(self._fileno, fcntl.F_GETFD)
+                    select.select([self._fileno], [], [], 0)
                 except OSError as os_exc:
-                    if os_exc.errno == errno.EBADF:
+                    if _is_bad_descriptor_error(os_exc):
                         with contextlib.suppress(OSError):
                             self._loop.remove_reader(self._fileno)
-                finally:
-                    # forget a bad file descriptor, don't try to touch it
-                    self._fileno = None
+                            # forget a bad file descriptor, don't try to touch it
+                            self._fileno = None
 
             try:
                 if self._writing:
