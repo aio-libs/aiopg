@@ -268,13 +268,6 @@ def test_cancel_noop(connect):
 
 
 @asyncio.coroutine
-def test_cancel_with_timeout(connect, warning):
-    conn = yield from connect()
-    with warning(DeprecationWarning):
-        yield from conn.cancel(10)
-
-
-@asyncio.coroutine
 def test_cancel_pending_op(connect, loop):
     conn = yield from connect()
     cur = yield from conn.cursor()

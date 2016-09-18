@@ -340,11 +340,8 @@ class Connection:
             "tpc_recover cannot be used in asynchronous mode")
 
     @asyncio.coroutine
-    def cancel(self, timeout=None):
+    def cancel(self):
         """Cancel the current database operation."""
-        if timeout is not None:
-            warnings.warn('timeout parameter is deprecated and never used',
-                          DeprecationWarning)
         if self._waiter is not None:
             self._waiter.cancel()
         if not self._isexecuting():
