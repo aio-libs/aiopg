@@ -561,9 +561,30 @@ def test_drop_connection_if_timedout(make_connection,
 
 
 @asyncio.coroutine
-def test_close_running_cursor(create_pool, loop):
+def test_close_running_cursor(create_pool):
     pool = yield from create_pool(minsize=3)
 
     with pytest.raises(asyncio.TimeoutError):
         with (yield from pool.cursor(timeout=0.1)) as cur:
             yield from cur.execute('SELECT pg_sleep(10)')
+
+
+@asyncio.coroutine
+def test_pool_on_connect(create_pool):
+    called = False
+
+    @asyncio.coroutine
+    def cb(connection):
+        nonlocal called
+        cur = yield from connection.cursor()
+        yield from cur.execute('SELECT 1')
+        data = yield from cur.fetchall()
+        assert [(1,)] == data
+        called = True
+
+    pool = yield from create_pool(on_connect=cb)
+
+    with (yield from pool.cursor()) as cur:
+        yield from cur.execute('SELECT 1')
+
+    assert called
