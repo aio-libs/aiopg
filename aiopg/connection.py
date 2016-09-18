@@ -88,7 +88,7 @@ def _connect(dsn=None, *, timeout=TIMEOUT, loop=None, enable_json=True,
 
 
 def _is_bad_descriptor_error(os_error):
-    if platform.system() == 'Windows':
+    if platform.system() == 'Windows':  # pragma: no cover
         return os_error.winerror == WSAENOTSOCK
     else:
         return os_error.errno == errno.EBADF

@@ -14,4 +14,5 @@ Michal Kuffa
 Nikolay Novik <is.infinity@yahoo.com>
 Petr Viktorin  <encukou@gmail.com>
 R. Davis Murrey <rdmurray@bitdance.com>
+Ryan Hodge
 Theron Luhn <theron@luhn.com>
