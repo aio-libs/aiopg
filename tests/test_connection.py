@@ -607,4 +607,3 @@ def test_remove_reader_from_dead_fd(connect):
     conn.close()
     assert not m_remove_reader.called
     old_remove_reader(fileno)
-

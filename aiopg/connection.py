@@ -141,7 +141,8 @@ class Connection:
                     if _is_bad_descriptor_error(os_exc):
                         with contextlib.suppress(OSError):
                             self._loop.remove_reader(self._fileno)
-                            # forget a bad file descriptor, don't try to touch it
+                            # forget a bad file descriptor, don't try to
+                            # touch it
                             self._fileno = None
 
             try:
