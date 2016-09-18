@@ -40,7 +40,7 @@ def connect(make_connection):
     yield go
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_execute_text_select(connect):
     conn = yield from connect()
     res = yield from conn.execute("SELECT * FROM sa_tbl;")
@@ -59,7 +59,7 @@ def test_execute_text_select(connect):
     assert 'first' == row.name
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_execute_sa_select(connect):
     conn = yield from connect()
     res = yield from conn.execute(tbl.select())
@@ -80,7 +80,7 @@ def test_execute_sa_select(connect):
     assert 'first' == row.name
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_execute_sa_insert_with_dict(connect):
     conn = yield from connect()
     yield from conn.execute(tbl.insert(), {"id": 2, "name": "second"})
@@ -92,7 +92,7 @@ def test_execute_sa_insert_with_dict(connect):
     assert (2, 'second') == rows[1]
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_execute_sa_insert_with_tuple(connect):
     conn = yield from connect()
     yield from conn.execute(tbl.insert(), (2, "second"))
@@ -104,7 +104,7 @@ def test_execute_sa_insert_with_tuple(connect):
     assert (2, 'second') == rows[1]
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_execute_sa_insert_named_params(connect):
     conn = yield from connect()
     yield from conn.execute(tbl.insert(), id=2, name="second")
@@ -116,7 +116,7 @@ def test_execute_sa_insert_named_params(connect):
     assert (2, 'second') == rows[1]
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_execute_sa_insert_positional_params(connect):
     conn = yield from connect()
     yield from conn.execute(tbl.insert(), 2, "second")
@@ -128,14 +128,14 @@ def test_execute_sa_insert_positional_params(connect):
     assert (2, 'second') == rows[1]
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_scalar(connect):
     conn = yield from connect()
     res = yield from conn.scalar(tbl.count())
     assert 1, res
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_scalar_None(connect):
     conn = yield from connect()
     yield from conn.execute(tbl.delete())
@@ -143,7 +143,7 @@ def test_scalar_None(connect):
     assert res is None
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_row_proxy(connect):
     conn = yield from connect()
     res = yield from conn.execute(tbl.select())
@@ -166,7 +166,7 @@ def test_row_proxy(connect):
     assert 5 != row
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_insert(connect):
     conn = yield from connect()
     res = yield from conn.execute(tbl.insert().values(name='second'))
@@ -179,7 +179,7 @@ def test_insert(connect):
     assert 2 == rows[0].id
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_raw_insert(connect):
     conn = yield from connect()
     yield from conn.execute(
@@ -194,7 +194,7 @@ def test_raw_insert(connect):
     assert 2 == rows[1].id
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_raw_insert_with_params(connect):
     conn = yield from connect()
     res = yield from conn.execute(
@@ -210,7 +210,7 @@ def test_raw_insert_with_params(connect):
     assert 2 == rows[1].id
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_raw_insert_with_params_dict(connect):
     conn = yield from connect()
     res = yield from conn.execute(
@@ -226,7 +226,7 @@ def test_raw_insert_with_params_dict(connect):
     assert 2 == rows[1].id
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_raw_insert_with_named_params(connect):
     conn = yield from connect()
     res = yield from conn.execute(
@@ -242,7 +242,7 @@ def test_raw_insert_with_named_params(connect):
     assert 2 == rows[1].id
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_raw_insert_with_executemany(connect):
     conn = yield from connect()
     with pytest.raises(sa.ArgumentError):
@@ -251,7 +251,7 @@ def test_raw_insert_with_executemany(connect):
             [(2, 'third'), (3, 'forth')])
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_delete(connect):
     conn = yield from connect()
     res = yield from conn.execute(tbl.delete().where(tbl.c.id == 1))
@@ -262,7 +262,7 @@ def test_delete(connect):
     assert res.cursor is None
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_double_close(connect):
     conn = yield from connect()
     res = yield from conn.execute("SELECT 1")
@@ -274,7 +274,7 @@ def test_double_close(connect):
     assert res.cursor is None
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_fetchall(connect):
     conn = yield from connect()
     yield from conn.execute(tbl.insert().values(name='second'))
@@ -287,7 +287,7 @@ def test_fetchall(connect):
     assert [(1, 'first') == (2, 'second')], rows
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_fetchall_closed(connect):
     conn = yield from connect()
     yield from conn.execute(tbl.insert().values(name='second'))
@@ -298,7 +298,7 @@ def test_fetchall_closed(connect):
         yield from res.fetchall()
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_fetchall_not_returns_rows(connect):
     conn = yield from connect()
     res = yield from conn.execute(tbl.delete())
@@ -306,7 +306,7 @@ def test_fetchall_not_returns_rows(connect):
         yield from res.fetchall()
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_fetchone_closed(connect):
     conn = yield from connect()
     yield from conn.execute(tbl.insert().values(name='second'))
@@ -317,7 +317,7 @@ def test_fetchone_closed(connect):
         yield from res.fetchone()
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_first_not_returns_rows(connect):
     conn = yield from connect()
     res = yield from conn.execute(tbl.delete())
@@ -325,7 +325,7 @@ def test_first_not_returns_rows(connect):
         yield from res.first()
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_fetchmany(connect):
     conn = yield from connect()
     yield from conn.execute(tbl.insert().values(name='second'))
@@ -338,7 +338,7 @@ def test_fetchmany(connect):
     assert [(1, 'first')] == rows
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_fetchmany_with_size(connect):
     conn = yield from connect()
     yield from conn.execute(tbl.insert().values(name='second'))
@@ -351,7 +351,7 @@ def test_fetchmany_with_size(connect):
     assert [(1, 'first') == (2, 'second')], rows
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_fetchmany_closed(connect):
     conn = yield from connect()
     yield from conn.execute(tbl.insert().values(name='second'))
@@ -362,7 +362,7 @@ def test_fetchmany_closed(connect):
         yield from res.fetchmany()
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_fetchmany_with_size_closed(connect):
     conn = yield from connect()
     yield from conn.execute(tbl.insert().values(name='second'))
@@ -373,7 +373,7 @@ def test_fetchmany_with_size_closed(connect):
         yield from res.fetchmany(5555)
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_fetchmany_not_returns_rows(connect):
     conn = yield from connect()
     res = yield from conn.execute(tbl.delete())
@@ -381,7 +381,7 @@ def test_fetchmany_not_returns_rows(connect):
         yield from res.fetchmany()
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_fetchmany_close_after_last_read(connect):
     conn = yield from connect()
 
@@ -396,7 +396,7 @@ def test_fetchmany_close_after_last_read(connect):
     assert res.closed
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_create_table(connect):
     conn = yield from connect()
     res = yield from conn.execute(DropTable(tbl))

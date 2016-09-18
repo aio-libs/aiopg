@@ -10,7 +10,7 @@ from aiopg.connection import Connection, TIMEOUT
 from aiopg.pool import Pool
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_create_pool(create_pool):
     pool = yield from create_pool()
     assert isinstance(pool, Pool)
@@ -22,7 +22,7 @@ def test_create_pool(create_pool):
     assert not pool.echo
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_create_pool2(create_pool):
     pool = yield from create_pool(minsize=5, maxsize=20)
     assert isinstance(pool, Pool)
@@ -33,7 +33,7 @@ def test_create_pool2(create_pool):
     assert TIMEOUT == pool.timeout
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_acquire(create_pool):
     pool = yield from create_pool()
     conn = yield from pool.acquire()
@@ -46,7 +46,7 @@ def test_acquire(create_pool):
     pool.release(conn)
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_release(create_pool):
     pool = yield from create_pool(minsize=10)
     conn = yield from pool.acquire()
@@ -57,7 +57,7 @@ def test_release(create_pool):
     assert not pool._used
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_release_closed(create_pool):
     pool = yield from create_pool(minsize=10)
     conn = yield from pool.acquire()
@@ -74,7 +74,7 @@ def test_release_closed(create_pool):
     pool.release(conn2)
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_bad_context_manager_usage(create_pool):
     pool = yield from create_pool()
     with pytest.raises(RuntimeError):
@@ -82,7 +82,7 @@ def test_bad_context_manager_usage(create_pool):
             pass
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_context_manager(create_pool):
     pool = yield from create_pool(minsize=10)
     with (yield from pool) as conn:
@@ -92,14 +92,14 @@ def test_context_manager(create_pool):
     assert 10 == pool.freesize
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_clear(create_pool):
     pool = yield from create_pool()
     yield from pool.clear()
     assert 0 == pool.freesize
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_initial_empty(create_pool):
     pool = yield from create_pool(minsize=0)
     assert 10 == pool.maxsize
@@ -130,7 +130,7 @@ def test_initial_empty(create_pool):
     assert 2 == pool.freesize
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_parallel_tasks(create_pool, loop):
     pool = yield from create_pool(minsize=0, maxsize=2)
     assert 2 == pool.maxsize
@@ -163,7 +163,7 @@ def test_parallel_tasks(create_pool, loop):
     pool.release(conn3)
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_parallel_tasks_more(create_pool, loop):
     pool = yield from create_pool(minsize=0, maxsize=3)
 
@@ -202,7 +202,7 @@ def test_parallel_tasks_more(create_pool, loop):
     pool.release(conn4)
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_release_with_invalid_status(create_pool):
     pool = yield from create_pool(minsize=10)
     conn = yield from pool.acquire()
@@ -222,7 +222,7 @@ def test_release_with_invalid_status(create_pool):
         TRANSACTION_STATUS_INTRANS)
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_default_event_loop(create_pool, loop):
     asyncio.set_event_loop(loop)
 
@@ -230,7 +230,7 @@ def test_default_event_loop(create_pool, loop):
     assert pool._loop is loop
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_cursor(create_pool):
     pool = yield from create_pool()
     with (yield from pool.cursor()) as cur:
@@ -240,7 +240,7 @@ def test_cursor(create_pool):
     assert cur.closed
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_release_with_invalid_status_wait_release(create_pool):
     pool = yield from create_pool(minsize=10)
     conn = yield from pool.acquire()
@@ -260,7 +260,7 @@ def test_release_with_invalid_status_wait_release(create_pool):
         TRANSACTION_STATUS_INTRANS)
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test__fill_free(create_pool, loop):
     pool = yield from create_pool(minsize=1)
     with (yield from pool):
@@ -279,7 +279,7 @@ def test__fill_free(create_pool, loop):
     assert 2 == pool.size
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_connect_from_acquire(create_pool):
     pool = yield from create_pool(minsize=0)
     assert 0 == pool.freesize
@@ -291,7 +291,7 @@ def test_connect_from_acquire(create_pool):
     assert 1 == pool.freesize
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_create_pool_with_timeout(create_pool):
     timeout = 0.1
     pool = yield from create_pool(timeout=timeout)
@@ -301,7 +301,7 @@ def test_create_pool_with_timeout(create_pool):
     pool.release(conn)
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_cursor_with_timeout(create_pool):
     timeout = 0.1
     pool = yield from create_pool()
@@ -309,7 +309,7 @@ def test_cursor_with_timeout(create_pool):
         assert timeout == cur.timeout
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_concurrency(create_pool):
     pool = yield from create_pool(minsize=2, maxsize=4)
     c1 = yield from pool.acquire()
@@ -320,19 +320,19 @@ def test_concurrency(create_pool):
     pool.release(c2)
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_invalid_minsize(create_pool):
     with pytest.raises(ValueError):
         yield from create_pool(minsize=-1)
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_invalid__maxsize(create_pool):
     with pytest.raises(ValueError):
         yield from create_pool(minsize=5, maxsize=2)
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_true_parallel_tasks(create_pool, loop):
     pool = yield from create_pool(minsize=0, maxsize=1)
     assert 1 == pool.maxsize
@@ -361,7 +361,7 @@ def test_true_parallel_tasks(create_pool, loop):
     assert 0 == minfreesize
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_wait_closed(create_pool, loop):
     pool = yield from create_pool(minsize=10)
 
@@ -392,7 +392,7 @@ def test_wait_closed(create_pool, loop):
     assert 0 == pool.freesize
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_echo(create_pool):
     pool = yield from create_pool(echo=True)
     assert pool.echo
@@ -401,7 +401,7 @@ def test_echo(create_pool):
         assert conn.echo
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_cannot_acquire_after_closing(create_pool):
     pool = yield from create_pool()
     pool.close()
@@ -410,7 +410,7 @@ def test_cannot_acquire_after_closing(create_pool):
         yield from pool.acquire()
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_terminate_with_acquired_connections(create_pool):
     pool = yield from create_pool()
     conn = yield from pool.acquire()
@@ -420,7 +420,7 @@ def test_terminate_with_acquired_connections(create_pool):
     assert conn.closed
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_release_closed_connection(create_pool):
     pool = yield from create_pool()
     conn = yield from pool.acquire()
@@ -429,7 +429,7 @@ def test_release_closed_connection(create_pool):
     pool.release(conn)
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_wait_closing_on_not_closed(create_pool):
     pool = yield from create_pool()
 
@@ -437,7 +437,7 @@ def test_wait_closing_on_not_closed(create_pool):
         yield from pool.wait_closed()
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_release_terminated_pool(create_pool):
     pool = yield from create_pool()
     conn = yield from pool.acquire()
@@ -447,7 +447,7 @@ def test_release_terminated_pool(create_pool):
     pool.release(conn)
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_release_terminated_pool_with_wait_release(create_pool):
     pool = yield from create_pool()
     conn = yield from pool.acquire()
@@ -457,7 +457,7 @@ def test_release_terminated_pool_with_wait_release(create_pool):
     yield from pool.release(conn)
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_close_with_acquired_connections(create_pool, loop):
     pool = yield from create_pool()
     yield from pool.acquire()
@@ -469,21 +469,21 @@ def test_close_with_acquired_connections(create_pool, loop):
 
 @pytest.mark.skipif(sys.version_info < (3, 4),
                     reason="Python 3.3 doesnt support __del__ calls from GC")
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test___del__(loop, pg_params, warning):
     pool = yield from aiopg.create_pool(loop=loop, **pg_params)
     with warning(ResourceWarning):
         del pool
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_unlimited_size(create_pool):
     pool = yield from create_pool(maxsize=0)
     assert 1 == pool.minsize
     assert pool._free.maxlen is None
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_connection_in_good_state_after_timeout(create_pool):
     @asyncio.coroutine
     def sleep(conn):
@@ -505,7 +505,7 @@ def test_connection_in_good_state_after_timeout(create_pool):
         assert (1,) == val
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_connection_in_good_state_after_timeout_in_transaction(create_pool):
     @asyncio.coroutine
     def sleep(conn):
@@ -529,7 +529,7 @@ def test_connection_in_good_state_after_timeout_in_transaction(create_pool):
         assert (1,) == val
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_drop_connection_if_timedout(make_connection,
                                      create_pool, loop):
 
@@ -560,7 +560,7 @@ def test_drop_connection_if_timedout(make_connection,
     yield from pool.wait_closed()
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_close_running_cursor(create_pool, loop):
     pool = yield from create_pool(minsize=3)
 

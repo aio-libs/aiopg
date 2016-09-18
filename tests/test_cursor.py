@@ -34,7 +34,7 @@ def connect(make_connection):
     return go
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_description(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -59,14 +59,14 @@ def test_description(connect):
     assert cur.description is None
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_raw(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
     assert cur._impl is cur.raw
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_close(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -76,7 +76,7 @@ def test_close(connect):
         yield from cur.execute('SELECT 1')
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_close_twice(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -88,21 +88,21 @@ def test_close_twice(connect):
     assert conn._waiter is None
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_connection(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
     assert cur.connection is conn
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_name(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
     assert cur.name is None
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_scrollable(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -111,7 +111,7 @@ def test_scrollable(connect):
         cur.scrollable = True
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_withhold(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -121,7 +121,7 @@ def test_withhold(connect):
     assert not cur.withhold
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_execute(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -130,7 +130,7 @@ def test_execute(connect):
     assert (1,) == ret
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_executemany(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -138,7 +138,7 @@ def test_executemany(connect):
         yield from cur.executemany('SELECT %s', ['1', '2'])
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_mogrify(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -146,14 +146,14 @@ def test_mogrify(connect):
     assert b"SELECT '1'" == ret
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_setinputsizes(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
     yield from cur.setinputsizes(10)
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_fetchmany(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -166,7 +166,7 @@ def test_fetchmany(connect):
     assert [(1, 'a'), (2, 'b')] == ret
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_fetchall(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -175,7 +175,7 @@ def test_fetchall(connect):
     assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_scroll(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -185,7 +185,7 @@ def test_scroll(connect):
     assert (2, 'b') == ret
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_arraysize(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -195,7 +195,7 @@ def test_arraysize(connect):
     assert 10 == cur.arraysize
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_itersize(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -205,7 +205,7 @@ def test_itersize(connect):
     assert 10 == cur.itersize
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_rows(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -221,7 +221,7 @@ def test_rows(connect):
     assert 0 != cur.lastrowid
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_query(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -229,7 +229,7 @@ def test_query(connect):
     assert b'SELECT 1' == cur.query
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_statusmessage(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -237,7 +237,7 @@ def test_statusmessage(connect):
     assert 'SELECT 1' == cur.statusmessage
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_tzinfo_factory(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -247,7 +247,7 @@ def test_tzinfo_factory(connect):
     assert psycopg2.tz.LocalTimezone is cur.tzinfo_factory
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_nextset(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -255,14 +255,14 @@ def test_nextset(connect):
         yield from cur.nextset()
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_setoutputsize(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
     yield from cur.setoutputsize(4, 1)
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_copy_family(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -277,7 +277,7 @@ def test_copy_family(connect):
         yield from cur.copy_expert('sql', 'table')
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_callproc(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -291,7 +291,7 @@ def test_callproc(connect):
     assert conn._waiter is None
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_execute_timeout(connect):
     timeout = 0.1
     conn = yield from connect()
@@ -306,7 +306,7 @@ def test_execute_timeout(connect):
     assert 0.08 <= dt <= 0.15, dt
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_execute_override_timeout(connect):
     timeout = 0.1
     conn = yield from connect()
@@ -321,7 +321,7 @@ def test_execute_override_timeout(connect):
     assert 0.08 <= dt <= 0.15, dt
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_callproc_timeout(connect):
     timeout = 0.1
     conn = yield from connect()
@@ -336,7 +336,7 @@ def test_callproc_timeout(connect):
     assert 0.08 <= dt <= 0.15, dt
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_callproc_override_timeout(connect):
     timeout = 0.1
     conn = yield from connect()
@@ -351,21 +351,21 @@ def test_callproc_override_timeout(connect):
     assert 0.08 <= dt <= 0.15, dt
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_echo(connect):
     conn = yield from connect(echo=True)
     cur = yield from conn.cursor()
     assert cur.echo
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_echo_false(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
     assert not cur.echo
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_iter(connect):
     conn = yield from connect()
     cur = yield from conn.cursor()
@@ -375,7 +375,7 @@ def test_iter(connect):
         assert item == tst
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_echo_callproc(connect):
     conn = yield from connect(echo=True)
     cur = yield from conn.cursor()

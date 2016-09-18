@@ -61,7 +61,7 @@ def test_freesize(engine):
     assert 1 == engine.freesize
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_make_engine_with_default_loop(make_engine, loop):
     asyncio.set_event_loop(loop)
     engine = yield from make_engine(use_loop=False)
@@ -75,7 +75,7 @@ def test_not_context_manager(engine):
             pass
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_release_transacted(engine):
     conn = yield from engine.acquire()
     tr = yield from conn.begin()
@@ -89,7 +89,7 @@ def test_timeout(engine):
     assert TIMEOUT == engine.timeout
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_timeout_override(make_engine):
     timeout = 1
     engine = yield from make_engine(timeout=timeout)
@@ -102,7 +102,7 @@ def test_timeout_override(make_engine):
     yield from engine.wait_closed()
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_cannot_acquire_after_closing(make_engine):
     engine = yield from make_engine()
     engine.close()
@@ -113,7 +113,7 @@ def test_cannot_acquire_after_closing(make_engine):
     yield from engine.wait_closed()
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_wait_closed(make_engine, loop):
     engine = yield from make_engine(minsize=10)
 
@@ -144,7 +144,7 @@ def test_wait_closed(make_engine, loop):
     assert 0 == engine.freesize
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_terminate_with_acquired_connections(make_engine):
     engine = yield from make_engine()
     conn = yield from engine.acquire()

@@ -58,7 +58,7 @@ def connect(make_engine):
     yield go
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_json(connect):
     engine, tbl, has_hstore = yield from connect()
     data = {'a': 1, 'b': 'name'}
@@ -71,7 +71,7 @@ def test_json(connect):
         assert data == item['json_val']
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_array(connect):
     engine, tbl, has_hstore = yield from connect()
     data = [1, 2, 3]
@@ -84,7 +84,7 @@ def test_array(connect):
         assert data == item['array_val']
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_hstore(connect):
     engine, tbl, has_hstore = yield from connect()
     if not has_hstore:
@@ -99,7 +99,7 @@ def test_hstore(connect):
         assert data == item['hstore_val']
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_enum(connect):
     engine, tbl, has_hstore = yield from connect()
     with (yield from engine) as conn:

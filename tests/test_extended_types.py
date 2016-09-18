@@ -1,10 +1,10 @@
-import pytest
+import asyncio
 import uuid
 
 from psycopg2.extras import Json
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_uuid(make_connection):
     conn = yield from make_connection()
     _id = uuid.uuid1()
@@ -21,7 +21,7 @@ def test_uuid(make_connection):
         cur.close()
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_json(make_connection):
     conn = yield from make_connection()
     data = {'a': 1, 'b': 'str'}

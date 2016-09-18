@@ -48,7 +48,7 @@ def xa_connect(connect):
     yield go
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_without_transactions(connect):
     conn1 = yield from connect()
     conn2 = yield from connect()
@@ -61,14 +61,14 @@ def test_without_transactions(connect):
     assert 0 == res2
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_connection_attr(connect):
     conn = yield from connect()
     tr = yield from conn.begin()
     assert tr.connection is conn
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_root_transaction(connect):
     conn1 = yield from connect()
     conn2 = yield from connect()
@@ -88,7 +88,7 @@ def test_root_transaction(connect):
     assert 0 == res2
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_root_transaction_rollback(connect):
     conn1 = yield from connect()
     conn2 = yield from connect()
@@ -107,7 +107,7 @@ def test_root_transaction_rollback(connect):
     assert 1 == res2
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_root_transaction_close(connect):
     conn1 = yield from connect()
     conn2 = yield from connect()
@@ -126,7 +126,7 @@ def test_root_transaction_close(connect):
     assert 1 == res2
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_root_transaction_commit_inactive(connect):
     conn = yield from connect()
     tr = yield from conn.begin()
@@ -137,7 +137,7 @@ def test_root_transaction_commit_inactive(connect):
         yield from tr.commit()
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_root_transaction_rollback_inactive(connect):
     conn = yield from connect()
     tr = yield from conn.begin()
@@ -148,7 +148,7 @@ def test_root_transaction_rollback_inactive(connect):
     assert not tr.is_active
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_root_transaction_double_close(connect):
     conn = yield from connect()
     tr = yield from conn.begin()
@@ -159,7 +159,7 @@ def test_root_transaction_double_close(connect):
     assert not tr.is_active
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_inner_transaction_commit(connect):
     conn = yield from connect()
     tr1 = yield from conn.begin()
@@ -175,7 +175,7 @@ def test_inner_transaction_commit(connect):
     assert not tr1.is_active
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_rollback_on_connection_close(connect):
     conn1 = yield from connect()
     conn2 = yield from connect()
@@ -193,7 +193,7 @@ def test_rollback_on_connection_close(connect):
     del tr
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_inner_transaction_rollback(connect):
     conn = yield from connect()
     tr1 = yield from conn.begin()
@@ -209,7 +209,7 @@ def test_inner_transaction_rollback(connect):
     assert 1 == res
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_inner_transaction_close(connect):
     conn = yield from connect()
     tr1 = yield from conn.begin()
@@ -226,7 +226,7 @@ def test_inner_transaction_close(connect):
     assert 2 == res
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_nested_transaction_commit(connect):
     conn = yield from connect()
     tr1 = yield from conn.begin_nested()
@@ -250,7 +250,7 @@ def test_nested_transaction_commit(connect):
     assert 2 == res
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_nested_transaction_commit_twice(connect):
     conn = yield from connect()
     tr1 = yield from conn.begin_nested()
@@ -271,7 +271,7 @@ def test_nested_transaction_commit_twice(connect):
     yield from tr1.close()
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_nested_transaction_rollback(connect):
     conn = yield from connect()
     tr1 = yield from conn.begin_nested()
@@ -295,7 +295,7 @@ def test_nested_transaction_rollback(connect):
     assert 1 == res
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_nested_transaction_rollback_twice(connect):
     conn = yield from connect()
     tr1 = yield from conn.begin_nested()
@@ -315,7 +315,7 @@ def test_nested_transaction_rollback_twice(connect):
     assert 1 == res
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_twophase_transaction_commit(xa_connect):
     conn = yield from xa_connect()
     tr = yield from conn.begin_twophase()
@@ -331,7 +331,7 @@ def test_twophase_transaction_commit(xa_connect):
     assert 2 == res
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_twophase_transaction_twice(xa_connect):
     conn = yield from xa_connect()
     tr = yield from conn.begin_twophase()
@@ -343,7 +343,7 @@ def test_twophase_transaction_twice(xa_connect):
     yield from tr.commit()
 
 
-@pytest.mark.run_loop
+@asyncio.coroutine
 def test_transactions_sequence(xa_connect):
     conn = yield from xa_connect()
 

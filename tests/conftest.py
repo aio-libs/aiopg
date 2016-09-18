@@ -1,5 +1,6 @@
 import asyncio
 import collections
+import contextlib
 import gc
 import logging
 import psycopg2
@@ -43,12 +44,27 @@ def loop(request):
 
 @pytest.mark.tryfirst
 def pytest_pycollect_makeitem(collector, name, obj):
-    if collector.funcnamefilter(name):
-        if not callable(obj):
-            return
-        item = pytest.Function(name, parent=collector)
-        if 'run_loop' in item.keywords:
-            return list(collector._genfunctions(name, obj))
+    if collector.funcnamefilter(name) and asyncio.iscoroutinefunction(obj):
+        return list(collector._genfunctions(name, obj))
+
+
+@contextlib.contextmanager
+def _passthrough_loop_context(loop):
+    if loop:
+        # loop already exists, pass it straight through
+        yield loop
+    else:
+        # this shadows loop_context's standard behavior
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(None)
+        yield loop
+        closed = loop.is_closed()
+        if not closed:
+            loop.call_soon(loop.stop)
+            loop.run_forever()
+            loop.close()
+            gc.collect()
+        asyncio.set_event_loop(None)
 
 
 @pytest.mark.tryfirst
@@ -57,19 +73,16 @@ def pytest_pyfunc_call(pyfuncitem):
     Run asyncio marked test functions in an event loop instead of a normal
     function call.
     """
-    if 'run_loop' in pyfuncitem.keywords:
-        funcargs = pyfuncitem.funcargs
-        loop = funcargs['loop']
-        testargs = {arg: funcargs[arg]
-                    for arg in pyfuncitem._fixtureinfo.argnames}
-        loop.run_until_complete(pyfuncitem.obj(**testargs))
+    if asyncio.iscoroutinefunction(pyfuncitem.function):
+        existing_loop = pyfuncitem.funcargs.get('loop', None)
+        with _passthrough_loop_context(existing_loop) as _loop:
+            testargs = {arg: pyfuncitem.funcargs[arg]
+                        for arg in pyfuncitem._fixtureinfo.argnames}
+
+            task = _loop.create_task(pyfuncitem.obj(**testargs))
+            _loop.run_until_complete(task)
+
         return True
-
-
-def pytest_runtest_setup(item):
-    if 'run_loop' in item.keywords and 'loop' not in item.fixturenames:
-        # inject an event loop fixture for all async tests
-        item.fixturenames.append('loop')
 
 
 def pytest_ignore_collect(path, config):
