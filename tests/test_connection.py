@@ -274,7 +274,7 @@ def test_cancel_pending_op(connect, loop):
     @asyncio.coroutine
     def inner():
         fut.set_result(None)
-        cur.execute("SELECT pg_sleep(10)")
+        yield from cur.execute("SELECT pg_sleep(10)")
 
     conn = yield from connect()
     cur = yield from conn.cursor()
