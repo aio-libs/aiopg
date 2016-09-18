@@ -269,10 +269,19 @@ def test_cancel_noop(connect):
 
 @asyncio.coroutine
 def test_cancel_pending_op(connect, loop):
+    fut = asyncio.Future(loop=loop)
+
+    @asyncio.coroutine
+    def inner():
+        fut.set_result(None)
+        cur.execute("SELECT pg_sleep(10)")
+
     conn = yield from connect()
     cur = yield from conn.cursor()
-    task = ensure_future(cur.execute("SELECT pg_sleep(10)"), loop=loop)
-    yield from asyncio.sleep(0.01, loop=loop)
+    task = ensure_future(inner(), loop=loop)
+    yield from fut
+    # N.B. May deadlock if the sleep is too short
+    yield from asyncio.sleep(0.05, loop=loop)
     yield from conn.cancel()
 
     with pytest.raises(asyncio.CancelledError):
