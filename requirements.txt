@@ -5,7 +5,7 @@ ipdb
 ipython
 flake8
 wheel
-setuptools
+setuptools==27.3.0
 -e .[sa]
 sphinx
 tox
