@@ -1,7 +1,7 @@
 coverage
 docker-py
 docutils
-ipdb
+ipdb==0.10.1
 ipython
 flake8
 wheel==0.29.0
