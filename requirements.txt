@@ -13,4 +13,4 @@ pytest
 pytest-cov
 pytest-sugar
 pytest-timeout
-sphinxcontrib-asyncio
+sphinxcontrib-asyncio==0.2.0
