@@ -4,7 +4,7 @@ docutils
 ipdb
 ipython
 flake8
-wheel
+wheel==0.29.0
 setuptools
 -e .[sa]
 sphinx
