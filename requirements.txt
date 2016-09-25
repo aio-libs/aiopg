@@ -1,5 +1,5 @@
 coverage
-docker-py
+docker-py==1.10.3
 docutils
 ipdb
 ipython
