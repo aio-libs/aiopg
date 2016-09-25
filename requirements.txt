@@ -1,6 +1,6 @@
 coverage
 docker-py
-docutils
+docutils==0.12
 ipdb
 ipython
 flake8
