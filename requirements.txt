@@ -8,7 +8,7 @@ wheel
 setuptools
 -e .[sa]
 sphinx
-tox
+tox==2.3.1
 pytest
 pytest-cov
 pytest-sugar
