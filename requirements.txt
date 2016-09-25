@@ -9,7 +9,7 @@ setuptools
 -e .[sa]
 sphinx
 tox
-pytest
+pytest==3.0.2
 pytest-cov
 pytest-sugar
 pytest-timeout
