@@ -3,7 +3,7 @@ docker-py
 docutils
 ipdb
 ipython
-flake8
+flake8==3.0.4
 wheel
 setuptools
 -e .[sa]
