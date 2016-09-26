@@ -172,7 +172,7 @@ def pg_params(pg_server):
 @pytest.yield_fixture()
 def make_connection(loop, pg_params):
 
-    conn = None
+    conns = []
 
     @asyncio.coroutine
     def go(*, no_loop=False, **kwargs):
@@ -185,11 +185,12 @@ def make_connection(loop, pg_params):
         cur = yield from conn2.cursor()
         yield from cur.execute("DROP TABLE IF EXISTS foo")
         yield from conn2.close()
+        conns.append(conn)
         return conn
 
     yield go
 
-    if conn is not None:
+    for conn in conns:
         loop.run_until_complete(conn.close())
 
 
