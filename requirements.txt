@@ -2,7 +2,7 @@ coverage
 docker-py
 docutils
 ipdb
-ipython
+ipython==5.1.0
 flake8==3.0.4
 wheel==0.29.0
 setuptools
