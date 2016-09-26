@@ -1,6 +1,6 @@
 coverage==4.2
 docker-py
-docutils
+docutils==0.12
 ipdb
 ipython==5.1.0
 flake8==3.0.4
