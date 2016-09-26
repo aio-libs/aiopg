@@ -1,5 +1,5 @@
 coverage==4.2
-docker-py
+docker-py==1.10.3
 docutils==0.12
 ipdb
 ipython==5.1.0
