@@ -9,7 +9,7 @@ setuptools==28.0.0
 -e .[sa]
 sphinx==1.4.6
 tox==2.3.1
-pytest==3.0.2
+pytest==3.0.3
 pytest-cov==2.3.1
 pytest-sugar==0.7.1
 pytest-timeout==1.0.0
