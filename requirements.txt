@@ -7,7 +7,7 @@ flake8==3.0.4
 wheel==0.29.0
 setuptools==28.0.0
 -e .[sa]
-sphinx==1.4.6
+sphinx==1.4.7
 tox==2.3.1
 pytest==3.0.3
 pytest-cov==2.3.1
