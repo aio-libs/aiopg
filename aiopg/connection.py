@@ -206,8 +206,6 @@ class Connection:
 
         @asyncio.coroutine
         def cancel():
-            if not self._isexecuting():
-                return
             self._waiter = create_future(self._loop)
             self._conn.cancel()
             try:
