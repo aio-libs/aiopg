@@ -37,6 +37,7 @@ classifiers = [
     'Programming Language :: Python :: 3.5',
     'Operating System :: POSIX',
     'Operating System :: MacOS :: MacOS X',
+    'Operating System :: Microsoft :: Windows',
     'Environment :: Web Environment',
     'Development Status :: 4 - Beta',
     'Topic :: Database',

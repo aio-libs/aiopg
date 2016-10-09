@@ -8,6 +8,8 @@ import socket
 import time
 import sys
 
+from async_timeout import timeout
+
 from aiopg.connection import Connection, TIMEOUT
 from aiopg.cursor import Cursor
 from aiopg.utils import ensure_future, create_future
@@ -280,11 +282,12 @@ def test_cancel_pending_op(connect, loop):
     cur = yield from conn.cursor()
     task = ensure_future(inner(), loop=loop)
     yield from fut
-    yield from asyncio.sleep(1, loop=loop)
+    yield from asyncio.sleep(0.1, loop=loop)
     yield from conn.cancel()
 
     with pytest.raises(asyncio.CancelledError):
-        yield from task
+        with timeout(60, loop=loop):
+            yield from task
 
 
 @asyncio.coroutine
