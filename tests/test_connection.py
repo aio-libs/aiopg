@@ -281,10 +281,14 @@ def test_cancel_pending_op(connect, loop):
     task = ensure_future(inner(), loop=loop)
     yield from fut
     yield from asyncio.sleep(0.1, loop=loop)
+    print('before cancel')
     yield from conn.cancel()
+    print('after cancel')
 
     with pytest.raises(asyncio.CancelledError):
+        print('before task waiting')
         yield from task
+        print('after task waiting')
 
 
 @asyncio.coroutine
