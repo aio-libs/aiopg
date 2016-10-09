@@ -677,6 +677,7 @@ The basic usage is::
 
 .. cofunction:: create_pool(dsn=None, *, minsize=1, maxsize=10,\
                             enable_json=True, enable_hstore=True, \
+                            enable_uuid=True, echo=False, on_connect=None, \
                             loop=None, timeout=60.0, **kwargs)
    :coroutine:
    :async-with:
@@ -686,32 +687,38 @@ The basic usage is::
    The function accepts all parameters that :func:`psycopg2.connect`
    does plus optional keyword-only parameters *loop*, *minsize*, *maxsize*.
 
-   *loop* is an optional *event loop* instance,
+   :param loop: is an optional *event loop* instance,
     :func:`asyncio.get_event_loop` is used if *loop* is not specified.
 
-   *minsize* and *maxsize* are minimum and maximum sizes of the *pool*.
+   :param int minsize: minimum size of the *pool*, ``1`` by default.
 
-   *timeout* is a default timeout (in seconds) for connection
-    operations. 60 secs if not specified.
+   :param int maxsize: maximum sizes of the *pool*, ``10`` by default.
+                   ``0`` means unlimited pool size.
 
-   *enable_json* --- enable json column types for connections
-   created by the pool.
+   :param float timeout: a default timeout (in seconds) for connection
+      operations. ``60`` secs by default.
 
-      ``True`` by default.
+   :param bool enable_json: enable json column types for connections
+      created by the pool, enabled by default.
 
-   *enable_hstore* --- try to enable hstore column types for connections
-   created by the pool.
-
-      ``True`` by default.
+   :param bool enable_hstore: enable hstore column types for connections
+      created by the pool, enabled by default.
 
       For using HSTORE columns extension should be
       installed in database first::
 
          CREATE EXTENSION HSTORE
 
-   *echo* --- executed log SQL queryes (``False`` by default).
+   :param bool enable_uuid: enable UUID column types for connections
+      created by the pool, enabled by default.
 
-   Returns :class:`Pool` instance.
+   :param bool echo: executed log SQL queryes (disabled by default).
+
+   :param on_connect:  a *callback coroutine* executed at once for every
+     created connection. May be used for setting up connection level
+     state like client encoding etc.
+
+   :return: :class:`Pool` instance.
 
 
 .. class:: Pool
@@ -936,3 +943,4 @@ There is usage example:
 
 .. _LISTEN: http://www.postgresql.org/docs/current/static/sql-listen.html
 .. _NOTIFY: http://www.postgresql.org/docs/current/static/sql-notify.html
+
