@@ -211,9 +211,12 @@ class Connection:
             self._waiter = create_future(self._loop)
             self._conn.cancel()
             try:
-                yield from self._waiter
+                yield from asyncio.wait_for(self._waiter, timeout,
+                                            loop=self._loop)
             except psycopg2.extensions.QueryCanceledError:
                 pass
+            except asyncio.TimeoutError:
+                self._close()
 
         try:
             yield from asyncio.wait_for(self._waiter, timeout, loop=self._loop)
@@ -266,7 +269,7 @@ class Connection:
                                      scrollable=scrollable, withhold=withhold)
         return impl
 
-    def close(self):
+    def _close(self):
         """Remove the connection from the event_loop and close it."""
         # N.B. If connection contains uncommitted transaction the
         # transaction will be discarded
@@ -279,6 +282,9 @@ class Connection:
         if self._waiter is not None and not self._waiter.done():
             self._waiter.set_exception(
                 psycopg2.OperationalError("Connection closed"))
+
+    def close(self):
+        self._close()
         ret = create_future(self._loop)
         ret.set_result(None)
         return ret
