@@ -208,7 +208,7 @@ class Connection:
         def cancel():
             self._waiter = create_future(self._loop)
             self._conn.cancel()
-            if not self._conn.executing():
+            if not self._conn.isexecuting():
                 return
             try:
                 yield from asyncio.wait_for(self._waiter, timeout,
