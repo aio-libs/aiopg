@@ -39,8 +39,12 @@ def _enable_hstore(conn):
         """)
     rv0, rv1 = [], []
     for oids in (yield from cur.fetchall()):
-        rv0.append(oids[0])
-        rv1.append(oids[1])
+        if type(oids) is list:
+            rv0.append(oids[0])
+            rv1.append(oids[1])
+        else:
+            rv0.append(oids['oid'])
+            rv1.append(oids['typarray'])
 
     cur.close()
     return tuple(rv0), tuple(rv1)
