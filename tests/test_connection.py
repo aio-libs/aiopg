@@ -612,3 +612,32 @@ def test_remove_reader_from_dead_fd(connect):
     conn.close()
     assert not m_remove_reader.called
     old_remove_reader(fileno)
+
+
+@asyncio.coroutine
+def test_connection_on_server_restart(connect, pg_server, docker):
+    # Operation on closed connection should raise OperationalError
+    conn = yield from connect()
+    cur = yield from conn.cursor()
+    yield from cur.execute('SELECT 1')
+    ret = yield from cur.fetchone()
+    assert (1,) == ret
+    docker.restart(container=pg_server['Id'])
+
+    with pytest.raises(psycopg2.OperationalError):
+        yield from cur.execute('SELECT 1')
+    conn.close()
+
+    # Wait for postgres to be up and running again before moving on
+    # so as the restart won't affect other tests
+    delay = 0.001
+    for i in range(100):
+        try:
+            conn = yield from connect()
+            conn.close()
+            break
+        except psycopg2.Error:
+            time.sleep(delay)
+            delay *= 2
+    else:
+        pytest.fail("Cannot connect to the restarted server")
