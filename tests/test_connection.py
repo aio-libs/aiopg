@@ -612,3 +612,17 @@ def test_remove_reader_from_dead_fd(connect):
     conn.close()
     assert not m_remove_reader.called
     old_remove_reader(fileno)
+
+
+@asyncio.coroutine
+def test_connection_on_server_restart(connect, pg_server, docker):
+    # Operation on closed connection should raise OperationalError
+    conn = yield from connect()
+    cur = yield from conn.cursor()
+    yield from cur.execute('SELECT 1')
+    ret = yield from cur.fetchone()
+    assert (1,) == ret
+    docker.restart(container=pg_server['Id'])
+    with pytest.raises(psycopg2.OperationalError):
+        yield from cur.execute('SELECT 1')
+    conn.close()
