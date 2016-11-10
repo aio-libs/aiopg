@@ -12,5 +12,5 @@ tox==2.4.1
 pytest==3.0.3
 pytest-cov==2.4.0
 pytest-sugar==0.7.1
-pytest-timeout==1.0.0
+pytest-timeout==1.2.0
 sphinxcontrib-asyncio==0.2.0
