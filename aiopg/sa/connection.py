@@ -1,8 +1,8 @@
 import asyncio
 
 from sqlalchemy.sql import ClauseElement
-from sqlalchemy.sql.dml import UpdateBase
 from sqlalchemy.sql.ddl import DDLElement
+from sqlalchemy.sql.dml import UpdateBase
 
 from . import exc
 from .result import ResultProxy
@@ -12,7 +12,6 @@ from ..utils import _SAConnectionContextManager, _TransactionContextManager
 
 
 class SAConnection:
-
     def __init__(self, connection, engine):
         self._connection = connection
         self._transaction = None
@@ -83,8 +82,12 @@ class SAConnection:
                         raise exc.ArgumentError("Don't mix sqlalchemy SELECT "
                                                 "clause with positional "
                                                 "parameters")
+                table = (query.table
+                         if isinstance(query, UpdateBase)
+                         else None)
+
                 compiled_parameters = [compiled.construct_params(
-                    dp)]
+                    dp, table=table)]
                 processed_parameters = []
                 processors = compiled._bind_processors
                 for compiled_params in compiled_parameters:

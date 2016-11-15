@@ -2,20 +2,91 @@ import asyncio
 import json
 
 import aiopg
+from aiopg.sa import exc
+from sqlalchemy import ColumnDefault
+
 from .connection import SAConnection
 from .exc import InvalidRequestError
-from ..utils import PY_35, _PoolContextManager, _PoolAcquireContextManager
 from ..connection import TIMEOUT
-
+from ..utils import PY_35, _PoolContextManager, _PoolAcquireContextManager
 
 try:
     from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
+    from sqlalchemy.dialects.postgresql.psycopg2 import PGCompiler_psycopg2
 except ImportError:  # pragma: no cover
     raise ImportError('aiopg.sa requires sqlalchemy')
 
 
+class APGCompiler_psycopg2(PGCompiler_psycopg2):
+    def construct_params(self, params=None, _group_number=None,
+                         _check=True, table=None):
+        """return a dictionary of bind parameter keys and values"""
+        fields = table.c if table is not None else {}
+
+        if params:
+            pd = {}
+            for bindparam in self.bind_names:
+                name = self.bind_names[bindparam]
+                if bindparam.key in params:
+                    pd[name] = params[bindparam.key]
+                elif name in params:
+                    pd[name] = params[name]
+
+                elif _check and bindparam.required:
+                    if _group_number:
+                        raise exc.InvalidRequestError(
+                            "A value is required for bind parameter %r, "
+                            "in parameter group %d" %
+                            (bindparam.key, _group_number))
+                    else:
+                        raise exc.InvalidRequestError(
+                            "A value is required for bind parameter %r"
+                            % bindparam.key)
+
+                elif bindparam.callable:
+                    pd[name] = bindparam.effective_value
+                else:
+                    pd[name] = bindparam.value
+            return pd
+        else:
+            pd = {}
+            if fields:
+                fields = {f.key: f.default for f in fields
+                          if isinstance(f.default, ColumnDefault)}
+
+            for bindparam in self.bind_names:
+                if _check and bindparam.required:
+                    if _group_number:
+                        raise exc.InvalidRequestError(
+                            "A value is required for bind parameter %r, "
+                            "in parameter group %d" %
+                            (bindparam.key, _group_number))
+                    else:
+                        raise exc.InvalidRequestError(
+                            "A value is required for bind parameter %r"
+                            % bindparam.key)
+
+                if bindparam.callable:
+                    value = bindparam.effective_value
+                else:
+                    value = bindparam.value
+
+                if value is None and bindparam.key in fields:
+                    field = fields[bindparam.key]
+                    if field.is_callable:
+                        value = field.arg(table)
+                    else:
+                        value = field.arg
+
+                pd[self.bind_names[bindparam]] = value
+
+            return pd
+
+
 _dialect = PGDialect_psycopg2(json_serializer=json.dumps,
                               json_deserializer=lambda x: x)
+
+_dialect.statement_compiler = APGCompiler_psycopg2
 _dialect.implicit_returning = True
 _dialect.supports_native_enum = True
 _dialect.supports_smallserial = True  # 9.2+
