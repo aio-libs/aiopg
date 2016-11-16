@@ -2,7 +2,6 @@ import asyncio
 import json
 
 import aiopg
-from aiopg.sa import exc
 from sqlalchemy import ColumnDefault
 
 from .connection import SAConnection
@@ -18,69 +17,32 @@ except ImportError:  # pragma: no cover
 
 
 class APGCompiler_psycopg2(PGCompiler_psycopg2):
-    def construct_params(self, params=None, _group_number=None,
-                         _check=True, table=None):
-        """return a dictionary of bind parameter keys and values"""
-        fields = table.c if table is not None else {}
+    @asyncio.coroutine
+    def aconstruct_params(self, cursor, params=None,
+                          _group_number=None, _check=True):
+        pd = self.construct_params(params, _group_number, _check)
 
-        if params:
-            pd = {}
-            for bindparam in self.bind_names:
-                name = self.bind_names[bindparam]
-                if bindparam.key in params:
-                    pd[name] = params[bindparam.key]
-                elif name in params:
-                    pd[name] = params[name]
+        default_fields = ((f.key, f.default) for f in self.insert_prefetch
+                          if isinstance(f.default, ColumnDefault))
 
-                elif _check and bindparam.required:
-                    if _group_number:
-                        raise exc.InvalidRequestError(
-                            "A value is required for bind parameter %r, "
-                            "in parameter group %d" %
-                            (bindparam.key, _group_number))
-                    else:
-                        raise exc.InvalidRequestError(
-                            "A value is required for bind parameter %r"
-                            % bindparam.key)
+        for key, default in default_fields:
+            pd[key] = (yield from self._exec_default(cursor, default))
 
-                elif bindparam.callable:
-                    pd[name] = bindparam.effective_value
-                else:
-                    pd[name] = bindparam.value
-            return pd
+        return pd
+
+    @asyncio.coroutine
+    def _exec_default(self, cursor, default):
+        if default.is_sequence:
+            sql = "select nextval('{}')".format(
+                self.dialect.identifier_preparer.format_sequence(default))
+
+            return (yield from cursor.scalar(sql))
+        elif default.is_callable:
+            return default.arg(self.dialect)
+        elif default.is_clause_element:
+            return (yield from cursor.scalar(default.arg))
         else:
-            pd = {}
-            if fields:
-                fields = {f.key: f.default for f in fields
-                          if isinstance(f.default, ColumnDefault)}
-
-            for bindparam in self.bind_names:
-                if _check and bindparam.required:
-                    if _group_number:
-                        raise exc.InvalidRequestError(
-                            "A value is required for bind parameter %r, "
-                            "in parameter group %d" %
-                            (bindparam.key, _group_number))
-                    else:
-                        raise exc.InvalidRequestError(
-                            "A value is required for bind parameter %r"
-                            % bindparam.key)
-
-                if bindparam.callable:
-                    value = bindparam.effective_value
-                else:
-                    value = bindparam.value
-
-                if value is None and bindparam.key in fields:
-                    field = fields[bindparam.key]
-                    if field.is_callable:
-                        value = field.arg(table)
-                    else:
-                        value = field.arg
-
-                pd[self.bind_names[bindparam]] = value
-
-            return pd
+            return default.arg
 
 
 _dialect = PGDialect_psycopg2(json_serializer=json.dumps,

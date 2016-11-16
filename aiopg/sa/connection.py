@@ -82,12 +82,10 @@ class SAConnection:
                         raise exc.ArgumentError("Don't mix sqlalchemy SELECT "
                                                 "clause with positional "
                                                 "parameters")
-                table = (query.table
-                         if isinstance(query, UpdateBase)
-                         else None)
 
-                compiled_parameters = [compiled.construct_params(
-                    dp, table=table)]
+                compiled_parameters = [
+                    (yield from compiled.aconstruct_params(cursor, dp))
+                ]
                 processed_parameters = []
                 processors = compiled._bind_processors
                 for compiled_params in compiled_parameters:
