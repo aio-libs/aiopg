@@ -221,7 +221,7 @@ async def test_transaction_context_manager_nested_commit(pg_params, loop):
     async with aiopg.sa.create_engine(loop=loop, **pg_params) as engine:
         async with engine.acquire() as conn:
             async with conn.begin_nested() as tr1:
-                async with conn.begin_nested() as tr2: 
+                async with conn.begin_nested() as tr2:
                     async with conn.execute(sql) as cursor:
                         async for v in cursor:
                             result.append(v)
