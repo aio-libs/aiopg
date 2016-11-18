@@ -208,6 +208,8 @@ class Connection:
         def cancel():
             self._waiter = create_future(self._loop)
             self._conn.cancel()
+            if not self._conn.isexecuting():
+                return
             try:
                 yield from asyncio.wait_for(self._waiter, timeout,
                                             loop=self._loop)
@@ -221,6 +223,8 @@ class Connection:
         except (asyncio.CancelledError, asyncio.TimeoutError) as exc:
             yield from asyncio.shield(cancel(), loop=self._loop)
             raise exc
+        except psycopg2.extensions.QueryCanceledError:
+            raise asyncio.CancelledError
         finally:
             self._waiter = None
 
@@ -346,14 +350,11 @@ class Connection:
     @asyncio.coroutine
     def cancel(self):
         """Cancel the current database operation."""
-        if self._waiter is not None:
-            self._waiter.cancel()
-        if not self._isexecuting():
+        if self._waiter is None:
             return
 
         @asyncio.coroutine
         def cancel():
-            self._waiter = create_future(self._loop)
             self._conn.cancel()
             try:
                 yield from self._waiter
