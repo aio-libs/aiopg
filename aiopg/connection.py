@@ -159,6 +159,11 @@ class Connection:
             if waiter is not None and not waiter.done():
                 waiter.set_exception(exc)
         else:
+            if self._fileno is None:
+                # connection closed
+                if waiter is not None and not waiter.done():
+                    waiter.set_exception(
+                        psycopg2.OperationalError("Connection closed"))
             if state == POLL_OK:
                 if self._writing:
                     self._loop.remove_writer(self._fileno)
