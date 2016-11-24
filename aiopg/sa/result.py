@@ -89,6 +89,11 @@ class ResultMetaData(object):
     def __init__(self, result_proxy, metadata):
         self._processors = processors = []
 
+        result_map = {}
+        if result_proxy._result_map:
+            result_map = {elem[0]: elem[3] for elem in
+                          result_proxy._result_map}
+
         # We do not strictly need to store the processor in the key mapping,
         # though it is faster in the Python version (probably because of the
         # saved attribute lookup self._processors)
@@ -113,8 +118,13 @@ class ResultMetaData(object):
             # if dialect.requires_name_normalize:
             #     colname = dialect.normalize_name(colname)
 
-            name, obj, type_ = \
-                colname, None, typemap.get(coltype, sqltypes.NULLTYPE)
+            name, obj, type_ = (
+                colname,
+                None,
+                result_map.get(
+                    colname,
+                    typemap.get(coltype, sqltypes.NULLTYPE))
+            )
 
             processor = type_._cached_result_processor(dialect, coltype)
 
@@ -215,6 +225,7 @@ class ResultProxy:
     def __init__(self, connection, cursor, dialect, result_map=None):
         self._dialect = dialect
         self._closed = False
+        self._result_map = result_map
         self._cursor = cursor
         self._connection = connection
         self._rowcount = cursor.rowcount

@@ -1,16 +1,46 @@
 import asyncio
+from enum import Enum
 
 import psycopg2
-
 import pytest
 sa = pytest.importorskip("aiopg.sa")  # noqa
 
-from sqlalchemy import MetaData, Table, Column, Integer
+from sqlalchemy import MetaData, Table, Column, Integer, types
 from sqlalchemy.schema import CreateTable, DropTable
 from sqlalchemy.dialects.postgresql import ARRAY, JSON, HSTORE, ENUM
 
 
 meta = MetaData()
+
+
+class SimpleEnum(Enum):
+    first = 'first'
+    second = 'second'
+
+
+class PythonEnum(types.TypeDecorator):
+    impl = types.Enum
+
+    def __init__(self, python_enum_type, **kwargs):
+        self.python_enum_type = python_enum_type
+        self.kwargs = kwargs
+        enum_args = [x.value for x in python_enum_type]
+        super().__init__(*enum_args, **self.kwargs)
+
+    def process_bind_param(self, value, dialect):
+        return value.value
+
+    def process_result_value(self, value: str, dialect):
+        for __, case in self.python_enum_type.__members__.items():
+            if case.value == value:
+                return case
+        raise TypeError("Cannot map Enum value '{}' to Python's {}".format(
+            value, self.python_enum_type
+        ))
+
+    def copy(self):
+        return PythonEnum(self.python_enum_type, **self.kwargs)
+
 
 tbl = Table('sa_tbl_types', meta,
             Column('id', Integer, nullable=False,
@@ -18,6 +48,8 @@ tbl = Table('sa_tbl_types', meta,
             Column('json_val', JSON),
             Column('array_val', ARRAY(Integer)),
             Column('hstore_val', HSTORE),
+            Column('pyt_enum_val',
+                   PythonEnum(SimpleEnum, name='simple_enum')),
             Column('enum_val', ENUM('first', 'second', name='simple_enum')))
 
 tbl2 = Table('sa_tbl_types2', meta,
@@ -25,6 +57,8 @@ tbl2 = Table('sa_tbl_types2', meta,
                     primary_key=True),
              Column('json_val', JSON),
              Column('array_val', ARRAY(Integer)),
+             Column('pyt_enum_val',
+                    PythonEnum(SimpleEnum, name='simple_enum')),
              Column('enum_val', ENUM('first', 'second', name='simple_enum')))
 
 
@@ -109,3 +143,15 @@ def test_enum(connect):
         ret = yield from conn.execute(tbl.select())
         item = yield from ret.fetchone()
         assert 'second' == item['enum_val']
+
+
+@asyncio.coroutine
+def test_pyenum(connect):
+    engine, tbl, has_hstore = yield from connect()
+    with (yield from engine) as conn:
+        yield from conn.execute(
+            tbl.insert().values(pyt_enum_val=SimpleEnum.first))
+
+        ret = yield from conn.execute(tbl.select())
+        item = yield from ret.fetchone()
+        assert SimpleEnum.first == item.pyt_enum_val
