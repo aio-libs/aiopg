@@ -7,13 +7,12 @@ services:
 python:
   - "3.4"
   - "3.5"
-  - "3.5-dev"
+  - "3.6-dev"
 
 install:
   - python setup.py install
   - pip install -Ur requirements.txt
   - pip install codecov
-  - test $USE_SA == 1 && pip install sqlalchemy || true
 
 script:
   - make cov-ci
@@ -23,10 +22,8 @@ env:
   global:
     - PYTHON=python
   matrix:
-    - USE_SA=1 PYTHONASYNCIODEBUG=x
-    - USE_SA=0 PYTHONASYNCIODEBUG=x
-    - USE_SA=1 PYTHONASYNCIODEBUG=
-    - USE_SA=0 PYTHONASYNCIODEBUG=
+    - PYTHONASYNCIODEBUG=x
+    - PYTHONASYNCIODEBUG=
 
 cache:
   directories:

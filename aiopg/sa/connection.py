@@ -193,7 +193,6 @@ class SAConnection:
             cur.close()
             self._transaction = None
 
-    @asyncio.coroutine
     def begin_nested(self):
         """Begin a nested transaction and return a transaction handle.
 
@@ -205,6 +204,11 @@ class SAConnection:
         still controls the overall .commit() or .rollback() of the
         transaction of a whole.
         """
+        coro = self._begin_nested()
+        return _TransactionContextManager(coro)
+
+    @asyncio.coroutine
+    def _begin_nested(self):
         if self._transaction is None:
             self._transaction = RootTransaction(self)
             yield from self._begin_impl()

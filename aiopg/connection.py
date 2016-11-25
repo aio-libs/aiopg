@@ -159,6 +159,11 @@ class Connection:
             if waiter is not None and not waiter.done():
                 waiter.set_exception(exc)
         else:
+            if self._fileno is None:
+                # connection closed
+                if waiter is not None and not waiter.done():
+                    waiter.set_exception(
+                        psycopg2.OperationalError("Connection closed"))
             if state == POLL_OK:
                 if self._writing:
                     self._loop.remove_writer(self._fileno)
@@ -208,6 +213,8 @@ class Connection:
         def cancel():
             self._waiter = create_future(self._loop)
             self._conn.cancel()
+            if not self._conn.isexecuting():
+                return
             try:
                 yield from asyncio.wait_for(self._waiter, timeout,
                                             loop=self._loop)
@@ -221,6 +228,8 @@ class Connection:
         except (asyncio.CancelledError, asyncio.TimeoutError) as exc:
             yield from asyncio.shield(cancel(), loop=self._loop)
             raise exc
+        except psycopg2.extensions.QueryCanceledError:
+            raise asyncio.CancelledError
         finally:
             self._waiter = None
 
@@ -346,14 +355,11 @@ class Connection:
     @asyncio.coroutine
     def cancel(self):
         """Cancel the current database operation."""
-        if self._waiter is not None:
-            self._waiter.cancel()
-        if not self._isexecuting():
+        if self._waiter is None:
             return
 
         @asyncio.coroutine
         def cancel():
-            self._waiter = create_future(self._loop)
             self._conn.cancel()
             try:
                 yield from self._waiter

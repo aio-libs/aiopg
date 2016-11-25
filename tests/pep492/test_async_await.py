@@ -215,6 +215,36 @@ async def test_transaction_context_manager_commit_once(pg_params, loop):
 
 
 @asyncio.coroutine
+async def test_transaction_context_manager_nested_commit(pg_params, loop):
+    sql = 'SELECT generate_series(1, 5);'
+    result = []
+    async with aiopg.sa.create_engine(loop=loop, **pg_params) as engine:
+        async with engine.acquire() as conn:
+            async with conn.begin_nested() as tr1:
+                async with conn.begin_nested() as tr2:
+                    async with conn.execute(sql) as cursor:
+                        async for v in cursor:
+                            result.append(v)
+                        assert tr1.is_active
+                        assert tr2.is_active
+                    assert result == [(1,), (2, ), (3, ), (4, ), (5, )]
+                    assert cursor.closed
+                assert not tr2.is_active
+
+                tr2 = await conn.begin_nested()
+                async with tr2:
+                    assert tr2.is_active
+                    async with conn.execute('SELECT 1;') as cursor:
+                        rec = await cursor.scalar()
+                        assert rec == 1
+                        cursor.close()
+                assert not tr2.is_active
+            assert not tr1.is_active
+
+    assert conn.closed
+
+
+@asyncio.coroutine
 async def test_sa_connection_execute(pg_params, loop):
     sql = 'SELECT generate_series(1, 5);'
     result = []
