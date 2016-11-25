@@ -96,6 +96,9 @@ class SAConnection:
                     processed_parameters.append(params)
                 post_processed_params = self._dialect.execute_sequence_format(
                     processed_parameters)
+
+                # _result_columns is a private API of Compiled,
+                # but I couldn't find any public API exposing this data.
                 result_map = compiled._result_columns
 
             else:
