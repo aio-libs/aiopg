@@ -2,7 +2,6 @@ import asyncio
 import json
 
 import aiopg
-from sqlalchemy import ColumnDefault
 
 from .connection import SAConnection
 from .exc import InvalidRequestError
@@ -17,30 +16,17 @@ except ImportError:  # pragma: no cover
 
 
 class APGCompiler_psycopg2(PGCompiler_psycopg2):
-    @asyncio.coroutine
-    def aconstruct_params(self, cursor, params=None,
-                          _group_number=None, _check=True):
-        pd = self.construct_params(params, _group_number, _check)
+    def construct_params(self, params=None, _group_number=None, _check=True):
+        pd = super().construct_params(params, _group_number, _check)
 
-        default_fields = ((f.key, f.default) for f in self.insert_prefetch
-                          if isinstance(f.default, ColumnDefault))
-
-        for key, default in default_fields:
-            pd[key] = (yield from self._exec_default(cursor, default))
+        for column in self.prefetch:
+            pd[column.key] = self._exec_default(column.default)
 
         return pd
 
-    @asyncio.coroutine
-    def _exec_default(self, cursor, default):
-        if default.is_sequence:
-            sql = "select nextval('{}')".format(
-                self.dialect.identifier_preparer.format_sequence(default))
-
-            return (yield from cursor.scalar(sql))
-        elif default.is_callable:
+    def _exec_default(self, default):
+        if default.is_callable:
             return default.arg(self.dialect)
-        elif default.is_clause_element:
-            return (yield from cursor.scalar(default.arg))
         else:
             return default.arg
 

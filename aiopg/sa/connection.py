@@ -83,9 +83,7 @@ class SAConnection:
                                                 "clause with positional "
                                                 "parameters")
 
-                compiled_parameters = [
-                    (yield from compiled.aconstruct_params(cursor, dp))
-                ]
+                compiled_parameters = [compiled.construct_params(dp)]
                 processed_parameters = []
                 processors = compiled._bind_processors
                 for compiled_params in compiled_parameters:

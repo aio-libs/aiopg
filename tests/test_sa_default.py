@@ -28,7 +28,7 @@ def engine(make_engine, loop):
             yield from conn.execute('DROP TABLE IF EXISTS sa_tbl4')
             yield from conn.execute('DROP SEQUENCE IF EXISTS id_sequence_seq')
             yield from conn.execute(CreateTable(tbl))
-            yield from conn.execute('CREATE SEQUENCE id_sequence_seq START 1')
+            yield from conn.execute('CREATE SEQUENCE id_sequence_seq')
 
         return engine
 
@@ -38,9 +38,9 @@ def engine(make_engine, loop):
 @asyncio.coroutine
 def test_default_fields(engine):
     with (yield from engine) as conn:
-        yield from conn.execute(sa.insert(tbl).values())
+        yield from conn.execute(tbl.insert().values())
 
-        res = yield from conn.execute(sa.select([tbl]))
+        res = yield from conn.execute(tbl.select())
         row = yield from res.fetchone()
         assert row.count == 100
         assert row.id_sequence == 1
@@ -53,12 +53,12 @@ def test_default_fields(engine):
 @asyncio.coroutine
 def test_default_fields_isnull(engine):
     with (yield from engine) as conn:
-        yield from conn.execute(sa.insert(tbl).values(
+        yield from conn.execute(tbl.insert().values(
             is_active=False,
             date=None,
         ))
 
-        res = yield from conn.execute(sa.select([tbl]))
+        res = yield from conn.execute(tbl.select())
         row = yield from res.fetchone()
         assert row.count == 100
         assert row.id_sequence == 1
@@ -72,14 +72,14 @@ def test_default_fields_isnull(engine):
 def test_default_fields_edit(engine):
     with (yield from engine) as conn:
         date = datetime.datetime.now()
-        yield from conn.execute(sa.insert(tbl).values(
+        yield from conn.execute(tbl.insert().values(
             name='edit name',
             is_active=False,
             date=date,
             count=1,
         ))
 
-        res = yield from conn.execute(sa.select([tbl]))
+        res = yield from conn.execute(tbl.select())
         row = yield from res.fetchone()
         assert row.count == 1
         assert row.id_sequence == 1
