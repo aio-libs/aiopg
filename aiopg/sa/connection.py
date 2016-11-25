@@ -68,6 +68,8 @@ class SAConnection:
         elif dp:
             dp = dp[0]
 
+        result_map = None
+
         if isinstance(query, str):
             yield from cursor.execute(query, dp)
         elif isinstance(query, ClauseElement):
@@ -94,18 +96,24 @@ class SAConnection:
                     processed_parameters.append(params)
                 post_processed_params = self._dialect.execute_sequence_format(
                     processed_parameters)
+
+                # _result_columns is a private API of Compiled,
+                # but I couldn't find any public API exposing this data.
+                result_map = compiled._result_columns
+
             else:
                 if dp:
                     raise exc.ArgumentError("Don't mix sqlalchemy DDL clause "
                                             "and execution with parameters")
                 post_processed_params = [compiled.construct_params()]
+                result_map = None
             yield from cursor.execute(str(compiled), post_processed_params[0])
         else:
             raise exc.ArgumentError("sql statement should be str or "
                                     "SQLAlchemy data "
                                     "selection/modification clause")
 
-        return ResultProxy(self, cursor, self._dialect)
+        return ResultProxy(self, cursor, self._dialect, result_map)
 
     @asyncio.coroutine
     def scalar(self, query, *multiparams, **params):
