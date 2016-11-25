@@ -2,20 +2,39 @@ import asyncio
 import json
 
 import aiopg
+
 from .connection import SAConnection
 from .exc import InvalidRequestError
-from ..utils import PY_35, _PoolContextManager, _PoolAcquireContextManager
 from ..connection import TIMEOUT
-
+from ..utils import PY_35, _PoolContextManager, _PoolAcquireContextManager
 
 try:
     from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
+    from sqlalchemy.dialects.postgresql.psycopg2 import PGCompiler_psycopg2
 except ImportError:  # pragma: no cover
     raise ImportError('aiopg.sa requires sqlalchemy')
 
 
+class APGCompiler_psycopg2(PGCompiler_psycopg2):
+    def construct_params(self, params=None, _group_number=None, _check=True):
+        pd = super().construct_params(params, _group_number, _check)
+
+        for column in self.prefetch:
+            pd[column.key] = self._exec_default(column.default)
+
+        return pd
+
+    def _exec_default(self, default):
+        if default.is_callable:
+            return default.arg(self.dialect)
+        else:
+            return default.arg
+
+
 _dialect = PGDialect_psycopg2(json_serializer=json.dumps,
                               json_deserializer=lambda x: x)
+
+_dialect.statement_compiler = APGCompiler_psycopg2
 _dialect.implicit_returning = True
 _dialect.supports_native_enum = True
 _dialect.supports_smallserial = True  # 9.2+
