@@ -10,6 +10,11 @@ CHANGES
 
 * Raise informative error on unexpected connection closing #191
 
+* Added support for python types columns issues #217
+
+* Added support for default values in SA table issues #206
+
+
 0.12.0 (2016-10-09)
 ^^^^^^^^^^^^^^^^^^^
 
