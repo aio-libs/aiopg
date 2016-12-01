@@ -290,16 +290,15 @@ def test_cancel_pending_op(connect, loop):
 
 @asyncio.coroutine
 def test_cancelled_connection_is_usable_asap(connect, loop):
-    fut = asyncio.Future(loop=loop)
-
     @asyncio.coroutine
-    def inner():
-        fut.set_result(None)
-        yield from cur.execute("SELECT pg_sleep(10)")
+    def inner(future, cursor):
+        future.set_result(None)
+        yield from cursor.execute("SELECT pg_sleep(10)")
 
+    fut = asyncio.Future(loop=loop)
     conn = yield from connect()
     cur = yield from conn.cursor()
-    task = ensure_future(inner(), loop=loop)
+    task = ensure_future(inner(fut, cur), loop=loop)
     yield from fut
     yield from asyncio.sleep(0.1, loop=loop)
 
