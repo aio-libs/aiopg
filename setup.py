@@ -15,7 +15,7 @@ if PY_VER < (3, 4):
 def read(f):
     return open(os.path.join(os.path.dirname(__file__), f)).read().strip()
 
-extras_require = {'sa': ['sqlalchemy>=0.9'], }
+extras_require = {'sa': ['sqlalchemy>=1.1'], }
 
 
 def read_version():

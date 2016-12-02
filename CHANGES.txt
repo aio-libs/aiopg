@@ -1,12 +1,12 @@
 CHANGES
 -------
 
-0.13.0 (2016-11-XX)
+0.13.0 (2016-12-02)
 ^^^^^^^^^^^^^^^^^^^
 
 * Add `async with` support to `.begin_nested()` #208
 
-* Fix connection.cancel() #212
+* Fix connection.cancel() #212 #223
 
 * Raise informative error on unexpected connection closing #191
 
