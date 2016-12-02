@@ -113,6 +113,8 @@ class Connection:
         self._timeout = timeout
         self._waiter = waiter
         self._writing = False
+        self._cancelling = False
+        self._cancellation_waiter = None
         self._echo = echo
         self._notifies = asyncio.Queue(loop=loop)
         self._weakref = weakref.ref(self)
@@ -199,8 +201,14 @@ class Connection:
 
     def _create_waiter(self, func_name):
         if self._waiter is not None:
-            raise RuntimeError('%s() called while another coroutine is '
-                               'already waiting for incoming data' % func_name)
+            if self._cancelling:
+                if not self._waiter.done():
+                    raise RuntimeError('%s() called while connection is '
+                                       'being cancelled' % func_name)
+            else:
+                raise RuntimeError('%s() called while another coroutine is '
+                                   'already waiting for incoming '
+                                   'data' % func_name)
         self._waiter = create_future(self._loop)
         return self._waiter
 
@@ -212,6 +220,8 @@ class Connection:
         @asyncio.coroutine
         def cancel():
             self._waiter = create_future(self._loop)
+            self._cancelling = True
+            self._cancellation_waiter = self._waiter
             self._conn.cancel()
             if not self._conn.isexecuting():
                 return
@@ -231,7 +241,13 @@ class Connection:
         except psycopg2.extensions.QueryCanceledError:
             raise asyncio.CancelledError
         finally:
-            self._waiter = None
+            if self._cancelling:
+                self._cancelling = False
+                if self._waiter is self._cancellation_waiter:
+                    self._waiter = None
+                self._cancellation_waiter = None
+            else:
+                self._waiter = None
 
     def _isexecuting(self):
         return self._conn.isexecuting()

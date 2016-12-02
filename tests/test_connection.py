@@ -3,6 +3,7 @@ import aiopg
 import gc
 import psycopg2
 import psycopg2.extras
+import psycopg2.extensions
 import pytest
 import socket
 import time
@@ -285,6 +286,65 @@ def test_cancel_pending_op(connect, loop):
 
     with pytest.raises(asyncio.CancelledError):
         yield from task
+
+
+@asyncio.coroutine
+def test_cancelled_connection_is_usable_asap(connect, loop):
+    @asyncio.coroutine
+    def inner(future, cursor):
+        future.set_result(None)
+        yield from cursor.execute("SELECT pg_sleep(10)")
+
+    fut = asyncio.Future(loop=loop)
+    conn = yield from connect()
+    cur = yield from conn.cursor()
+    task = ensure_future(inner(fut, cur), loop=loop)
+    yield from fut
+    yield from asyncio.sleep(0.1, loop=loop)
+
+    task.cancel()
+
+    for tick in range(100):
+        yield from asyncio.sleep(0, loop=loop)
+        status = conn._conn.get_transaction_status()
+        if status == psycopg2.extensions.TRANSACTION_STATUS_IDLE:
+            cur = yield from conn.cursor()
+            yield from cur.execute("SELECT 1")
+            ret = yield from cur.fetchone()
+            assert (1,) == ret
+            break
+    else:
+        assert False, "Cancelled connection transaction status never got idle"
+
+
+@asyncio.coroutine
+def test_cancelled_connection_is_not_usable_until_cancellation(connect, loop):
+    @asyncio.coroutine
+    def inner(future, cursor):
+        future.set_result(None)
+        yield from cursor.execute("SELECT pg_sleep(10)")
+
+    fut = asyncio.Future(loop=loop)
+    conn = yield from connect()
+    cur = yield from conn.cursor()
+    task = ensure_future(inner(fut, cur), loop=loop)
+    yield from fut
+    yield from asyncio.sleep(0.1, loop=loop)
+
+    task.cancel()
+
+    for i in range(100):
+        yield from asyncio.sleep(0)
+        if conn._cancelling:
+            break
+    else:
+        assert False, "Connection did not start cancelling"
+
+    cur = yield from conn.cursor()
+    with pytest.raises(RuntimeError) as e:
+        yield from cur.execute('SELECT 1')
+    assert str(e.value) == ('cursor.execute() called while connection '
+                            'is being cancelled')
 
 
 @asyncio.coroutine
