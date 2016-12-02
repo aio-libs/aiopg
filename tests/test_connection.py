@@ -304,8 +304,10 @@ def test_cancelled_connection_is_usable_asap(connect, loop):
 
     task.cancel()
 
+    delay = 0.001
+
     for tick in range(100):
-        yield from asyncio.sleep(0, loop=loop)
+        yield from asyncio.sleep(delay, loop=loop)
         status = conn._conn.get_transaction_status()
         if status == psycopg2.extensions.TRANSACTION_STATUS_IDLE:
             cur = yield from conn.cursor()
@@ -313,6 +315,7 @@ def test_cancelled_connection_is_usable_asap(connect, loop):
             ret = yield from cur.fetchone()
             assert (1,) == ret
             break
+        delay *= 2
     else:
         assert False, "Cancelled connection transaction status never got idle"
 
