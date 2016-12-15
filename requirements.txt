@@ -5,7 +5,7 @@ ipdb==0.10.1
 ipython==5.1.0
 flake8==3.2.1
 wheel==0.29.0
-setuptools==31.0.0
+setuptools==32.0.0
 -e .[sa]
 sphinx==1.5.1
 tox==2.5.0
