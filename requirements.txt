@@ -1,4 +1,4 @@
-coverage==4.2
+coverage==4.3
 docker-py==1.10.6
 docutils==0.13.1
 ipdb==0.10.1
