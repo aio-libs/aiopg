@@ -255,6 +255,7 @@ class _PoolCursorContextManager:
                 yield from conn.__aexit__(exc_type, exc_val, exc_tb)
                 self._conn = None
 
+
 if not PY_35:
     try:
         from asyncio import coroutines
