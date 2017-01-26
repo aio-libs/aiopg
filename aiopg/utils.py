@@ -125,7 +125,7 @@ class _PoolAcquireContextManager(_ContextManager):
     __slots__ = ('_coro', '_conn', '_pool')
 
     def __init__(self, coro, pool):
-        self._coro = coro
+        super().__init__(coro)
         self._conn = None
         self._pool = pool
 
@@ -203,14 +203,22 @@ class _PoolCursorContextManager:
 
         with pool:
             <block>
+
+    It also allows the following idiom:
+    async with pool.cursor_context() as cur:
+        yield from cur.execute("SELECT 1")
     """
 
-    __slots__ = ('_pool', '_conn', '_cur')
+    __slots__ = ('_pool', '_conn', '_cur', '_conn_cur_co')
 
-    def __init__(self, pool, conn, cur):
+    def __init__(self, pool, conn, cur, conn_cur_co=None):
+        if conn_cur_co:
+            assert conn is None and cur is None
+
         self._pool = pool
         self._conn = conn
         self._cur = cur
+        self._conn_cur_co = conn_cur_co
 
     def __enter__(self):
         return self._cur
@@ -224,6 +232,28 @@ class _PoolCursorContextManager:
             self._conn = None
             self._cur = None
 
+    if PY_35:
+        @asyncio.coroutine
+        def __aenter__(self):
+            assert not self._conn and not self._cur
+            self._conn, self._cur = yield from self._conn_cur_co
+
+            yield from self._conn.__aenter__()
+            yield from self._cur.__aenter__()
+            return self
+
+        @asyncio.coroutine
+        def __aexit__(self, exc_type, exc_val, exc_tb):
+            conn = self._conn
+            cur = self._cur
+            self._pool = None  # releases cursor in conn __aexit__
+
+            try:
+                yield from cur.__aexit__(exc_type, exc_val, exc_tb)
+                self._cur = None
+            finally:
+                yield from conn.__aexit__(exc_type, exc_val, exc_tb)
+                self._conn = None
 
 if not PY_35:
     try:
