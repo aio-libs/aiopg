@@ -1,6 +1,6 @@
 import asyncio
 import sys
-
+import warnings
 
 PY_35 = sys.version_info >= (3, 5)
 PY_352 = sys.version_info >= (3, 5, 2)
@@ -232,14 +232,25 @@ class _PoolCursorContextManager:
             self._conn = None
             self._cur = None
 
-    if PY_35:
-        @asyncio.coroutine
-        def __aenter__(self):
+    @asyncio.coroutine
+    def _acquire_conn_cur(self):
             assert not self._conn and not self._cur
             self._conn, self._cur = yield from self._conn_cur_co
 
             yield from self._conn.__aenter__()
             yield from self._cur.__aenter__()
+
+    @asyncio.coroutine
+    def __await__(self):
+        if PY_35:
+            warnings.warn("This usage is deprecated, use 'async with` syntax",
+                          DeprecationWarning)
+        yield from self._acquire_conn_cur()
+
+    if PY_35:
+        @asyncio.coroutine
+        def __aenter__(self):
+            yield from self._acquire_conn_cur()
             return self
 
         @asyncio.coroutine

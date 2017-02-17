@@ -266,16 +266,7 @@ class Pool(asyncio.AbstractServer):
 
         return conn, cur
 
-    @asyncio.coroutine
     def cursor(self, name=None, cursor_factory=None,
-               scrollable=None, withhold=False, *, timeout=None):
-        """XXX"""
-        conn, cur = yield from self._create_conn_cur(
-            name=name, cursor_factory=cursor_factory, scrollable=scrollable,
-            withhold=withhold, timeout=timeout)
-        return _PoolCursorContextManager(self, conn, cur)
-
-    def cursor_context(self, name=None, cursor_factory=None,
                        scrollable=None, withhold=False, *, timeout=None):
         conn_cur_co = self._create_conn_cur(
             name=name, cursor_factory=cursor_factory, scrollable=scrollable,
