@@ -230,9 +230,6 @@ class _PoolCursorContextManager:
     def _init(self):
         assert not self._conn and not self._cur
         self._conn, self._cur = yield from self._conn_cur_co
-
-        yield from self._conn.__aenter__()
-        yield from self._cur.__aenter__()
         return self
 
     def __iter__(self):
@@ -260,7 +257,9 @@ class _PoolCursorContextManager:
         @asyncio.coroutine
         def __aenter__(self):
             yield from self._init()
-            return self
+            yield from self._conn.__aenter__()
+            yield from self._cur.__aenter__()
+            return self._cur
 
         @asyncio.coroutine
         def __aexit__(self, exc_type, exc_val, exc_tb):
