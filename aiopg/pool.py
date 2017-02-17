@@ -271,7 +271,7 @@ class Pool(asyncio.AbstractServer):
         conn_cur_co = self._create_conn_cur(
             name=name, cursor_factory=cursor_factory, scrollable=scrollable,
             withhold=withhold, timeout=timeout)
-        return _PoolCursorContextManager(self, None, None, conn_cur_co)
+        return _PoolCursorContextManager(self, conn_cur_co)
 
     def __enter__(self):
         raise RuntimeError(

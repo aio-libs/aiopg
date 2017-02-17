@@ -211,13 +211,9 @@ class _PoolCursorContextManager:
 
     __slots__ = ('_pool', '_conn', '_cur', '_conn_cur_co')
 
-    def __init__(self, pool, conn, cur, conn_cur_co=None):
-        if conn_cur_co:
-            assert conn is None and cur is None
-
+    def __init__(self, pool, conn_cur_co=None):
         self._pool = pool
-        self._conn = conn
-        self._cur = cur
+        self._conn = self._cur = None
         self._conn_cur_co = conn_cur_co
 
     def __enter__(self):
@@ -228,29 +224,30 @@ class _PoolCursorContextManager:
             self._cur.close()
             self._pool.release(self._conn)
         finally:
-            self._pool = None
             self._conn = None
             self._cur = None
 
     @asyncio.coroutine
-    def _acquire_conn_cur(self):
-            assert not self._conn and not self._cur
-            self._conn, self._cur = yield from self._conn_cur_co
+    def _init(self):
+        assert not self._conn and not self._cur
+        self._conn, self._cur = yield from self._conn_cur_co
 
-            yield from self._conn.__aenter__()
-            yield from self._cur.__aenter__()
+        yield from self._conn.__aenter__()
+        yield from self._cur.__aenter__()
 
     @asyncio.coroutine
     def __await__(self):
+        # this is using a trick similar to the one here:
+        # https://magicstack.github.io/asyncpg/current/_modules/asyncpg/pool.html
         if PY_35:
             warnings.warn("This usage is deprecated, use 'async with` syntax",
                           DeprecationWarning)
-        yield from self._acquire_conn_cur()
+        return self._init.__await__()
 
     if PY_35:
         @asyncio.coroutine
         def __aenter__(self):
-            yield from self._acquire_conn_cur()
+            yield from self._init()
             return self
 
         @asyncio.coroutine
