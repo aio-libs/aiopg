@@ -23,15 +23,23 @@ async def test_connect_context_manager(loop, pg_params):
         cursor.close()
     assert conn.closed
 
-
-async def test_cursor_context_manager(loop, pg_params):
-    async with aiopg.connect(loop=loop, **pg_params) as conn:
-        async with conn.cursor() as cursor:
+async def test_pool_cursor_context_manager(loop, pg_params):
+    async with aiopg.create_pool(loop=loop, **pg_params) as pool:
+        async with pool.cursor() as cursor:
             await cursor.execute('SELECT 42')
             resp = await cursor.fetchone()
             assert resp == (42, )
-    assert conn.closed
+        assert cursor.closed
+    assert pool.closed
 
+async def test_pool_cursor_await_context_manager(loop, pg_params):
+    async with aiopg.create_pool(loop=loop, **pg_params) as pool:
+        with (await pool.cursor()) as cursor:
+            await cursor.execute('SELECT 42')
+            resp = await cursor.fetchone()
+            assert resp == (42, )
+        assert cursor.closed
+    assert pool.closed
 
 async def test_connection_context_manager(make_connection):
     conn = await make_connection()
