@@ -259,10 +259,15 @@ class Pool(asyncio.AbstractServer):
     @asyncio.coroutine
     def _create_conn_cur(self, name=None, cursor_factory=None,
                          scrollable=None, withhold=False, *, timeout=None):
+
         conn = yield from self.acquire()
-        cur = yield from conn.cursor(name=name, cursor_factory=cursor_factory,
-                                     scrollable=scrollable, withhold=withhold,
-                                     timeout=timeout)
+        try:
+            cur = yield from conn.cursor(name=name, cursor_factory=cursor_factory,
+                                         scrollable=scrollable, withhold=withhold,
+                                         timeout=timeout)
+        except:
+            self.release(conn)
+            raise
 
         return conn, cur
 

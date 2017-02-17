@@ -235,14 +235,26 @@ class _PoolCursorContextManager:
         yield from self._cur.__aenter__()
         return self
 
-    @asyncio.coroutine
-    def __await__(self):
-        # this is using a trick similar to the one here:
-        # https://magicstack.github.io/asyncpg/current/_modules/asyncpg/pool.html
+    def __iter__(self):
+        # This will get hit if you use "yield from pool.cursor()"
         if PY_35:
             warnings.warn("This usage is deprecated, use 'async with` syntax",
                           DeprecationWarning)
-        return self._init.__await__()
+        return self._init()
+
+    def __await__(self):
+        # This will get hit directly if you "await pool.cursor()"
+        # this is using a trick similar to the one here:
+        # https://magicstack.github.io/asyncpg/current/_modules/asyncpg/pool.html
+        # however since `self._init()` is an "asyncio.coroutine" we can't use
+        # just return self._init().__await__() as that returns a generator
+        # witout an "__await__" attribute, and we can't return a coroutine from
+        # here
+        if PY_35:
+            warnings.warn("This usage is deprecated, use 'async with` syntax",
+                          DeprecationWarning)
+        value = yield from self._init()
+        return value
 
     if PY_35:
         @asyncio.coroutine
