@@ -262,8 +262,10 @@ class Pool(asyncio.AbstractServer):
 
         conn = yield from self.acquire()
         try:
-            cur = yield from conn.cursor(name=name, cursor_factory=cursor_factory,
-                                         scrollable=scrollable, withhold=withhold,
+            cur = yield from conn.cursor(name=name,
+                                         cursor_factory=cursor_factory,
+                                         scrollable=scrollable,
+                                         withhold=withhold,
                                          timeout=timeout)
         except:
             self.release(conn)
