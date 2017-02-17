@@ -193,20 +193,19 @@ class _PoolConnectionContextManager:
 class _PoolCursorContextManager:
     """Context manager.
 
-    This enables the following idiom for acquiring and releasing a
+    This enables the following idioms for acquiring and releasing a
     cursor around a block:
 
         with (yield from pool.cursor()) as cur:
+            yield from cur.execute("SELECT 1")
+
+        async with pool.cursor() as cur:
             yield from cur.execute("SELECT 1")
 
     while failing loudly when accidentally using:
 
         with pool:
             <block>
-
-    It also allows the following idiom:
-    async with pool.cursor_context() as cur:
-        yield from cur.execute("SELECT 1")
     """
 
     __slots__ = ('_pool', '_conn', '_cur', '_conn_cur_co')
@@ -234,6 +233,7 @@ class _PoolCursorContextManager:
 
         yield from self._conn.__aenter__()
         yield from self._cur.__aenter__()
+        return self
 
     @asyncio.coroutine
     def __await__(self):
