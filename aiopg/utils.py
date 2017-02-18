@@ -163,6 +163,10 @@ class _PoolConnectionContextManager:
         self._pool = pool
         self._conn = conn
 
+    @property
+    def conn(self):
+        return self._conn
+
     def __enter__(self):
         assert self._conn
         return self._conn
@@ -208,12 +212,12 @@ class _PoolCursorContextManager:
             <block>
     """
 
-    __slots__ = ('_pool', '_conn', '_cur', '_conn_cur_co')
+    __slots__ = ('_pool', '_cursor_kwargs', '_cur')
 
-    def __init__(self, pool, conn_cur_co=None):
+    def __init__(self, pool, cursor_kwargs=None):
         self._pool = pool
-        self._conn = self._cur = None
-        self._conn_cur_co = conn_cur_co
+        self._cursor_kwargs = cursor_kwargs
+        self._cur = None
 
     def __enter__(self):
         return self._cur
@@ -221,15 +225,26 @@ class _PoolCursorContextManager:
     def __exit__(self, *args):
         try:
             self._cur.close()
-            self._pool.release(self._conn)
+            self._pool.__exit__(*args)
         finally:
-            self._conn = None
             self._cur = None
 
     @asyncio.coroutine
-    def _init(self):
-        assert not self._conn and not self._cur
-        self._conn, self._cur = yield from self._conn_cur_co
+    def _init_pool(self, with_aenter):
+        assert not self._cur
+
+        if with_aenter:
+            conn = None
+        else:
+            conn = yield from self._pool.acquire()
+
+        # self._pool now morphs into a _PoolConnectionContextManager
+        self._pool = _PoolConnectionContextManager(self._pool, conn)
+
+    @asyncio.coroutine
+    def _yield_await_init(self):
+        yield from self._init_pool(False)
+        self._cur = yield from self._pool.conn.cursor(**self._cursor_kwargs)
         return self
 
     def __iter__(self):
@@ -237,7 +252,7 @@ class _PoolCursorContextManager:
         if PY_35:
             warnings.warn("This usage is deprecated, use 'async with` syntax",
                           DeprecationWarning)
-        return self._init()
+        return self._yield_await_init()
 
     def __await__(self):
         # This will get hit directly if you "await pool.cursor()"
@@ -250,29 +265,27 @@ class _PoolCursorContextManager:
         if PY_35:
             warnings.warn("This usage is deprecated, use 'async with` syntax",
                           DeprecationWarning)
-        value = yield from self._init()
+        value = yield from self._yield_await_init()
         return value
 
     if PY_35:
         @asyncio.coroutine
         def __aenter__(self):
-            yield from self._init()
-            yield from self._conn.__aenter__()
-            yield from self._cur.__aenter__()
+            yield from self._init_pool(True)
+
+            # this will create the connection
+            yield from self._pool.__aenter__()
+            self._cur = yield from self._pool.conn.cursor(**self._cursor_kwargs)
             return self._cur
 
         @asyncio.coroutine
         def __aexit__(self, exc_type, exc_val, exc_tb):
-            conn = self._conn
-            cur = self._cur
-            self._pool = None  # releases cursor in conn __aexit__
-
             try:
-                yield from cur.__aexit__(exc_type, exc_val, exc_tb)
+                yield from self._cur.__aexit__(exc_type, exc_val, exc_tb)
                 self._cur = None
             finally:
-                yield from conn.__aexit__(exc_type, exc_val, exc_tb)
-                self._conn = None
+                yield from self._pool.__aexit__(exc_type, exc_val, exc_tb)
+                self._pool = None
 
 
 if not PY_35:

@@ -275,10 +275,10 @@ class Pool(asyncio.AbstractServer):
 
     def cursor(self, name=None, cursor_factory=None, scrollable=None,
                withhold=False, *, timeout=None):
-        conn_cur_co = self._create_conn_cur(
-            name=name, cursor_factory=cursor_factory, scrollable=scrollable,
-            withhold=withhold, timeout=timeout)
-        return _PoolCursorContextManager(self, conn_cur_co)
+        cursor_kwargs = dict(name=name, cursor_factory=cursor_factory,
+                             scrollable=scrollable, withhold=withhold,
+                             timeout=timeout)
+        return _PoolCursorContextManager(self, cursor_kwargs)
 
     def __enter__(self):
         raise RuntimeError(
