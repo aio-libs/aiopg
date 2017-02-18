@@ -256,23 +256,6 @@ class Pool(asyncio.AbstractServer):
             fut = ensure_future(self._wakeup(), loop=self._loop)
         return fut
 
-    @asyncio.coroutine
-    def _create_conn_cur(self, name=None, cursor_factory=None,
-                         scrollable=None, withhold=False, *, timeout=None):
-
-        conn = yield from self.acquire()
-        try:
-            cur = yield from conn.cursor(name=name,
-                                         cursor_factory=cursor_factory,
-                                         scrollable=scrollable,
-                                         withhold=withhold,
-                                         timeout=timeout)
-        except:
-            self.release(conn)
-            raise
-
-        return conn, cur
-
     def cursor(self, name=None, cursor_factory=None, scrollable=None,
                withhold=False, *, timeout=None):
         cursor_kwargs = dict(name=name, cursor_factory=cursor_factory,
