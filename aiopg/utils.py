@@ -275,7 +275,8 @@ class _PoolCursorContextManager:
 
             # this will create the connection
             yield from self._pool.__aenter__()
-            self._cur = yield from self._pool.conn.cursor(**self._cursor_kwargs)
+            self._cur = yield from self._pool.conn.cursor(
+                **self._cursor_kwargs)
             return self._cur
 
         @asyncio.coroutine
