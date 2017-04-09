@@ -8,7 +8,7 @@ wheel==0.29.0
 setuptools==34.3.0
 -e .[sa]
 sphinx==1.5.5
-tox==2.6.0
+tox==2.7.0
 pytest==3.0.7
 pytest-cov==2.4.0
 pytest-sugar==0.8.0
