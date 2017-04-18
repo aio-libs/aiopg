@@ -12,7 +12,7 @@ asynchronous features of the Psycopg database driver.
 Example
 -------
 
-::
+.. code-block:: python
 
     import asyncio
     import aiopg
@@ -36,7 +36,7 @@ Example
 Example of SQLAlchemy optional integration
 ------------------------------------------
 
-::
+.. code-block:: python
 
    import asyncio
    from aiopg.sa import create_engine
