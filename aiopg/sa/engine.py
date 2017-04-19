@@ -152,14 +152,14 @@ class Engine:
         """Wait for closing all engine's connections."""
         yield from self._pool.wait_closed()
 
-    def acquire(self):
+    def acquire(self, timeout=None):
         """Get a connection from pool."""
-        coro = self._acquire()
+        coro = self._acquire(timeout=timeout)
         return _EngineAcquireContextManager(coro, self)
 
     @asyncio.coroutine
-    def _acquire(self):
-        raw = yield from self._pool.acquire()
+    def _acquire(self, timeout=None):
+        raw = yield from self._pool.acquire(timeout=timeout)
         conn = SAConnection(raw, self)
         return conn
 

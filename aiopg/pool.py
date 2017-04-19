@@ -156,13 +156,13 @@ class Pool(asyncio.AbstractServer):
 
         self._closed = True
 
-    def acquire(self):
+    def acquire(self, timeout=None):
         """Acquire free connection from the pool."""
-        coro = self._acquire()
+        coro = self._acquire(timeout=timeout)
         return _PoolAcquireContextManager(coro, self)
 
     @asyncio.coroutine
-    def _acquire(self):
+    def _acquire(self, timeout=None):
         if self._closing:
             raise RuntimeError("Cannot acquire connection after closing pool")
         with (yield from self._cond):
@@ -177,7 +177,11 @@ class Pool(asyncio.AbstractServer):
                         yield from self._on_connect(conn)
                     return conn
                 else:
-                    yield from self._cond.wait()
+                    waiter = self._cond.wait()
+                    if timeout is not None:
+                        yield from asyncio.wait_for(waiter, timeout=timeout, loop=self._loop)
+                    else:
+                        yield from waiter
 
     @asyncio.coroutine
     def _fill_free_pool(self, override_min):
