@@ -1,7 +1,7 @@
 coverage==4.3.4
 docker-py==1.10.6
 docutils==0.13.1
-ipdb==0.10.2
+ipdb==0.10.3
 ipython==5.3.0
 flake8==3.3.0
 wheel==0.29.0
