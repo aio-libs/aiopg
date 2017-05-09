@@ -124,7 +124,7 @@ so we introduce support for :term:`sqlalchemy` query builders::
 
 We believe constructions like ``tbl.insert().values(val='abc')`` and
 ``tbl.select().where(tbl.c.val=='abc')`` to be very handy and
-convinient.
+convenient.
 
 
 Installation
