@@ -222,7 +222,11 @@ class Connection:
             self._waiter = create_future(self._loop)
             self._cancelling = True
             self._cancellation_waiter = self._waiter
-            self._conn.cancel()
+            try:
+                self._conn.cancel()
+            except psycopg2.OperationalError:
+                self._close()
+                return
             if not self._conn.isexecuting():
                 return
             try:
