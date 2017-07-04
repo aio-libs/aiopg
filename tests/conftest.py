@@ -166,7 +166,7 @@ def pg_server(unused_port, docker, session_id, pg_tag, request):
 
 @pytest.fixture
 def pg_params(pg_server):
-    return dict(**pg_server.attrs['pg_params'])
+    return dict(**pg_server['pg_params'])
 
 
 @pytest.yield_fixture()
