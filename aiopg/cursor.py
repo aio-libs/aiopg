@@ -112,6 +112,7 @@ class Cursor:
         try:
             yield from self._conn._poll(waiter, timeout)
         except asyncio.TimeoutError:
+            yield from self._conn.cancel()
             self._impl.close()
             raise
 
