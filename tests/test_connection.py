@@ -150,7 +150,6 @@ def test_dsn(connect, pg_params):
 
     pg_params = pg_params.copy()
     pg_params['password'] = 'x' * len(pg_params['password'])
-
     pg_params['dbname'] = pg_params['database']
     del pg_params['database']
 

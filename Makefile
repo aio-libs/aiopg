@@ -12,10 +12,10 @@ flake:
 	flake8 aiopg tests $$extra
 
 test: flake
-	py.test -q tests
+	pytest -q tests
 
 vtest: flake
-	py.test tests
+	pytest tests
 
 cov cover coverage: flake
 	py.test --cov=aiopg --cov-report=html --cov-report=term tests
