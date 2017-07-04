@@ -12,7 +12,7 @@ import time
 import uuid
 import warnings
 
-from docker import Client as DockerClient
+from docker.client import DockerClient
 
 import aiopg
 from aiopg import sa
@@ -126,20 +126,20 @@ def pytest_generate_tests(metafunc):
 @pytest.yield_fixture(scope='session')
 def pg_server(unused_port, docker, session_id, pg_tag, request):
     if not request.config.option.no_pull:
-        docker.pull('postgres:{}'.format(pg_tag))
-    container = docker.create_container(
+        docker.images.pull('postgres:{}'.format(pg_tag))
+    container = docker.containers.create(
         image='postgres:{}'.format(pg_tag),
         name='aiopg-test-server-{}-{}'.format(pg_tag, session_id),
-        ports=[5432],
+        ports={5432: 5432},
         detach=True,
     )
-    docker.start(container=container['Id'])
-    inspection = docker.inspect_container(container['Id'])
-    host = inspection['NetworkSettings']['IPAddress']
+    container.start()
+    container.reload()
+    host = container.attrs['NetworkSettings']['IPAddress']
     pg_params = dict(database='postgres',
                      user='postgres',
                      password='mysecretpassword',
-                     host=host,
+                     host='localhost',
                      port=5432)
     delay = 0.001
     for i in range(100):
@@ -155,18 +155,15 @@ def pg_server(unused_port, docker, session_id, pg_tag, request):
             delay *= 2
     else:
         pytest.fail("Cannot start postgres server")
-    container['host'] = host
-    container['port'] = 5432
-    container['pg_params'] = pg_params
+    container.attrs['pg_params'] = pg_params
     yield container
 
-    docker.kill(container=container['Id'])
-    docker.remove_container(container['Id'])
+    container.remove(force=True)
 
 
 @pytest.fixture
 def pg_params(pg_server):
-    return dict(**pg_server['pg_params'])
+    return dict(**pg_server.attrs['pg_params'])
 
 
 @pytest.yield_fixture()

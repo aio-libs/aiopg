@@ -39,10 +39,17 @@ def test_driver(engine):
 
 
 def test_dsn(engine, pg_params):
+    pg_params = pg_params.copy()
     pg_params['password'] = 'x' * len(pg_params['password'])
-    dsn = ('dbname={database} user={user} password={password} '
-           'host={host} port={port}').format_map(pg_params)
-    assert dsn == engine.dsn
+
+    pg_params['dbname'] = pg_params['database']
+    del pg_params['database']
+
+    pg_params['port'] = str(pg_params['port'])
+
+    # dictionary keys are unsorted so we need this hack
+    dsn_params = dict([tpl.split('=') for tpl in engine.dsn.split(' ')])
+    assert dsn_params == pg_params
 
 
 def test_minsize(engine):

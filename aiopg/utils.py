@@ -1,6 +1,5 @@
 import asyncio
 import sys
-import warnings
 
 PY_35 = sys.version_info >= (3, 5)
 PY_352 = sys.version_info >= (3, 5, 2)
@@ -230,7 +229,7 @@ class _PoolCursorContextManager:
             self._cur = None
 
     @asyncio.coroutine
-    def _init_pool(self, with_aenter):
+    def _init_cursor(self, with_aenter):
         assert not self._cur
 
         if with_aenter:
@@ -241,18 +240,23 @@ class _PoolCursorContextManager:
         # self._pool now morphs into a _PoolConnectionContextManager
         self._pool = _PoolConnectionContextManager(self._pool, conn)
 
-    @asyncio.coroutine
-    def _yield_await_init(self):
-        yield from self._init_pool(False)
-        self._cur = yield from self._pool.conn.cursor(**self._cursor_kwargs)
-        return self
+        if with_aenter:
+            # this will create the connection
+            yield from self._pool.__aenter__()
+            self._cur = yield from self._pool.conn.cursor(
+                **self._cursor_kwargs)
 
+            return self._cur
+        else:
+            self._cur = yield from self._pool.conn.cursor(
+                **self._cursor_kwargs)
+            return self
+
+    @asyncio.coroutine
     def __iter__(self):
         # This will get hit if you use "yield from pool.cursor()"
-        if PY_35:
-            warnings.warn("This usage is deprecated, use 'async with` syntax",
-                          DeprecationWarning)
-        return self._yield_await_init()
+        result = yield from self._init_cursor(False)
+        return result
 
     def __await__(self):
         # This will get hit directly if you "await pool.cursor()"
@@ -260,24 +264,16 @@ class _PoolCursorContextManager:
         # https://magicstack.github.io/asyncpg/current/_modules/asyncpg/pool.html
         # however since `self._init()` is an "asyncio.coroutine" we can't use
         # just return self._init().__await__() as that returns a generator
-        # witout an "__await__" attribute, and we can't return a coroutine from
+        # without an "__await__" attribute and we can't return a coroutine from
         # here
-        if PY_35:
-            warnings.warn("This usage is deprecated, use 'async with` syntax",
-                          DeprecationWarning)
-        value = yield from self._yield_await_init()
+        value = yield from self._init_cursor(False)
         return value
 
     if PY_35:
         @asyncio.coroutine
         def __aenter__(self):
-            yield from self._init_pool(True)
-
-            # this will create the connection
-            yield from self._pool.__aenter__()
-            self._cur = yield from self._pool.conn.cursor(
-                **self._cursor_kwargs)
-            return self._cur
+            value = yield from self._init_cursor(True)
+            return value
 
         @asyncio.coroutine
         def __aexit__(self, exc_type, exc_val, exc_tb):

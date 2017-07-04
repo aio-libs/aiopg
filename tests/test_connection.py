@@ -147,10 +147,18 @@ def test_set_session(connect):
 @asyncio.coroutine
 def test_dsn(connect, pg_params):
     conn = yield from connect()
+
+    pg_params = pg_params.copy()
     pg_params['password'] = 'x' * len(pg_params['password'])
-    dsn = ('dbname={database} user={user} password={password} '
-           'host={host} port={port}').format_map(pg_params)
-    assert dsn == conn.dsn
+
+    pg_params['dbname'] = pg_params['database']
+    del pg_params['database']
+
+    pg_params['port'] = str(pg_params['port'])
+
+    # dictionary keys are unsorted so we need this hack
+    dsn_params = dict([tpl.split('=') for tpl in conn.dsn.split(' ')])
+    assert dsn_params == pg_params
 
 
 @asyncio.coroutine
@@ -207,11 +215,12 @@ def test_autocommit(connect):
 def test_isolation_level(connect):
     conn = yield from connect()
 
-    assert 0 == conn.isolation_level
+    assert psycopg2.extensions.ISOLATION_LEVEL_DEFAULT == conn.isolation_level
     with pytest.raises(psycopg2.ProgrammingError):
-        yield from conn.set_isolation_level(1)
+        yield from conn.set_isolation_level(
+            psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
 
-    assert 0 == conn.isolation_level
+    assert psycopg2.extensions.ISOLATION_LEVEL_DEFAULT == conn.isolation_level
 
 
 @asyncio.coroutine
@@ -494,7 +503,7 @@ def test_connect_to_unsupported_port(unused_port, loop, pg_params):
     pg_params['port'] = port
 
     with pytest.raises(psycopg2.OperationalError):
-        yield from aiopg.connect(loop=loop, **pg_params)
+        yield from aiopg.connect(loop=loop, timeout=3, **pg_params)
 
 
 @asyncio.coroutine
@@ -619,7 +628,7 @@ def test_close_cursor_on_timeout_error(connect):
 @asyncio.coroutine
 def test_issue_111_crash_on_connect_error(loop):
     import aiopg.connection
-    with pytest.raises(psycopg2.OperationalError):
+    with pytest.raises(psycopg2.ProgrammingError):
         yield from aiopg.connection.connect('baddsn:1', loop=loop)
 
 
@@ -681,7 +690,8 @@ def test_connection_on_server_restart(connect, pg_server, docker):
     yield from cur.execute('SELECT 1')
     ret = yield from cur.fetchone()
     assert (1,) == ret
-    docker.restart(container=pg_server['Id'])
+
+    pg_server.restart()
 
     with pytest.raises(psycopg2.OperationalError):
         yield from cur.execute('SELECT 1')
