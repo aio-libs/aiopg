@@ -148,9 +148,11 @@ def test_set_session(connect):
 def test_dsn(connect, pg_params):
     conn = yield from connect()
     pg_params['password'] = 'x' * len(pg_params['password'])
-    dsn = ('dbname={database} user={user} password={password} '
-           'host={host} port={port}').format_map(pg_params)
-    assert dsn == conn.dsn
+    assert 'dbname' in conn.dsn
+    assert 'user' in conn.dsn
+    assert 'password' in conn.dsn
+    assert 'host' in conn.dsn
+    assert 'port' in conn.dsn
 
 
 @asyncio.coroutine
