@@ -135,7 +135,6 @@ def pg_server(unused_port, docker, session_id, pg_tag, request):
     )
     container.start()
     container.reload()
-    host = container.attrs['NetworkSettings']['IPAddress']
     pg_params = dict(database='postgres',
                      user='postgres',
                      password='mysecretpassword',
