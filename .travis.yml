@@ -1,39 +1,40 @@
-sudo: required
+sudo: false
+dist: trusty
 language: python
 
 services:
-  - docker
+- docker
 
 python:
-  - "3.4"
-  - "3.5"
-  - "3.6-dev"
+- "3.4"
+- "3.5"
+- "3.6"
 
 install:
-  - python setup.py install
-  - pip install -Ur requirements.txt
-  - pip install codecov
+- python setup.py install
+- pip install -Ur requirements.txt
+- pip install codecov
 
 script:
-  - make cov-ci
-  - python setup.py check -rms
+- make cov-ci
+- python setup.py check -rms
 
 env:
   global:
-    - PYTHON=python
+  - PYTHON=python
   matrix:
-    - PYTHONASYNCIODEBUG=x
-    - PYTHONASYNCIODEBUG=
+  - PYTHONASYNCIODEBUG=x
+  - PYTHONASYNCIODEBUG=
 
 cache:
   directories:
   - $HOME/.cache/pip
 
 before_cache:
-  - rm -f $HOME/.cache/pip/log/debug.log
+- rm -f $HOME/.cache/pip/log/debug.log
 
 after_script:
-  - codecov
+- codecov
 
 deploy:
   provider: pypi

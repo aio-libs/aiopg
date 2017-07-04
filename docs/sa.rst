@@ -382,7 +382,7 @@ ResultProxy
    case-sensitive column name, or by :class:`sqlalchemy.schema.Column``
    object. e.g.::
 
-      async for row in onn.execute(...):
+      async for row in conn.execute(...):
           col1 = row[0]    # access via integer position
           col2 = row['col2']   # access via name
           col3 = row[mytable.c.mycol] # access via Column object.

@@ -22,7 +22,7 @@ cov cover coverage: flake
 	@echo "open file://`pwd`/htmlcov/index.html"
 
 cov-ci: flake
-	py.test -v --cov=aiopg --cov-report=term tests --pg_tag all
+	py.test -v --cov --cov-report=term tests --pg_tag all
 
 clean:
 	find . -name __pycache__ |xargs rm -rf
