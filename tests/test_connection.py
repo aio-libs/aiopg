@@ -691,7 +691,7 @@ def test_connection_on_server_restart(connect, pg_server, docker):
     ret = yield from cur.fetchone()
     assert (1,) == ret
 
-    pg_server.restart()
+    docker.restart(container=pg_server['Id'])
 
     with pytest.raises(psycopg2.OperationalError):
         yield from cur.execute('SELECT 1')
