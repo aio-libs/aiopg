@@ -12,4 +12,4 @@ pytest-sugar==0.8.0
 pytest-timeout==1.2.0
 sphinxcontrib-asyncio==0.2.0
 sqlalchemy==1.1.11
-psycopg2==2.6.2
+psycopg2==2.7.1
