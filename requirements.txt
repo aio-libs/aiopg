@@ -11,5 +11,5 @@ pytest-cov==2.5.1
 pytest-sugar==0.8.0
 pytest-timeout==1.2.0
 sphinxcontrib-asyncio==0.2.0
-sqlalchemy==1.1.11
+sqlalchemy==1.1.12
 psycopg2==2.6.2
