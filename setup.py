@@ -1,15 +1,21 @@
 import os
+import platform
 import re
 import sys
 from setuptools import setup
 
 
-install_requires = ['psycopg2>=2.5.2']
-
 PY_VER = sys.version_info
+PY_IMPL = platform.python_implementation()
 
 if PY_VER < (3, 4):
     raise RuntimeError("aiopg doesn't suppport Python earlier than 3.4")
+
+
+if PY_IMPL == 'PyPy':
+    install_requires = ['psycopg2cffi>=2.7.5']
+else:
+    install_requires = ['psycopg2>=2.5.2']
 
 
 def read(f):
@@ -35,6 +41,7 @@ classifiers = [
     'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3.4',
     'Programming Language :: Python :: 3.5',
+    'Programming Language :: Python :: Implementation :: PyPy',
     'Operating System :: POSIX',
     'Operating System :: MacOS :: MacOS X',
     'Operating System :: Microsoft :: Windows',

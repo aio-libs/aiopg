@@ -1,6 +1,17 @@
+import platform
 import re
 import sys
 from collections import namedtuple
+
+
+PY_IMPL = platform.python_implementation()
+
+# map psycopg2cffi to psycopg2, so any code
+# that imports psycopg2 will use psycopg2cffi
+if PY_IMPL == 'PyPy':
+    from psycopg2cffi import compat
+    compat.register()
+
 
 from .connection import connect, Connection, TIMEOUT as DEFAULT_TIMEOUT
 from .cursor import Cursor
