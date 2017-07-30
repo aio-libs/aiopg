@@ -10,7 +10,7 @@ sa = pytest.importorskip("aiopg.sa")  # noqa
 from sqlalchemy import MetaData, Table, Column, Integer, String
 from sqlalchemy.schema import DropTable, CreateTable
 
-import psycopg2
+from aiopg import psycopg2_compat as psycopg2
 
 
 meta = MetaData()

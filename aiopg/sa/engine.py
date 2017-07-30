@@ -6,10 +6,15 @@ import aiopg
 from .connection import SAConnection
 from .exc import InvalidRequestError
 from ..connection import TIMEOUT
-from ..utils import PY_35, _PoolContextManager, _PoolAcquireContextManager
+from ..utils import \
+    PY_35, _PoolContextManager, _PoolAcquireContextManager, IS_PYPY
 
 try:
-    from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
+    if IS_PYPY:
+        from sqlalchemy.dialects.postgresql.psycopg2cffi import \
+            PGDialect_psycopg2cffi as PGDialect_psycopg2
+    else:
+        from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
     from sqlalchemy.dialects.postgresql.psycopg2 import PGCompiler_psycopg2
 except ImportError:  # pragma: no cover
     raise ImportError('aiopg.sa requires sqlalchemy')

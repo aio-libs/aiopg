@@ -3,7 +3,6 @@ import collections
 import contextlib
 import gc
 import logging
-import psycopg2
 import pytest
 import re
 import socket
@@ -15,6 +14,7 @@ import warnings
 from docker import Client as DockerClient
 
 import aiopg
+from aiopg import psycopg2_compat as psycopg2
 from aiopg import sa
 
 

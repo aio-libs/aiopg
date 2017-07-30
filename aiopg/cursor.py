@@ -1,7 +1,7 @@
 import asyncio
 import warnings
 
-import psycopg2
+from . import psycopg2_compat as psycopg2
 
 from .log import logger
 from .utils import PY_35, PY_352

@@ -1,6 +1,12 @@
 CHANGES
 -------
 
+release-candidate
+^^^^^^^^^^^^^^^^^
+
+* Add PyPy support through `psycopg2cffi` #361
+
+
 0.13.0 (2016-12-02)
 ^^^^^^^^^^^^^^^^^^^
 

@@ -4,7 +4,7 @@ import sys
 import warnings
 
 
-from psycopg2.extensions import TRANSACTION_STATUS_IDLE
+from .psycopg2_compat.extensions import TRANSACTION_STATUS_IDLE
 
 from .connection import connect, TIMEOUT
 from .log import logger

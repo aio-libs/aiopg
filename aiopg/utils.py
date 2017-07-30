@@ -6,6 +6,7 @@ import sys
 PY_35 = sys.version_info >= (3, 5)
 PY_352 = sys.version_info >= (3, 5, 2)
 PY_IMPL = platform.python_implementation()
+IS_PYPY = (PY_IMPL == 'PyPy')
 
 if PY_35:
     from collections.abc import Coroutine
@@ -233,10 +234,3 @@ if not PY_35:
         coroutines._COROUTINE_TYPES += (_ContextManager,)
     except:
         pass
-
-
-# map psycopg2cffi to psycopg2, so any code
-# that imports psycopg2 will use psycopg2cffi
-if PY_IMPL == 'PyPy':
-    from psycopg2cffi import compat
-    compat.register()

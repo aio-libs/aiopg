@@ -1,9 +1,8 @@
 import asyncio
-import psycopg2
-import psycopg2.tz
 import pytest
 import time
 
+from aiopg import psycopg2_compat as psycopg2
 from aiopg.connection import TIMEOUT
 
 

@@ -1,7 +1,7 @@
 import asyncio
 import uuid
 
-from psycopg2.extras import Json
+from aiopg.psycopg2_compat.extras import Json
 
 
 @asyncio.coroutine

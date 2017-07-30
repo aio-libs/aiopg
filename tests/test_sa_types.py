@@ -1,7 +1,7 @@
 import asyncio
 from enum import Enum
 
-import psycopg2
+from aiopg import psycopg2_compat as psycopg2
 import pytest
 sa = pytest.importorskip("aiopg.sa")  # noqa
 

@@ -8,10 +8,10 @@ import warnings
 import weakref
 import platform
 
-import psycopg2
-from psycopg2.extensions import (
+from . import psycopg2_compat as psycopg2
+from .psycopg2_compat.extensions import (
     POLL_OK, POLL_READ, POLL_WRITE, POLL_ERROR)
-from psycopg2 import extras
+from .psycopg2_compat import extras
 
 from .cursor import Cursor
 from .utils import _ContextManager, PY_35, create_future

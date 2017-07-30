@@ -3,7 +3,7 @@ from unittest import mock
 import pytest
 import sys
 
-from psycopg2.extensions import TRANSACTION_STATUS_INTRANS
+from aiopg.psycopg2_compat.extensions import TRANSACTION_STATUS_INTRANS
 
 import aiopg
 from aiopg.connection import Connection, TIMEOUT

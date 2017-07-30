@@ -1,14 +1,12 @@
 import asyncio
 import aiopg
 import gc
-import psycopg2
-import psycopg2.extras
-import psycopg2.extensions
 import pytest
 import socket
 import time
 import sys
 
+from aiopg import psycopg2_compat as psycopg2
 from aiopg.connection import Connection, TIMEOUT
 from aiopg.cursor import Cursor
 from aiopg.utils import ensure_future, create_future
