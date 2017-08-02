@@ -1,5 +1,6 @@
 import asyncio
 from aiopg.connection import TIMEOUT
+from aiopg.utils import IS_PYPY
 
 import pytest
 sa = pytest.importorskip("aiopg.sa")  # noqa
@@ -35,7 +36,11 @@ def test_name(engine):
 
 
 def test_driver(engine):
-    assert 'psycopg2' == engine.driver
+    if IS_PYPY:
+        driver = 'psycopg2cffi'
+    else:
+        driver = 'psycopg2'
+    assert driver == engine.driver
 
 
 def test_dsn(engine, pg_params):
