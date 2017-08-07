@@ -588,3 +588,25 @@ def test_pool_on_connect(create_pool):
         yield from cur.execute('SELECT 1')
 
     assert called
+
+
+@asyncio.coroutine
+def test_pool_recycle_noop_without_pool_recycle(create_pool, loop):
+    pool = yield from create_pool(minsize=3)
+
+    conn = yield from pool.acquire()
+    yield from pool.release(conn)
+    yield from asyncio.sleep(0.02, loop=loop)
+    yield from pool.acquire()
+    assert all([not c.closed for c in pool._free if conn is c])
+
+
+@asyncio.coroutine
+def test_pool_recycle_closes_timed_out_engines(create_pool, loop):
+    pool = yield from create_pool(minsize=3, pool_recycle=0.01)
+
+    conn = yield from pool.acquire()
+    yield from pool.release(conn)
+    yield from asyncio.sleep(0.02, loop=loop)
+    yield from pool.acquire()
+    assert all([c.closed for c in pool._free if conn is c])
