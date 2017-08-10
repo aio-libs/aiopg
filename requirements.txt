@@ -6,7 +6,7 @@ flake8==3.4.1
 -e .[sa]
 sphinx==1.6.3
 tox==2.7.0
-pytest==3.2.0
+pytest==3.2.1
 pytest-cov==2.5.1
 pytest-sugar==0.8.0
 pytest-timeout==1.2.0
