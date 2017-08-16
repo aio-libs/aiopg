@@ -115,12 +115,15 @@ class Connection:
         self._writing = False
         self._cancelling = False
         self._cancellation_waiter = None
+        self._last_free_time = None
         self._echo = echo
         self._notifies = asyncio.Queue(loop=loop)
         self._weakref = weakref.ref(self)
         self._loop.add_reader(self._fileno, self._ready, self._weakref)
         if loop.get_debug():
             self._source_traceback = traceback.extract_stack(sys._getframe(1))
+
+        self.free()
 
     @staticmethod
     def _ready(weak_self):
@@ -496,6 +499,15 @@ class Connection:
     def echo(self):
         """Return echo mode status."""
         return self._echo
+
+    @property
+    def last_free_time(self):
+        """Return the last time the `free` method was called."""
+        return self._last_free_time
+
+    def free(self):
+        """Update last free time to the current time."""
+        self._last_free_time = self._loop.time()
 
     if PY_341:  # pragma: no branch
         def __del__(self):

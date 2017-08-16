@@ -19,12 +19,13 @@ PY_341 = sys.version_info >= (3, 4, 1)
 def create_pool(dsn=None, *, minsize=1, maxsize=10,
                 loop=None, timeout=TIMEOUT,
                 enable_json=True, enable_hstore=True, enable_uuid=True,
-                echo=False, on_connect=None,
+                echo=False, on_connect=None, pool_recycle=-1,
                 **kwargs):
     coro = _create_pool(dsn=dsn, minsize=minsize, maxsize=maxsize, loop=loop,
                         timeout=timeout, enable_json=enable_json,
                         enable_hstore=enable_hstore, enable_uuid=enable_uuid,
-                        echo=echo, on_connect=on_connect, **kwargs)
+                        echo=echo, on_connect=on_connect,
+                        pool_recycle=pool_recycle, **kwargs)
     return _PoolContextManager(coro)
 
 
@@ -32,7 +33,7 @@ def create_pool(dsn=None, *, minsize=1, maxsize=10,
 def _create_pool(dsn=None, *, minsize=1, maxsize=10,
                  loop=None, timeout=TIMEOUT,
                  enable_json=True, enable_hstore=True, enable_uuid=True,
-                 echo=False, on_connect=None,
+                 echo=False, on_connect=None, pool_recycle=-1,
                  **kwargs):
     if loop is None:
         loop = asyncio.get_event_loop()
@@ -40,7 +41,7 @@ def _create_pool(dsn=None, *, minsize=1, maxsize=10,
     pool = Pool(dsn, minsize, maxsize, loop, timeout,
                 enable_json=enable_json, enable_hstore=enable_hstore,
                 enable_uuid=enable_uuid, echo=echo, on_connect=on_connect,
-                **kwargs)
+                pool_recycle=pool_recycle, **kwargs)
     if minsize > 0:
         with (yield from pool._cond):
             yield from pool._fill_free_pool(False)
@@ -52,7 +53,7 @@ class Pool(asyncio.AbstractServer):
 
     def __init__(self, dsn, minsize, maxsize, loop, timeout, *,
                  enable_json, enable_hstore, enable_uuid, echo,
-                 on_connect, **kwargs):
+                 on_connect, pool_recycle, **kwargs):
         if minsize < 0:
             raise ValueError("minsize should be zero or greater")
         if maxsize < minsize and maxsize != 0:
@@ -66,6 +67,7 @@ class Pool(asyncio.AbstractServer):
         self._enable_uuid = enable_uuid
         self._echo = echo
         self._on_connect = on_connect
+        self._pool_recycle = pool_recycle
         self._conn_kwargs = kwargs
         self._acquiring = 0
         self._free = collections.deque(maxlen=maxsize or None)
@@ -183,8 +185,15 @@ class Pool(asyncio.AbstractServer):
     def _fill_free_pool(self, override_min):
         # iterate over free connections and remove timeouted ones
         n, free = 0, len(self._free)
+        now = self._loop.time()
         while n < free:
             conn = self._free[-1]
+
+            # Close connections that have lived longer than the recycle limit.
+            unused_duration = now - conn.last_free_time
+            if 0 < self._pool_recycle < unused_duration:
+                conn.close()
+
             if conn.closed:
                 self._free.pop()
             else:
@@ -203,6 +212,7 @@ class Pool(asyncio.AbstractServer):
                     **self._conn_kwargs)
                 # raise exception if pool is closing
                 self._free.append(conn)
+                conn.free()
                 self._cond.notify()
             finally:
                 self._acquiring -= 1
@@ -221,6 +231,7 @@ class Pool(asyncio.AbstractServer):
                     **self._conn_kwargs)
                 # raise exception if pool is closing
                 self._free.append(conn)
+                conn.free()
                 self._cond.notify()
             finally:
                 self._acquiring -= 1
@@ -253,6 +264,7 @@ class Pool(asyncio.AbstractServer):
                 conn.close()
             else:
                 self._free.append(conn)
+                conn.free()
             fut = ensure_future(self._wakeup(), loop=self._loop)
         return fut
 
