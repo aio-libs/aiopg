@@ -3,6 +3,7 @@ import pytest
 import time
 
 from aiopg import psycopg2_compat as psycopg2
+from aiopg.utils import IS_PYPY
 from aiopg.connection import TIMEOUT
 
 
@@ -248,9 +249,14 @@ def test_tzinfo_factory(connect):
 
 @asyncio.coroutine
 def test_nextset(connect):
+    if IS_PYPY:
+        exception_type = NotImplementedError
+    else:
+        exception_type = psycopg2.NotSupportedError
+
     conn = yield from connect()
     cur = yield from conn.cursor()
-    with pytest.raises(psycopg2.NotSupportedError):
+    with pytest.raises(exception_type):
         yield from cur.nextset()
 
 

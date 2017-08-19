@@ -338,7 +338,9 @@ class Cursor:
     @asyncio.coroutine
     def nextset(self):
         # Not supported
-        self._impl.nextset()  # raises psycopg2.NotSupportedError
+        # raises psycopg2.NotSupportedError on CPython
+        # raises NotImplementedError on PyPy
+        self._impl.nextset()
 
     @asyncio.coroutine
     def setoutputsize(self, size, column=None):
