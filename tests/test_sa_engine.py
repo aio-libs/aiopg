@@ -44,10 +44,13 @@ def test_driver(engine):
 
 
 def test_dsn(engine, pg_params):
-    pg_params['password'] = 'x' * len(pg_params['password'])
+    if not IS_PYPY:
+        pg_params['password'] = 'x' * len(pg_params['password'])
+
     dsn = ('dbname={database} user={user} password={password} '
            'host={host} port={port}').format_map(pg_params)
-    assert dsn == engine.dsn
+
+    assert sorted(dsn.split()) == sorted(engine.dsn.split())
 
 
 def test_minsize(engine):
