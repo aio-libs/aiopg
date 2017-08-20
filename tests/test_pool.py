@@ -2,12 +2,14 @@ import asyncio
 from unittest import mock
 import pytest
 import sys
+import gc
 
 from aiopg.psycopg2_compat.extensions import TRANSACTION_STATUS_INTRANS
 
 import aiopg
 from aiopg.connection import Connection, TIMEOUT
 from aiopg.pool import Pool
+from aiopg.utils import IS_PYPY
 
 
 @asyncio.coroutine
@@ -474,6 +476,11 @@ def test___del__(loop, pg_params, warning):
     pool = yield from aiopg.create_pool(loop=loop, **pg_params)
     with warning(ResourceWarning):
         del pool
+        if IS_PYPY:
+            # PyPy's GC is not based on reference counting, and the objects
+            # are not freed instantly when they are no longer reachable.
+            # Therefore, we explicitly collect unreachable objects here.
+            gc.collect()
 
 
 @asyncio.coroutine
