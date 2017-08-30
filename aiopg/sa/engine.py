@@ -64,8 +64,8 @@ def _create_engine(dsn=None, *, minsize=1, maxsize=10, loop=None,
     if loop is None:
         loop = asyncio.get_event_loop()
     pool = yield from aiopg.create_pool(dsn, minsize=minsize, maxsize=maxsize,
-                                        loop=loop, timeout=timeout, recycle=recycle,
-                                        **kwargs)
+                                        loop=loop, timeout=timeout,
+                                        recycle=recycle, **kwargs)
     conn = yield from pool.acquire()
     try:
         real_dsn = conn.dsn

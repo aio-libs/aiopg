@@ -23,9 +23,10 @@ def create_pool(dsn=None, *, minsize=1, maxsize=10,
                 echo=False, on_connect=None,
                 **kwargs):
     coro = _create_pool(dsn=dsn, minsize=minsize, maxsize=maxsize, loop=loop,
-                        timeout=timeout, recycle=recycle, enable_json=enable_json,
-                        enable_hstore=enable_hstore, enable_uuid=enable_uuid,
-                        echo=echo, on_connect=on_connect, **kwargs)
+                        timeout=timeout, recycle=recycle,
+                        enable_json=enable_json, enable_hstore=enable_hstore,
+                        enable_uuid=enable_uuid, echo=echo,
+                        on_connect=on_connect, **kwargs)
     return _PoolContextManager(coro)
 
 
@@ -189,7 +190,8 @@ class Pool(asyncio.AbstractServer):
             conn = self._free[-1]
             if conn.closed:
                 self._free.pop()
-            elif self._recycle > -1 and time.time() - conn.last_usage > self._recycle:
+            elif self._recycle > -1 \
+                    and time.time() - conn.last_usage > self._recycle:
                 conn.close()
                 self._free.pop()
             else:
