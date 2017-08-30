@@ -3,6 +3,7 @@ import contextlib
 import errno
 import select
 import sys
+import time
 import traceback
 import warnings
 import weakref
@@ -111,6 +112,7 @@ class Connection:
         assert self._conn.isexecuting(), "Is conn an async at all???"
         self._fileno = self._conn.fileno()
         self._timeout = timeout
+        self._last_usage = time.time()
         self._waiter = waiter
         self._writing = False
         self._cancelling = False
@@ -264,6 +266,7 @@ class Connection:
         psycopg in asynchronous mode.
 
         """
+        self._last_usage = time.time()
         coro = self._cursor(name=name, cursor_factory=cursor_factory,
                             scrollable=scrollable, withhold=withhold,
                             timeout=timeout)
@@ -491,6 +494,11 @@ class Connection:
     def timeout(self):
         """Return default timeout for connection operations."""
         return self._timeout
+
+    @property
+    def last_usage(self):
+        """Return time() when connection was used."""
+        return self._last_usage
 
     @property
     def echo(self):
