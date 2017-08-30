@@ -1,7 +1,6 @@
 import asyncio
 import collections
 import sys
-import time
 import warnings
 
 
