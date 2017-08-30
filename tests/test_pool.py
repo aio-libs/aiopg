@@ -506,6 +506,27 @@ def test_connection_in_good_state_after_timeout(create_pool):
 
 
 @asyncio.coroutine
+def test_pool_with_connection_recycling(create_pool, loop):
+    pool = yield from create_pool(minsize=1,
+                                  maxsize=1,
+                                  recycle=3)
+    with (yield from pool) as conn:
+        cur = yield from conn.cursor()
+        yield from cur.execute('SELECT 1;')
+        val = yield from cur.fetchone()
+        assert (1,) == val
+
+    yield from asyncio.sleep(5, loop=loop)
+
+    assert 1 == pool.freesize
+    with (yield from pool) as conn:
+        cur = yield from conn.cursor()
+        yield from cur.execute('SELECT 1;')
+        val = yield from cur.fetchone()
+        assert (1,) == val
+
+
+@asyncio.coroutine
 def test_connection_in_good_state_after_timeout_in_transaction(create_pool):
     @asyncio.coroutine
     def sleep(conn):
