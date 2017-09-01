@@ -509,7 +509,7 @@ def test_connection_in_good_state_after_timeout(create_pool):
 def test_pool_with_connection_recycling(create_pool, loop):
     pool = yield from create_pool(minsize=1,
                                   maxsize=1,
-                                  recycle=3)
+                                  pool_recycle=3)
     with (yield from pool) as conn:
         cur = yield from conn.cursor()
         yield from cur.execute('SELECT 1;')
