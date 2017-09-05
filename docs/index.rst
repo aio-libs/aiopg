@@ -115,7 +115,7 @@ so we introduce support for :term:`sqlalchemy` query builders::
             async with engine.acquire() as conn:
                 await conn.execute(tbl.insert().values(val='abc'))
 
-                async for row in conn.execute(tbl.select().where(tbl.c.val=='abc'))
+                async for row in conn.execute(tbl.select().where(tbl.c.val=='abc')):
                     print(row.id, row.val)
 
 
