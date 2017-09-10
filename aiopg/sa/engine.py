@@ -44,7 +44,8 @@ _dialect._has_native_hstore = True
 
 
 def create_engine(dsn=None, *, minsize=1, maxsize=10, loop=None,
-                  dialect=_dialect, timeout=TIMEOUT, **kwargs):
+                  dialect=_dialect, timeout=TIMEOUT, pool_recycle=-1,
+                  **kwargs):
     """A coroutine for Engine creation.
 
     Returns Engine instance with embedded connection pool.
@@ -54,17 +55,19 @@ def create_engine(dsn=None, *, minsize=1, maxsize=10, loop=None,
 
     coro = _create_engine(dsn=dsn, minsize=minsize, maxsize=maxsize,
                           loop=loop, dialect=dialect, timeout=timeout,
-                          **kwargs)
+                          pool_recycle=pool_recycle, **kwargs)
     return _EngineContextManager(coro)
 
 
 @asyncio.coroutine
 def _create_engine(dsn=None, *, minsize=1, maxsize=10, loop=None,
-                   dialect=_dialect, timeout=TIMEOUT, **kwargs):
+                   dialect=_dialect, timeout=TIMEOUT, pool_recycle=-1,
+                   **kwargs):
     if loop is None:
         loop = asyncio.get_event_loop()
     pool = yield from aiopg.create_pool(dsn, minsize=minsize, maxsize=maxsize,
-                                        loop=loop, timeout=timeout, **kwargs)
+                                        loop=loop, timeout=timeout,
+                                        pool_recycle=pool_recycle, **kwargs)
     conn = yield from pool.acquire()
     try:
         real_dsn = conn.dsn
