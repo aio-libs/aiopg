@@ -1,5 +1,10 @@
 CHANGES
 -------
+X.X.X (XXXX-XX-XX)
+^^^^^^^^^^^^^^^^^^^
+
+* Add `async with` support to cursor context
+
 
 0.13.1 (2017-09-10)
 ^^^^^^^^^^^^^^^^^^^
