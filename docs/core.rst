@@ -718,6 +718,10 @@ The basic usage is::
      created connection. May be used for setting up connection level
      state like client encoding etc.
 
+   :param float pool_recycle: number of seconds after which connection
+     is recycled, helps to deal with stale connections in pool, default
+     value is ``-1``, means recycling logic is disabled.
+
    :return: :class:`Pool` instance.
 
 

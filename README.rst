@@ -4,6 +4,9 @@ aiopg
    :target: https://travis-ci.org/aio-libs/aiopg
 .. image:: https://codecov.io/gh/aio-libs/aiopg/branch/master/graph/badge.svg
    :target: https://codecov.io/gh/aio-libs/aiopg
+.. image:: https://badges.gitter.im/Join%20Chat.svg
+    :target: https://gitter.im/aio-libs/Lobby
+    :alt: Chat on Gitter
 
 **aiopg** is a library for accessing a PostgreSQL_ database
 from the asyncio_ (PEP-3156/tulip) framework. It wraps
