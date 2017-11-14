@@ -179,7 +179,7 @@ class Pool(asyncio.AbstractServer):
                         yield from self._on_connect(conn)
                     return conn
                 else:
-                    logger.debug("ConnectionPool is full, Waiting for new connection")
+                    logger.debug("ConnectionPool is full, Waiting for connection")
                     yield from self._cond.wait()
 
     @asyncio.coroutine
