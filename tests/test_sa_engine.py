@@ -1,5 +1,6 @@
 import asyncio
 from aiopg.connection import TIMEOUT
+from psycopg2.extensions import parse_dsn
 
 import pytest
 sa = pytest.importorskip("aiopg.sa")  # noqa
@@ -39,10 +40,11 @@ def test_driver(engine):
 
 
 def test_dsn(engine, pg_params):
-    pg_params['password'] = 'x' * len(pg_params['password'])
-    dsn = ('dbname={database} user={user} password={password} '
-           'host={host} port={port}').format_map(pg_params)
-    assert dsn == engine.dsn
+    pg_params['password'] = 'xxx'
+    params = pg_params.copy()
+    params['dbname'] = params.pop('database')
+    params['port'] = str(params['port'])
+    assert parse_dsn(engine.dsn) == params
 
 
 def test_minsize(engine):
