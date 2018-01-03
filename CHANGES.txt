@@ -6,6 +6,8 @@ CHANGES
 
 * Fixed compatibility with SQLAlchemy 1.2.0 #412
 
+* Added support for transaction isolation levels #219
+
 
 0.13.1 (2017-09-10)
 ^^^^^^^^^^^^^^^^^^^
