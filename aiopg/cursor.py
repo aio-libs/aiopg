@@ -4,16 +4,17 @@ import warnings
 import psycopg2
 
 from .log import logger
-from .utils import PY_35, PY_352
+from .transaction import Transaction, IsolationLevel
+from .utils import PY_35, PY_352, _TransactionBeginContextManager
 
 
 class Cursor:
-
     def __init__(self, conn, impl, timeout, echo):
         self._conn = conn
         self._impl = impl
         self._timeout = timeout
         self._echo = echo
+        self._transaction = Transaction(self, IsolationLevel.repeatable_read)
 
     @property
     def echo(self):
@@ -145,6 +146,16 @@ class Cursor:
             raise
         else:
             yield from self._conn._poll(waiter, timeout)
+
+    def begin(self):
+        return _TransactionBeginContextManager(self._transaction.begin())
+
+    def begin_nested(self):
+        if not self._transaction.is_begin:
+            return _TransactionBeginContextManager(
+                self._transaction.begin())
+        else:
+            return self._transaction.point()
 
     @asyncio.coroutine
     def mogrify(self, operation, parameters=None):

@@ -1,6 +1,20 @@
 CHANGES
 -------
 
+0.13.2 (2018-01-03)
+^^^^^^^^^^^^^^^^^^^
+
+* Fixed compatibility with SQLAlchemy 1.2.0 #412
+
+* Added support for transaction isolation levels #219
+
+
+0.13.1 (2017-09-10)
+^^^^^^^^^^^^^^^^^^^
+
+* Added connection poll recycling logic #373
+
+
 0.13.0 (2016-12-02)
 ^^^^^^^^^^^^^^^^^^^
 

@@ -645,7 +645,51 @@ Cursor
       This method is exposed in compliance with the :term:`DBAPI`. It currently
       does nothing but it is safe to call it.
 
+   .. comethod:: begin()
 
+      Begin a transaction and return a transaction handle.
+      The returned object is an instance of :class:`._TransactionBeginContextManager`.::
+
+         async def begin(engine):
+            async with engine.cursor() as cur:
+                async with cur.begin():
+                    await cur.execute("insert into tbl values(1, 'data')")
+
+                async with cur.begin():
+                    await cur.execute('select * from tbl')
+                    row = await cur.fetchall()
+                    assert row == [(22, 'read only'), (1, 'data'), ]
+
+
+   .. comethod:: begin_nested()
+
+      Begin a nested transaction and return a transaction handle.
+
+      The returned object is an instance of :class:`._TransactionBeginContextManager`.
+
+      Any transaction in the hierarchy may ``commit`` and
+      ``rollback``, however the outermost transaction still controls
+      the overall ``commit`` or ``rollback`` of the transaction of a
+      whole. It utilizes SAVEPOINT facility of :term:`PostgreSQL` server::
+
+            async def begin_nested(engine):
+                async with engine.cursor() as cur:
+                    async with cur.begin_nested():
+                        await cur.execute("insert into tbl values(1, 'data')")
+
+                            try:
+                                async with cur.begin_nested():
+                                    await cur.execute("insert into tbl values(1/0, 'no data')")
+                            except psycopg2.DataError:
+                                    pass
+
+                    async with cur.begin_nested():
+                        await cur.execute("insert into tbl values(2, 'data')")
+
+                    async with cur.begin_nested():
+                        await cur.execute('select * from tbl')
+                        row = await cur.fetchall()
+                        assert row == [(22, 'read only'), (1, 'data'),  (2, 'data'), ]
 
 
 .. _aiopg-core-pool:
@@ -717,6 +761,10 @@ The basic usage is::
    :param on_connect:  a *callback coroutine* executed at once for every
      created connection. May be used for setting up connection level
      state like client encoding etc.
+
+   :param float pool_recycle: number of seconds after which connection
+     is recycled, helps to deal with stale connections in pool, default
+     value is ``-1``, means recycling logic is disabled.
 
    :return: :class:`Pool` instance.
 
