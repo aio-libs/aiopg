@@ -238,11 +238,13 @@ class _PoolCursorContextManager:
     def __exit__(self, *args):
         try:
             self._cur.close()
-            self._pool.release(self._conn)
         finally:
-            self._pool = None
-            self._conn = None
-            self._cur = None
+            try:
+                self._pool.release(self._conn)
+            finally:
+                self._pool = None
+                self._conn = None
+                self._cur = None
 
 
 if not PY_35:
