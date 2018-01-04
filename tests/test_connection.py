@@ -621,7 +621,7 @@ def test_close_cursor_on_timeout_error(connect):
 @asyncio.coroutine
 def test_issue_111_crash_on_connect_error(loop):
     import aiopg.connection
-    with pytest.raises(psycopg2.OperationalError):
+    with pytest.raises(psycopg2.ProgrammingError):
         yield from aiopg.connection.connect('baddsn:1', loop=loop)
 
 
