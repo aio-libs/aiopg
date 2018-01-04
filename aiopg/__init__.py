@@ -5,15 +5,15 @@ from collections import namedtuple
 from .connection import connect, Connection, TIMEOUT as DEFAULT_TIMEOUT
 from .cursor import Cursor
 from .pool import create_pool, Pool
-
+from .transaction import IsolationLevel, Transaction
 
 __all__ = ('connect', 'create_pool', 'Connection', 'Cursor', 'Pool',
-           'version', 'version_info', 'DEFAULT_TIMEOUT')
+           'version', 'version_info', 'DEFAULT_TIMEOUT', 'IsolationLevel',
+           'Transaction')
 
-__version__ = '0.13.1'
+__version__ = '0.13.2'
 
 version = __version__ + ' , Python ' + sys.version
-
 
 VersionInfo = namedtuple('VersionInfo',
                          'major minor micro releaselevel serial')
@@ -40,6 +40,6 @@ def _parse_version(ver):
 
 version_info = _parse_version(__version__)
 
-
 # make pyflakes happy
-(connect, create_pool, Connection, Cursor, Pool, DEFAULT_TIMEOUT)
+(connect, create_pool, Connection, Cursor, Pool, DEFAULT_TIMEOUT,
+ IsolationLevel, Transaction)

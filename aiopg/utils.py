@@ -6,10 +6,10 @@ PY_352 = sys.version_info >= (3, 5, 2)
 
 if PY_35:
     from collections.abc import Coroutine
+
     base = Coroutine
 else:
     base = object
-
 
 try:
     ensure_future = asyncio.ensure_future
@@ -25,7 +25,6 @@ def create_future(loop):
 
 
 class _ContextManager(base):
-
     __slots__ = ('_coro', '_obj')
 
     def __init__(self, coro):
@@ -83,7 +82,6 @@ class _ContextManager(base):
 
 
 class _SAConnectionContextManager(_ContextManager):
-
     if PY_35:  # pragma: no branch
         if PY_352:
             def __aiter__(self):
@@ -96,7 +94,6 @@ class _SAConnectionContextManager(_ContextManager):
 
 
 class _PoolContextManager(_ContextManager):
-
     if PY_35:
         @asyncio.coroutine
         def __aexit__(self, exc_type, exc, tb):
@@ -105,8 +102,33 @@ class _PoolContextManager(_ContextManager):
             self._obj = None
 
 
-class _TransactionContextManager(_ContextManager):
+class _TransactionPointContextManager(_ContextManager):
+    if PY_35:
 
+        @asyncio.coroutine
+        def __aexit__(self, exc_type, exc_val, exc_tb):
+            if exc_type is not None:
+                yield from self._obj.rollback_savepoint()
+            else:
+                yield from self._obj.release_savepoint()
+
+            self._obj = None
+
+
+class _TransactionBeginContextManager(_ContextManager):
+    if PY_35:
+
+        @asyncio.coroutine
+        def __aexit__(self, exc_type, exc_val, exc_tb):
+            if exc_type is not None:
+                yield from self._obj.rollback()
+            else:
+                yield from self._obj.commit()
+
+            self._obj = None
+
+
+class _TransactionContextManager(_ContextManager):
     if PY_35:
 
         @asyncio.coroutine
@@ -120,7 +142,6 @@ class _TransactionContextManager(_ContextManager):
 
 
 class _PoolAcquireContextManager(_ContextManager):
-
     __slots__ = ('_coro', '_conn', '_pool')
 
     def __init__(self, coro, pool):
@@ -288,6 +309,7 @@ class _PoolCursorContextManager:
 if not PY_35:
     try:
         from asyncio import coroutines
+
         coroutines._COROUTINE_TYPES += (_ContextManager,)
     except:
         pass
