@@ -4,7 +4,7 @@ import sys
 from setuptools import setup
 
 
-install_requires = ['psycopg2>=2.5.2']
+install_requires = ['psycopg2>=2.7.0']
 
 PY_VER = sys.version_info
 
