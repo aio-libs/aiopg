@@ -1,5 +1,6 @@
 import asyncio
 import sys
+import psycopg2
 
 PY_35 = sys.version_info >= (3, 5)
 PY_352 = sys.version_info >= (3, 5, 2)
@@ -145,7 +146,7 @@ class _PoolAcquireContextManager(_ContextManager):
     __slots__ = ('_coro', '_conn', '_pool')
 
     def __init__(self, coro, pool):
-        self._coro = coro
+        super().__init__(coro)
         self._conn = None
         self._pool = pool
 
@@ -238,6 +239,10 @@ class _PoolCursorContextManager:
     def __exit__(self, *args):
         try:
             self._cur.close()
+        except psycopg2.ProgrammingError:
+            # seen instances where the cursor fails to close: https://github.com/aio-libs/aiopg/issues/364
+            # We close it here so we don't return a bad connection to the pool
+            self._conn.close()
         finally:
             try:
                 self._pool.release(self._conn)
