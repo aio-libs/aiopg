@@ -183,14 +183,13 @@ class Pool(asyncio.AbstractServer):
 
     @asyncio.coroutine
     def _fill_free_pool(self, override_min):
-        # iterate over free connections and remove timeouted ones
+        # iterate over free connections and remove timed out ones
         n, free = 0, len(self._free)
         while n < free:
             conn = self._free[-1]
             if conn.closed:
                 self._free.pop()
-            elif self._recycle > -1 \
-                    and self._loop.time() - conn.last_usage > self._recycle:
+            elif -1 < self._recycle < self._loop.time() - conn.last_usage:
                 conn.close()
                 self._free.pop()
             else:
@@ -212,6 +211,7 @@ class Pool(asyncio.AbstractServer):
                 self._cond.notify()
             finally:
                 self._acquiring -= 1
+
         if self._free:
             return
 
@@ -241,12 +241,15 @@ class Pool(asyncio.AbstractServer):
         """
         fut = create_future(self._loop)
         fut.set_result(None)
+
         if conn in self._terminated:
             assert conn.closed, conn
             self._terminated.remove(conn)
             return fut
+
         assert conn in self._used, (conn, self._used)
         self._used.remove(conn)
+
         if not conn.closed:
             tran_status = conn._conn.get_transaction_status()
             if tran_status != TRANSACTION_STATUS_IDLE:
@@ -255,10 +258,13 @@ class Pool(asyncio.AbstractServer):
                     tran_status)
                 conn.close()
                 return fut
+
             if self._closing:
                 conn.close()
-            else:
+            elif conn.closed:
                 self._free.append(conn)
+            # otherwise we just drop the connection as it didn't close correctly
+
             fut = ensure_future(self._wakeup(), loop=self._loop)
         return fut
 
