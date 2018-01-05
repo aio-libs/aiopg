@@ -237,6 +237,7 @@ class _PoolCursorContextManager:
             # seen instances where the cursor fails to close: https://github.com/aio-libs/aiopg/issues/364
             # We close it here so we don't return a bad connection to the pool
             self._conn.close()
+            raise
         finally:
             try:
                 self._pool.release(self._conn)
