@@ -169,7 +169,7 @@ def pg_params(pg_server):
     return dict(**pg_server['pg_params'])
 
 
-@pytest.fixture()
+@pytest.fixture
 def make_connection(loop, pg_params):
 
     conns = []
@@ -194,7 +194,7 @@ def make_connection(loop, pg_params):
         loop.run_until_complete(conn.close())
 
 
-@pytest.fixture()
+@pytest.fixture
 def create_pool(loop, pg_params):
     pool = None
 
@@ -233,7 +233,7 @@ def make_engine(loop, pg_params):
         loop.run_until_complete(engine.wait_closed())
 
 
-@pytest.fixture()
+@pytest.fixture
 def make_sa_connection(make_engine):
     conn = None
     engine = None
