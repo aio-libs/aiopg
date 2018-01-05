@@ -62,7 +62,7 @@ tbl2 = Table('sa_tbl_types2', meta,
              Column('enum_val', ENUM('first', 'second', name='simple_enum')))
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def connect(make_engine):
     @asyncio.coroutine
     def go(**kwargs):

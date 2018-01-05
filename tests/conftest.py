@@ -27,7 +27,7 @@ def unused_port():
     return f
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def loop(request):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(None)
@@ -123,7 +123,7 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("pg_tag", tags, scope='session')
 
 
-@pytest.yield_fixture(scope='session')
+@pytest.fixture(scope='session')
 def pg_server(unused_port, docker, session_id, pg_tag, request):
     if not request.config.option.no_pull:
         docker.pull('postgres:{}'.format(pg_tag))
@@ -169,7 +169,7 @@ def pg_params(pg_server):
     return dict(**pg_server['pg_params'])
 
 
-@pytest.yield_fixture()
+@pytest.fixture
 def make_connection(loop, pg_params):
 
     conns = []
@@ -194,7 +194,7 @@ def make_connection(loop, pg_params):
         loop.run_until_complete(conn.close())
 
 
-@pytest.yield_fixture()
+@pytest.fixture
 def create_pool(loop, pg_params):
     pool = None
 
@@ -213,7 +213,7 @@ def create_pool(loop, pg_params):
         pool.terminate()
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def make_engine(loop, pg_params):
     engine = None
 
@@ -233,7 +233,7 @@ def make_engine(loop, pg_params):
         loop.run_until_complete(engine.wait_closed())
 
 
-@pytest.yield_fixture()
+@pytest.fixture
 def make_sa_connection(make_engine):
     conn = None
     engine = None
@@ -376,11 +376,11 @@ class _AssertLogsContext:
                                self.logger.name))
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def warning():
     yield _AssertWarnsContext
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def log():
     yield _AssertLogsContext
