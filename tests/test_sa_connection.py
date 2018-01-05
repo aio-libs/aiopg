@@ -20,7 +20,7 @@ tbl = Table('sa_tbl', meta,
             Column('name', String(255)))
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def connect(make_connection):
     @asyncio.coroutine
     def go(**kwargs):
