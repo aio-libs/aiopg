@@ -12,7 +12,7 @@ import time
 import uuid
 import warnings
 
-from docker import Client as DockerClient
+from docker import APIClient
 
 import aiopg
 from aiopg import sa
@@ -99,7 +99,7 @@ def session_id():
 
 @pytest.fixture(scope='session')
 def docker():
-    return DockerClient(version='auto')
+    return APIClient(version='auto')
 
 
 def pytest_addoption(parser):
