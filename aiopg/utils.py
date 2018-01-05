@@ -143,24 +143,23 @@ class _TransactionContextManager(_ContextManager):
 
 
 class _PoolAcquireContextManager(_ContextManager):
-    __slots__ = ('_coro', '_conn', '_pool')
+    __slots__ = ('_coro', '_obj', '_pool')
 
     def __init__(self, coro, pool):
         super().__init__(coro)
-        self._conn = None
         self._pool = pool
 
     if PY_35:
         @asyncio.coroutine
         def __aenter__(self):
-            self._conn = yield from self._coro
-            return self._conn
+            self._obj = yield from self._coro
+            return self._obj
 
         @asyncio.coroutine
         def __aexit__(self, exc_type, exc, tb):
-            yield from self._pool.release(self._conn)
+            yield from self._pool.release(self._obj)
             self._pool = None
-            self._conn = None
+            self._obj = None
 
 
 class _PoolConnectionContextManager:
