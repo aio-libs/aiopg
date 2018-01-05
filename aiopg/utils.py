@@ -151,11 +151,6 @@ class _PoolAcquireContextManager(_ContextManager):
 
     if PY_35:
         @asyncio.coroutine
-        def __aenter__(self):
-            self._obj = yield from self._coro
-            return self._obj
-
-        @asyncio.coroutine
         def __aexit__(self, exc_type, exc, tb):
             yield from self._pool.release(self._obj)
             self._pool = None
