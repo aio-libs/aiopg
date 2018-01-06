@@ -54,6 +54,24 @@ async def test_cursor_create_with_context_manager(make_connection):
 
 
 @asyncio.coroutine
+async def test_pool_context_manager_timeout(pg_params, loop: asyncio.BaseEventLoop):
+    async with aiopg.create_pool(loop=loop, **pg_params, minsize=1, maxsize=1) as pool:
+        cursor_ctx = await pool.cursor()
+        with cursor_ctx as cursor:
+            hung_task = cursor.execute('SELECT pg_sleep(1000);')
+            # start task
+            fut = loop.create_task(hung_task)
+
+            # sleep for a bit so it gets going
+            await asyncio.sleep(1)
+
+            print()
+
+    assert cursor.closed
+    assert pool.closed
+
+
+@asyncio.coroutine
 async def test_cursor_with_context_manager(make_connection):
     conn = await make_connection()
     cursor = await conn.cursor()
