@@ -136,26 +136,16 @@ def pg_server(unused_port, docker, session_id, pg_tag, request):
         detach=True,
     )
 
-    is_darwin = sys.platform == "darwin"
-
     # bound IPs do not work on OSX
     host = "127.0.0.1"
-    host_port = 5432
-
-    if is_darwin:
-        host_port = 55432
-        container_args['host_config'] = docker.create_host_config(port_bindings={5432: (host, host_port)})
+    host_port = unused_port()
+    container_args['host_config'] = docker.create_host_config(
+        port_bindings={5432: (host, host_port)})
 
     container = docker.create_container(**container_args)
 
     try:
         docker.start(container=container['Id'])
-
-        # This does not work on OSX
-        if not is_darwin:
-            inspection = docker.inspect_container(container['Id'])
-            host = inspection['NetworkSettings']['IPAddress']
-
         server_params = dict(database='postgres',
                              user='postgres',
                              password='mysecretpassword',
