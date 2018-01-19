@@ -209,11 +209,11 @@ def test_autocommit(connect):
 def test_isolation_level(connect):
     conn = yield from connect()
 
-    assert 0 == conn.isolation_level
+    assert psycopg2.extensions.ISOLATION_LEVEL_DEFAULT == conn.isolation_level
     with pytest.raises(psycopg2.ProgrammingError):
         yield from conn.set_isolation_level(1)
 
-    assert 0 == conn.isolation_level
+    assert psycopg2.extensions.ISOLATION_LEVEL_DEFAULT == conn.isolation_level
 
 
 @asyncio.coroutine
@@ -621,7 +621,7 @@ def test_close_cursor_on_timeout_error(connect):
 @asyncio.coroutine
 def test_issue_111_crash_on_connect_error(loop):
     import aiopg.connection
-    with pytest.raises(psycopg2.OperationalError):
+    with pytest.raises(psycopg2.ProgrammingError):
         yield from aiopg.connection.connect('baddsn:1', loop=loop)
 
 

@@ -12,7 +12,8 @@ import time
 import uuid
 import warnings
 
-from docker import Client as DockerClient
+
+from docker import APIClient
 
 import aiopg
 from aiopg import sa
@@ -27,7 +28,7 @@ def unused_port():
     return f
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def loop(request):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(None)
@@ -99,7 +100,7 @@ def session_id():
 
 @pytest.fixture(scope='session')
 def docker():
-    return DockerClient(version='auto')
+    return APIClient(version='auto')
 
 
 def pytest_addoption(parser):
@@ -123,45 +124,56 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("pg_tag", tags, scope='session')
 
 
-@pytest.yield_fixture(scope='session')
+@pytest.fixture(scope='session')
 def pg_server(unused_port, docker, session_id, pg_tag, request):
     if not request.config.option.no_pull:
         docker.pull('postgres:{}'.format(pg_tag))
-    container = docker.create_container(
+
+    container_args = dict(
         image='postgres:{}'.format(pg_tag),
         name='aiopg-test-server-{}-{}'.format(pg_tag, session_id),
         ports=[5432],
         detach=True,
     )
-    docker.start(container=container['Id'])
-    inspection = docker.inspect_container(container['Id'])
-    host = inspection['NetworkSettings']['IPAddress']
-    pg_params = dict(database='postgres',
-                     user='postgres',
-                     password='mysecretpassword',
-                     host=host,
-                     port=5432)
-    delay = 0.001
-    for i in range(100):
-        try:
-            conn = psycopg2.connect(**pg_params)
-            cur = conn.cursor()
-            cur.execute("CREATE EXTENSION hstore;")
-            cur.close()
-            conn.close()
-            break
-        except psycopg2.Error:
-            time.sleep(delay)
-            delay *= 2
-    else:
-        pytest.fail("Cannot start postgres server")
-    container['host'] = host
-    container['port'] = 5432
-    container['pg_params'] = pg_params
-    yield container
 
-    docker.kill(container=container['Id'])
-    docker.remove_container(container['Id'])
+    # bound IPs do not work on OSX
+    host = "127.0.0.1"
+    host_port = unused_port()
+    container_args['host_config'] = docker.create_host_config(
+        port_bindings={5432: (host, host_port)})
+
+    container = docker.create_container(**container_args)
+
+    try:
+        docker.start(container=container['Id'])
+        server_params = dict(database='postgres',
+                             user='postgres',
+                             password='mysecretpassword',
+                             host=host,
+                             port=host_port)
+        delay = 0.001
+        for i in range(100):
+            try:
+                conn = psycopg2.connect(**server_params)
+                cur = conn.cursor()
+                cur.execute("CREATE EXTENSION hstore;")
+                cur.close()
+                conn.close()
+                break
+            except psycopg2.Error:
+                time.sleep(delay)
+                delay *= 2
+        else:
+            pytest.fail("Cannot start postgres server")
+
+        container['host'] = host
+        container['port'] = host_port
+        container['pg_params'] = server_params
+
+        yield container
+    finally:
+        docker.kill(container=container['Id'])
+        docker.remove_container(container['Id'])
 
 
 @pytest.fixture
@@ -169,7 +181,7 @@ def pg_params(pg_server):
     return dict(**pg_server['pg_params'])
 
 
-@pytest.yield_fixture()
+@pytest.fixture
 def make_connection(loop, pg_params):
 
     conns = []
@@ -194,7 +206,7 @@ def make_connection(loop, pg_params):
         loop.run_until_complete(conn.close())
 
 
-@pytest.yield_fixture()
+@pytest.fixture
 def create_pool(loop, pg_params):
     pool = None
 
@@ -213,7 +225,7 @@ def create_pool(loop, pg_params):
         pool.terminate()
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def make_engine(loop, pg_params):
     engine = None
 
@@ -233,7 +245,7 @@ def make_engine(loop, pg_params):
         loop.run_until_complete(engine.wait_closed())
 
 
-@pytest.yield_fixture()
+@pytest.fixture
 def make_sa_connection(make_engine):
     conn = None
     engine = None
@@ -376,11 +388,11 @@ class _AssertLogsContext:
                                self.logger.name))
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def warning():
     yield _AssertWarnsContext
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def log():
     yield _AssertLogsContext
