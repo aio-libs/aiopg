@@ -454,6 +454,11 @@ class Connection:
         """The default cursor factory used by .cursor()."""
         return self._conn.cursor_factory
 
+    @cursor_factory.setter
+    def cursor_factory(self, value):
+        """Set the default cursor factory used by .cursor()."""
+        self._conn.cursor_factory = value
+
     @asyncio.coroutine
     def get_backend_pid(self):
         """Returns the PID of the backend server process."""
