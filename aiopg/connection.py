@@ -27,6 +27,9 @@ PY_341 = sys.version_info >= (3, 4, 1)
 # to OSError.errno EBADF
 WSAENOTSOCK = 10038
 
+# Marker object pushed into a Connection's notifies queue when no further
+# notifications can possibly be collected
+NoMoreNotifications = object()
 
 @asyncio.coroutine
 def _enable_hstore(conn):
@@ -147,6 +150,7 @@ class Connection:
                             # forget a bad file descriptor, don't try to
                             # touch it
                             self._fileno = None
+                        self._notifies.put_nowait(NoMoreNotifications)
 
             try:
                 if self._writing:
@@ -303,6 +307,7 @@ class Connection:
             if self._writing:
                 self._writing = False
                 self._loop.remove_writer(self._fileno)
+            self._notifies.put_nowait(NoMoreNotifications)
         self._conn.close()
         if self._waiter is not None and not self._waiter.done():
             self._waiter.set_exception(
