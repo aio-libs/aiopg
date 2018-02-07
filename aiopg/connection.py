@@ -116,6 +116,7 @@ class Connection:
         self._writing = False
         self._cancelling = False
         self._cancellation_waiter = None
+        self._closure_event = asyncio.Event(loop=loop)
         self._echo = echo
         self._notifies = asyncio.Queue(loop=loop)
         self._weakref = weakref.ref(self)
@@ -147,6 +148,7 @@ class Connection:
                             # forget a bad file descriptor, don't try to
                             # touch it
                             self._fileno = None
+                        self._closure_event.set()
 
             try:
                 if self._writing:
@@ -303,6 +305,7 @@ class Connection:
             if self._writing:
                 self._writing = False
                 self._loop.remove_writer(self._fileno)
+            self._closure_event.set()
         self._conn.close()
         if self._waiter is not None and not self._waiter.done():
             self._waiter.set_exception(
@@ -525,6 +528,11 @@ class Connection:
     def notifies(self):
         """Return notification queue."""
         return self._notifies
+
+    @property
+    def closure_event(self):
+        """Return closure event."""
+        return self._closure_event
 
     if PY_35:  # pragma: no branch
         @asyncio.coroutine
