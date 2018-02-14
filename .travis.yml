@@ -9,7 +9,6 @@ python:
 - "3.4"
 - "3.5"
 - "3.6"
-- "nightly" # currently points to 3.7-dev
 
 install:
 - python setup.py install
