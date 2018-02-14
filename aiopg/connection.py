@@ -106,7 +106,8 @@ class Connection:
 
     def __init__(self, dsn, loop, timeout, waiter, echo, **kwargs):
         self._loop = loop
-        self._conn = psycopg2.connect(dsn, async=True, **kwargs)
+        kwargs['async'] = True
+        self._conn = psycopg2.connect(dsn, **kwargs)
         self._dsn = self._conn.dsn
         assert self._conn.isexecuting(), "Is conn an async at all???"
         self._fileno = self._conn.fileno()

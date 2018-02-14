@@ -275,7 +275,7 @@ async def test_sa_connection_execute(pg_params, loop):
     result = []
     async with aiopg.sa.create_engine(loop=loop, **pg_params) as engine:
         async with engine.acquire() as conn:
-            async for value in conn.execute(sql):
+            async for value in await conn.execute(sql):
                 result.append(value)
             assert result == [(1,), (2, ), (3, ), (4, ), (5, )]
     assert conn.closed
