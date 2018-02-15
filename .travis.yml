@@ -13,8 +13,8 @@ python:
 
 install:
 - pip install -U setuptools
-- pip install -Ur requirements.txt
 - python setup.py install
+- pip install -Ur requirements.txt
 - pip install codecov
 
 script:
