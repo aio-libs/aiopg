@@ -9,10 +9,12 @@ python:
 - "3.4"
 - "3.5"
 - "3.6"
+- "nightly"
 
 install:
-- python setup.py install
+- pip install -U setuptools
 - pip install -Ur requirements.txt
+- python setup.py install
 - pip install codecov
 
 script:
