@@ -42,9 +42,10 @@ def test_driver(engine):
 def test_dsn(engine, pg_params):
     params = pg_params.copy()
     params['password'] = 'xxx'
-    params['dbname'] = params['database'].pop()
+    params['dbname'] = params.pop('database')
     params['port'] = str(params['port'])
     assert parse_dsn(engine.dsn) == params
+
 
 def test_minsize(engine):
     assert 1 == engine.minsize
