@@ -9,6 +9,7 @@ import socket
 import time
 import sys
 
+from psycopg2.extensions import parse_dsn
 from aiopg.connection import Connection, TIMEOUT
 from aiopg.cursor import Cursor
 from aiopg.utils import ensure_future, create_future
@@ -150,14 +151,10 @@ def test_dsn(connect, pg_params):
 
     pg_params = pg_params.copy()
     pg_params['password'] = 'x' * len(pg_params['password'])
-    pg_params['dbname'] = pg_params['database']
-    del pg_params['database']
-
+    pg_params['dbname'] = pg_params.pop('database')
     pg_params['port'] = str(pg_params['port'])
 
-    # dictionary keys are unsorted so we need this hack
-    dsn_params = dict([tpl.split('=') for tpl in conn.dsn.split(' ')])
-    assert dsn_params == pg_params
+    assert parse_dsn(conn.dsn) == pg_params
 
 
 @asyncio.coroutine
