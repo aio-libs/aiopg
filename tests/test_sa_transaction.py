@@ -13,7 +13,7 @@ tbl = Table('sa_tbl2', meta,
             Column('name', String(255)))
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def connect(make_connection):
     @asyncio.coroutine
     def go(**kwargs):
@@ -33,7 +33,7 @@ def connect(make_connection):
     yield go
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def xa_connect(connect):
     @asyncio.coroutine
     def go(**kwargs):
