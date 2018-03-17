@@ -150,7 +150,7 @@ def test_dsn(connect, pg_params):
     conn = yield from connect()
 
     pg_params = pg_params.copy()
-    pg_params['password'] = 'x' * len(pg_params['password'])
+    pg_params['password'] = 'xxx'
     pg_params['dbname'] = pg_params.pop('database')
     pg_params['port'] = str(pg_params['port'])
 
