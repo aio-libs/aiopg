@@ -85,7 +85,7 @@ async def test_pool_context_manager_timeout(pg_params, loop):
         fut.cancel()
         cursor_ctx = await pool.cursor()
         with cursor_ctx as cursor:
-            _ = await cursor.execute('SELECT 42;')
+            await cursor.execute('SELECT 42;')
             resp = await cursor.fetchone()
             assert resp == (42, )
 
