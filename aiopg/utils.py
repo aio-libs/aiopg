@@ -240,13 +240,6 @@ class _PoolCursorContextManager:
     def __exit__(self, *args):
         try:
             self._cur.close()
-            self._pool.__exit__(*args)
-        except psycopg2.ProgrammingError:
-            # seen instances where the cursor fails to close:
-            #   https://github.com/aio-libs/aiopg/issues/364
-            # We close it here so we don't return a bad connection to the pool
-            self._conn.close()
-            raise
         finally:
             try:
                 self._pool.__exit__(*args)
