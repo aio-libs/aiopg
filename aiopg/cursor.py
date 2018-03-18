@@ -48,7 +48,8 @@ class Cursor:
 
     def close(self):
         """Close the cursor now."""
-        self._impl.close()
+        if not self.closed:
+            self._impl.close()
 
     @property
     def closed(self):

@@ -117,9 +117,11 @@ class Connection:
         self._cancelling = False
         self._cancellation_waiter = None
         self._echo = echo
+        self._cursors = list()
         self._notifies = asyncio.Queue(loop=loop)
         self._weakref = weakref.ref(self)
         self._loop.add_reader(self._fileno, self._ready, self._weakref)
+
         if loop.get_debug():
             self._source_traceback = traceback.extract_stack(sys._getframe(1))
 
@@ -281,7 +283,9 @@ class Connection:
                                             cursor_factory=cursor_factory,
                                             scrollable=scrollable,
                                             withhold=withhold)
-        return Cursor(self, impl, timeout, self._echo)
+        cursor = Cursor(self, impl, timeout, self._echo)
+        self._cursors.append(cursor)
+        return cursor
 
     @asyncio.coroutine
     def _cursor_impl(self, name=None, cursor_factory=None,
@@ -303,6 +307,9 @@ class Connection:
             if self._writing:
                 self._writing = False
                 self._loop.remove_writer(self._fileno)
+
+        self.close_cursors()
+
         self._conn.close()
         if self._waiter is not None and not self._waiter.done():
             self._waiter.set_exception(
@@ -313,6 +320,10 @@ class Connection:
         ret = create_future(self._loop)
         ret.set_result(None)
         return ret
+
+    def close_cursors(self):
+        for cursor in self._cursors:
+            cursor.close()
 
     @property
     def closed(self):
