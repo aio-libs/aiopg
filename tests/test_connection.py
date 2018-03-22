@@ -11,7 +11,7 @@ import sys
 
 from aiopg.connection import Connection, TIMEOUT
 from aiopg.cursor import Cursor
-from aiopg.utils import ensure_future, create_future
+from aiopg.utils import ensure_future
 from unittest import mock
 
 
