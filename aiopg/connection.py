@@ -117,7 +117,7 @@ class Connection:
         self._cancelling = False
         self._cancellation_waiter = None
         self._echo = echo
-        self._cursors = list()
+        self._conn_cursor = None
         self._notifies = asyncio.Queue(loop=loop)
         self._weakref = weakref.ref(self)
         self._loop.add_reader(self._fileno, self._ready, self._weakref)
@@ -260,18 +260,34 @@ class Connection:
         """A coroutine that returns a new cursor object using the connection.
 
         *cursor_factory* argument can be used to create non-standard
-         cursors. The argument must be suclass of
+         cursors. The argument must be subclass of
          `psycopg2.extensions.cursor`.
 
         *name*, *scrollable* and *withhold* parameters are not supported by
         psycopg in asynchronous mode.
 
+        NOTE: as of [TODO] any previously created created cursor from this
+            connection will be closed
         """
+        self.close_cursor()
+
         self._last_usage = self._loop.time()
         coro = self._cursor(name=name, cursor_factory=cursor_factory,
                             scrollable=scrollable, withhold=withhold,
                             timeout=timeout)
         return _ContextManager(coro)
+
+    def cursor_created(self, cursor):
+        if self._conn_cursor and not self._conn_cursor.closed:
+            raise Exception("You can only have one cursor per connection")
+
+        self._conn_cursor = cursor
+
+    def cursor_closed(self, cursor):
+        if cursor != self._conn_cursor:
+            raise Exception("You can only have one cursor per connection")
+
+        self._conn_cursor = None
 
     @asyncio.coroutine
     def _cursor(self, name=None, cursor_factory=None,
@@ -284,7 +300,6 @@ class Connection:
                                             scrollable=scrollable,
                                             withhold=withhold)
         cursor = Cursor(self, impl, timeout, self._echo)
-        self._cursors.append(cursor)
         return cursor
 
     @asyncio.coroutine
@@ -308,9 +323,9 @@ class Connection:
                 self._writing = False
                 self._loop.remove_writer(self._fileno)
 
-        self.close_cursors()
-
+        self.close_cursor()
         self._conn.close()
+
         if self._waiter is not None and not self._waiter.done():
             self._waiter.set_exception(
                 psycopg2.OperationalError("Connection closed"))
@@ -321,9 +336,9 @@ class Connection:
         ret.set_result(None)
         return ret
 
-    def close_cursors(self):
-        for cursor in self._cursors:
-            cursor.close()
+    def close_cursor(self):
+        if self._conn_cursor:
+            self._conn_cursor.close()
 
     @property
     def closed(self):

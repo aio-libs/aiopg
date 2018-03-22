@@ -16,6 +16,8 @@ class Cursor:
         self._echo = echo
         self._transaction = Transaction(self, IsolationLevel.repeatable_read)
 
+        conn.cursor_created(self)
+
     @property
     def echo(self):
         """Return echo mode status."""
@@ -50,6 +52,7 @@ class Cursor:
         """Close the cursor now."""
         if not self.closed:
             self._impl.close()
+            self._conn.cursor_closed(self)
 
     @property
     def closed(self):

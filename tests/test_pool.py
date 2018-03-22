@@ -498,6 +498,7 @@ def test_connection_in_good_state_after_timeout(create_pool):
             yield from sleep(conn)
 
     assert 1 == pool.freesize
+
     with (yield from pool) as conn:
         cur = yield from conn.cursor()
         yield from cur.execute('SELECT 1;')
