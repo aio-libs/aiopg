@@ -1,6 +1,11 @@
 CHANGES
 -------
 
+0.14.0 (2018-05-10)
+^^^^^^^^^^^^^^^^^^^
+
+* Add ``get_dialect`` func to have ability to pass ``json_serializer`` #451
+
 0.13.2 (2018-01-03)
 ^^^^^^^^^^^^^^^^^^^
 
