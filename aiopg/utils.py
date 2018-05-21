@@ -14,7 +14,7 @@ else:
 
 try:
     ensure_future = asyncio.ensure_future
-except AttributeError:
+except AttributeError:  # noqa
     ensure_future = asyncio.async
 
 
@@ -117,7 +117,7 @@ class _TransactionPointContextManager(_ContextManager):
 
 
 class _TransactionBeginContextManager(_ContextManager):
-    if PY_35:
+    if PY_35:# noqa`
 
         @asyncio.coroutine
         def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -253,5 +253,5 @@ if not PY_35:
         from asyncio import coroutines
 
         coroutines._COROUTINE_TYPES += (_ContextManager,)
-    except Exception:
+    except Exception:  # noqa
         pass
