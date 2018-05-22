@@ -9,7 +9,7 @@ async def notify(conn):
         for i in range(5):
             msg = "message {}".format(i)
             print('Send ->', msg)
-            await cur.execute("NOTIFY channel, %s'", (msg,))
+            await cur.execute("NOTIFY channel, %s", (msg,))
 
         await cur.execute("NOTIFY channel, 'finish'")
 
