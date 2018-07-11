@@ -183,20 +183,24 @@ class SAConnection:
 
     @asyncio.coroutine
     def _commit_impl(self):
-        cur = yield from self._connection.cursor()
         try:
-            yield from cur.execute('COMMIT')
+            cur = yield from self._connection.cursor()
+            try:
+                yield from cur.execute('COMMIT')
+            finally:
+                cur.close()
         finally:
-            cur.close()
             self._transaction = None
 
     @asyncio.coroutine
     def _rollback_impl(self):
-        cur = yield from self._connection.cursor()
         try:
-            yield from cur.execute('ROLLBACK')
+            cur = yield from self._connection.cursor()
+            try:
+                yield from cur.execute('ROLLBACK')
+            finally:
+                cur.close()
         finally:
-            cur.close()
             self._transaction = None
 
     def begin_nested(self):
@@ -237,21 +241,25 @@ class SAConnection:
 
     @asyncio.coroutine
     def _rollback_to_savepoint_impl(self, name, parent):
-        cur = yield from self._connection.cursor()
         try:
-            yield from cur.execute('ROLLBACK TO SAVEPOINT ' + name)
+            cur = yield from self._connection.cursor()
+            try:
+                yield from cur.execute('ROLLBACK TO SAVEPOINT ' + name)
+            finally:
+                cur.close()
         finally:
-            cur.close()
-        self._transaction = parent
+            self._transaction = parent
 
     @asyncio.coroutine
     def _release_savepoint_impl(self, name, parent):
-        cur = yield from self._connection.cursor()
         try:
-            yield from cur.execute('RELEASE SAVEPOINT ' + name)
+            cur = yield from self._connection.cursor()
+            try:
+                yield from cur.execute('RELEASE SAVEPOINT ' + name)
+            finally:
+                cur.close()
         finally:
-            cur.close()
-        self._transaction = parent
+            self._transaction = parent
 
     @asyncio.coroutine
     def begin_twophase(self, xid=None):
@@ -327,8 +335,10 @@ class SAConnection:
             return
 
         if self._transaction is not None:
-            yield from self._transaction.rollback()
-            self._transaction = None
+            try:
+                yield from self._transaction.rollback()
+            finally:
+                self._transaction = None
         # don't close underlying connection, it can be reused by pool
         # conn.close()
         self._engine.release(self)
