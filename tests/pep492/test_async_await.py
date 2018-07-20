@@ -1,12 +1,9 @@
-import sys
 import asyncio
 import pytest
 import psycopg2
 import aiopg
 import aiopg.sa
 from aiopg.sa import SAConnection
-
-PY_37 = sys.version_info >= (3, 7)
 
 
 @asyncio.coroutine
@@ -278,10 +275,7 @@ async def test_sa_connection_execute(pg_params, loop):
     result = []
     async with aiopg.sa.create_engine(loop=loop, **pg_params) as engine:
         async with engine.acquire() as conn:
-            rows = conn.execute(sql)
-            if PY_37:
-                rows = await rows
-            async for value in rows:
+            async for value in conn.execute(sql):
                 result.append(value)
             assert result == [(1,), (2, ), (3, ), (4, ), (5, )]
     assert conn.closed
