@@ -8,7 +8,7 @@ pep:
 	pep8 aiopg examples tests
 
 flake:
-	extra=$$(python -c "import sys;sys.stdout.write('--exclude tests/pep492') if sys.version_info[:3] < (3, 5, 0) else sys.stdout.write('examples')"); \
+	extra=$$(python -c "import sys;sys.stdout.write('--exclude tests/pep492 --builtins=StopAsyncIteration') if sys.version_info[:3] < (3, 5, 0) else sys.stdout.write('examples')"); \
 	flake8 aiopg tests $$extra
 
 test: flake
