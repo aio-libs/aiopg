@@ -335,7 +335,7 @@ class ResultProxy:
         while True:
             row = yield from self.fetchone()
             if row is None:
-                raise StopIteration
+                return
             else:
                 yield row
 
