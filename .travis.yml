@@ -11,6 +11,12 @@ python:
 - "3.6"
 - "nightly"
 
+jobs:
+  include:
+  - python: "3.7"
+    dist: xenial
+    sudo: required
+
 install:
 - pip install -U setuptools
 - python setup.py install
