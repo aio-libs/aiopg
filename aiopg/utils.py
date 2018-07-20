@@ -1,4 +1,5 @@
 import asyncio
+import builtins
 import sys
 import psycopg2
 
@@ -95,7 +96,7 @@ class _SAConnectionContextManager(_ContextManager):
 
                 try:
                     return (yield from self._obj.__anext__())
-                except StopAsyncIteration:
+                except builtins.StopAsyncIteration:  # bare StopAsyncIteration breaks code coverage in python 3.4
                     self._obj.close()
                     self._obj = None
                     raise
