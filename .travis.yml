@@ -11,11 +11,17 @@ python:
 - "3.6"
 - "nightly"
 
+.mixtures:
+- &py3_7-base
+  python: "3.7"
+  dist: xenial
+  sudo: required
 jobs:
   include:
-  - python: "3.7"
-    dist: xenial
-    sudo: required
+  - <<: *py3_7-base
+
+  - <<: *py3_7-base
+    env:
 
 install:
 - pip install -U setuptools
