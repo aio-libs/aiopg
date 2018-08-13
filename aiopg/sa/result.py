@@ -335,7 +335,7 @@ class ResultProxy:
         while True:
             row = yield from self.fetchone()
             if row is None:
-                raise StopIteration
+                return
             else:
                 yield row
 
@@ -353,7 +353,7 @@ class ResultProxy:
             if ret is not None:
                 return ret
             else:
-                raise StopAsyncIteration  # noqa
+                raise StopAsyncIteration
 
     def _non_result(self):
         if self._metadata is None:

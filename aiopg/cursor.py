@@ -384,7 +384,7 @@ class Cursor:
         while True:
             row = yield from self.fetchone()
             if row is None:
-                raise StopIteration
+                return
             else:
                 yield row
 
@@ -402,7 +402,7 @@ class Cursor:
             if ret is not None:
                 return ret
             else:
-                raise StopAsyncIteration  # noqa
+                raise StopAsyncIteration
 
         @asyncio.coroutine
         def __aenter__(self):

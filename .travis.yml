@@ -9,8 +9,22 @@ python:
 - "3.4"
 - "3.5"
 - "3.6"
+- "nightly"
+
+.mixtures:
+- &py3_7-base
+  python: "3.7"
+  dist: xenial
+  sudo: required
+jobs:
+  include:
+  - <<: *py3_7-base
+
+  - <<: *py3_7-base
+    env:
 
 install:
+- pip install -U setuptools
 - python setup.py install
 - pip install -Ur requirements.txt
 - pip install codecov
