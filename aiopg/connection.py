@@ -258,7 +258,7 @@ class Connection:
         """A coroutine that returns a new cursor object using the connection.
 
         *cursor_factory* argument can be used to create non-standard
-         cursors. The argument must be suclass of
+         cursors. The argument must be subclass of
          `psycopg2.extensions.cursor`.
 
         *name*, *scrollable* and *withhold* parameters are not supported by
