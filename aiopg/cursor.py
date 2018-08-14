@@ -107,7 +107,7 @@ class Cursor:
             logger.info("%r", parameters)
         try:
             self._impl.execute(operation, parameters)
-        except:
+        except BaseException:
             self._conn._waiter = None
             raise
         try:
@@ -141,7 +141,7 @@ class Cursor:
             logger.info("%r", parameters)
         try:
             self._impl.callproc(procname, parameters)
-        except:
+        except BaseException:
             self._conn._waiter = None
             raise
         else:

@@ -379,9 +379,9 @@ class ResultProxy:
         except AttributeError:
             self._non_result()
         else:
-            l = self._process_rows(rows)
+            res = self._process_rows(rows)
             self.close()
-            return l
+            return res
 
     @asyncio.coroutine
     def fetchone(self):
@@ -417,10 +417,10 @@ class ResultProxy:
         except AttributeError:
             self._non_result()
         else:
-            l = self._process_rows(rows)
-            if len(l) == 0:
+            res = self._process_rows(rows)
+            if len(res) == 0:
                 self.close()
-            return l
+            return res
 
     @asyncio.coroutine
     def first(self):
