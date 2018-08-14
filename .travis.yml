@@ -52,9 +52,9 @@ after_script:
 
 deploy:
   provider: pypi
-  user: andrew.svetlov
+  user: aio-libs-bot
   password:
-    secure: "GpbzbKVaDaIUF24S05LK18vDedNR7kQ8g5Y/5a+qH+HD5w4C8eZSnHkbtAC9s0Fs4Ih8oxEoxaAcFq1rErEL2eBGofDVyFEGR2mwsIoIV3YgGNpYzxKBP5UjMQRp9ciFMpRsTWFYAOiEhoqY6IQJXgL8PKebs3PsCE7AE+blE3Y="
+    secure: "x/mAcLCVGF6+WBhUjqBCJkNYaH62KQ7BetXzf/9eY8p7bwwAehV11+AI9wnn7CeZag4Ot2o+POjo6xGkk0iHUBk4j4FYbEl8UpU+FEGl4rlEc4NpKgYQ/tvnhvXRqFuRCCplcVy6xPA4iEQ5bhGuaWb4cpFOTzoGKYrpzSvmZmT67MHXe46pKiHiFfqlv3reEvMW3VjgEvMcep+eoAx2+wwRfHVCNNutpNaTE8ue1enLPnMXffMhE0N0joXMSPbVQ5NIY7Wf4GzE2W9ajPbc38/lrbY8kSpTL2KjPvK8cmpPXlSjqoNEXXHs+lIdfjM9SbjVirXqjS49jLpMRQ0+KUj8702VXk1G2H2oNeF+rcz4lSr5gmRTTzmF6whM6x9VD9w1IdvCpbId+To06dbzrYV7GXyFyTph5NwwOdFeAbqXqLLDcJ6OBPCts5e/9niWJXb+rBpJycO8F5YjHLm2T6XzV3t0e9GFyIvAkw41yG/sZjKrHv+5hGH09/rM1mqQFcR5pYlxBkQOIXQECwWQIfsiEkBy2geuWQXJ7to8r+r7fZ6pAeq2z01Dt7pd3yB4Sk9GRgpViWmZYo3zl7QFEnnoGQ4YIf+qKid0wB+WgmWI6nlrWzcWfkL6wJb8h6o0tHZiXhwS1v16ZdIG2sZzTGnOuVO/sQDfB39PqQf6L4g="
   distributions: "sdist bdist_wheel"
   on:
     tags: true
