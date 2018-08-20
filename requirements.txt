@@ -4,7 +4,7 @@ ipdb==0.11
 ipython==6.5.0
 flake8==3.5.0
 -e .[sa]
-sphinx==1.7.6
+sphinx==1.7.7
 tox==3.2.1
 pytest==3.7.1
 pytest-cov==2.5.1
