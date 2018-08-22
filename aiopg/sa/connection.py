@@ -186,7 +186,7 @@ class SAConnection:
     @asyncio.coroutine
     def _begin_impl(self, isolation_level, readonly, deferrable):
         stmt = 'BEGIN'
-        if isolation_level:
+        if isolation_level is not None:
             stmt += ' ISOLATION LEVEL ' + isolation_level
         if readonly:
             stmt += ' READ ONLY'
@@ -235,7 +235,7 @@ class SAConnection:
     def _begin_nested(self):
         if self._transaction is None:
             self._transaction = RootTransaction(self)
-            yield from self._begin_impl()
+            yield from self._begin_impl(None, False, False)
         else:
             self._transaction = NestedTransaction(self, self._transaction)
             self._transaction._savepoint = yield from self._savepoint_impl()
