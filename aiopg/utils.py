@@ -15,7 +15,7 @@ else:
 try:
     ensure_future = asyncio.ensure_future
 except AttributeError:
-    ensure_future = asyncio.async
+    ensure_future = getattr(asyncio, 'async')
 
 
 def create_future(loop):
@@ -86,7 +86,20 @@ class _SAConnectionContextManager(_ContextManager):
     if PY_35:  # pragma: no branch
         if PY_352:
             def __aiter__(self):
-                return self._coro
+                return self
+
+            @asyncio.coroutine
+            def __anext__(self):
+                if self._obj is None:
+                    self._obj = yield from self._coro
+
+                try:
+                    return (yield from self._obj.__anext__())
+                except StopAsyncIteration:
+                    self._obj.close()
+                    self._obj = None
+                    raise
+
         else:
             @asyncio.coroutine
             def __aiter__(self):
@@ -253,5 +266,5 @@ if not PY_35:
         from asyncio import coroutines
 
         coroutines._COROUTINE_TYPES += (_ContextManager,)
-    except:
+    except BaseException:
         pass
