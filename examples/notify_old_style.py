@@ -11,7 +11,7 @@ def notify(conn):
         for i in range(5):
             msg = "message {}".format(i)
             print('Send ->', msg)
-            yield from cur.execute("NOTIFY channel, '{}'".format(msg))
+            yield from cur.execute("NOTIFY channel, %s", (msg,))
 
         yield from cur.execute("NOTIFY channel, 'finish'")
     finally:

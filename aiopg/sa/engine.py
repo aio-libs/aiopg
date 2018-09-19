@@ -31,16 +31,22 @@ class APGCompiler_psycopg2(PGCompiler_psycopg2):
             return default.arg
 
 
-_dialect = PGDialect_psycopg2(json_serializer=json.dumps,
-                              json_deserializer=lambda x: x)
+def get_dialect(json_serializer=json.dumps, json_deserializer=lambda x: x):
+    dialect = PGDialect_psycopg2(json_serializer=json_serializer,
+                                 json_deserializer=json_deserializer)
 
-_dialect.statement_compiler = APGCompiler_psycopg2
-_dialect.implicit_returning = True
-_dialect.supports_native_enum = True
-_dialect.supports_smallserial = True  # 9.2+
-_dialect._backslash_escapes = False
-_dialect.supports_sane_multi_rowcount = True  # psycopg 2.0.9+
-_dialect._has_native_hstore = True
+    dialect.statement_compiler = APGCompiler_psycopg2
+    dialect.implicit_returning = True
+    dialect.supports_native_enum = True
+    dialect.supports_smallserial = True  # 9.2+
+    dialect._backslash_escapes = False
+    dialect.supports_sane_multi_rowcount = True  # psycopg 2.0.9+
+    dialect._has_native_hstore = True
+
+    return dialect
+
+
+_dialect = get_dialect()
 
 
 def create_engine(dsn=None, *, minsize=1, maxsize=10, loop=None,

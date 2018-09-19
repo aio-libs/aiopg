@@ -343,6 +343,7 @@ def test_true_parallel_tasks(create_pool, loop):
     maxsize = 0
     minfreesize = 100
 
+    @asyncio.coroutine
     def inner():
         nonlocal maxsize, minfreesize
         maxsize = max(maxsize, pool.size)

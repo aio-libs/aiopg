@@ -335,7 +335,7 @@ class ResultProxy:
         while True:
             row = yield from self.fetchone()
             if row is None:
-                raise StopIteration
+                return
             else:
                 yield row
 
@@ -353,7 +353,7 @@ class ResultProxy:
             if ret is not None:
                 return ret
             else:
-                raise StopAsyncIteration  # noqa
+                raise StopAsyncIteration
 
     def _non_result(self):
         if self._metadata is None:
@@ -379,9 +379,9 @@ class ResultProxy:
         except AttributeError:
             self._non_result()
         else:
-            l = self._process_rows(rows)
+            res = self._process_rows(rows)
             self.close()
-            return l
+            return res
 
     @asyncio.coroutine
     def fetchone(self):
@@ -417,10 +417,10 @@ class ResultProxy:
         except AttributeError:
             self._non_result()
         else:
-            l = self._process_rows(rows)
-            if len(l) == 0:
+            res = self._process_rows(rows)
+            if len(res) == 0:
                 self.close()
-            return l
+            return res
 
     @asyncio.coroutine
     def first(self):

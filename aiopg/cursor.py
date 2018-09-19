@@ -114,7 +114,7 @@ class Cursor:
             logger.info("%r", parameters)
         try:
             self._impl.execute(operation, parameters)
-        except:
+        except BaseException:
             self._conn._waiter = None
             raise
         try:
@@ -148,7 +148,7 @@ class Cursor:
             logger.info("%r", parameters)
         try:
             self._impl.callproc(procname, parameters)
-        except:
+        except BaseException:
             self._conn._waiter = None
             raise
         else:
@@ -391,7 +391,7 @@ class Cursor:
         while True:
             row = yield from self.fetchone()
             if row is None:
-                raise StopIteration
+                return
             else:
                 yield row
 
@@ -409,7 +409,7 @@ class Cursor:
             if ret is not None:
                 return ret
             else:
-                raise StopAsyncIteration  # noqa
+                raise StopAsyncIteration
 
         @asyncio.coroutine
         def __aenter__(self):

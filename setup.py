@@ -13,7 +13,7 @@ extras_require = {
 PY_VER = sys.version_info
 
 if PY_VER < (3, 4):
-    raise RuntimeError("aiopg doesn't suppport Python earlier than 3.4")
+    raise RuntimeError("aiopg doesn't support Python earlier than 3.4")
 
 
 def read(f):
@@ -38,6 +38,8 @@ classifiers = [
     'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3.4',
     'Programming Language :: Python :: 3.5',
+    'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
     'Operating System :: POSIX',
     'Operating System :: MacOS :: MacOS X',
     'Operating System :: Microsoft :: Windows',

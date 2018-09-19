@@ -377,3 +377,60 @@ def test_transactions_sequence(xa_connect):
 
     yield from tr3.commit()
     assert conn._transaction is None
+
+
+@asyncio.coroutine
+def test_transaction_mode(connect):
+    conn = yield from connect()
+
+    yield from conn.execute(tbl.delete())
+
+    tr1 = yield from conn.begin(isolation_level='SERIALIZABLE')
+    yield from conn.execute(tbl.insert().values(name='a'))
+    res1 = yield from conn.scalar(tbl.count())
+    assert 1 == res1
+    yield from tr1.commit()
+
+    tr2 = yield from conn.begin(isolation_level='REPEATABLE READ')
+    yield from conn.execute(tbl.insert().values(name='b'))
+    res2 = yield from conn.scalar(tbl.count())
+    assert 2 == res2
+    yield from tr2.commit()
+
+    tr3 = yield from conn.begin(isolation_level='READ UNCOMMITTED')
+    yield from conn.execute(tbl.insert().values(name='c'))
+    res3 = yield from conn.scalar(tbl.count())
+    assert 3 == res3
+    yield from tr3.commit()
+
+    tr4 = yield from conn.begin(readonly=True)
+    assert tr4 is conn._transaction
+    res1 = yield from conn.scalar(tbl.count())
+    assert 3 == res1
+    yield from tr4.commit()
+
+    tr5 = yield from conn.begin(isolation_level='READ UNCOMMITTED',
+                                readonly=True)
+    res1 = yield from conn.scalar(tbl.count())
+    assert 3 == res1
+    yield from tr5.commit()
+
+    tr6 = yield from conn.begin(deferrable=True)
+    yield from conn.execute(tbl.insert().values(name='f'))
+    res1 = yield from conn.scalar(tbl.count())
+    assert 4 == res1
+    yield from tr6.commit()
+
+    tr7 = yield from conn.begin(isolation_level='REPEATABLE READ',
+                                deferrable=True)
+    yield from conn.execute(tbl.insert().values(name='g'))
+    res1 = yield from conn.scalar(tbl.count())
+    assert 5 == res1
+    yield from tr7.commit()
+
+    tr8 = yield from conn.begin(isolation_level='SERIALIZABLE',
+                                readonly=True, deferrable=True)
+    assert tr8 is conn._transaction
+    res1 = yield from conn.scalar(tbl.count())
+    assert 5 == res1
+    yield from tr8.commit()
