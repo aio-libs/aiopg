@@ -5,6 +5,7 @@ from setuptools import setup
 
 
 install_requires = ['psycopg2>=2.7.0']
+extras_require = {'sa': ['sqlalchemy>=1.1']}
 
 extras_require = {
     'sa': ['sqlalchemy>=1.1']
