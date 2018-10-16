@@ -11,7 +11,7 @@ import sys
 
 from aiopg.connection import Connection, TIMEOUT
 from aiopg.cursor import Cursor
-from aiopg.utils import ensure_future, create_future
+from aiopg.utils import ensure_future
 from unittest import mock
 
 
@@ -332,6 +332,7 @@ def test_cancelled_connection_is_not_usable_until_cancellation(connect, loop):
     fut = asyncio.Future(loop=loop)
     conn = yield from connect()
     cur = yield from conn.cursor()
+
     task = ensure_future(inner(fut, cur), loop=loop)
     yield from fut
     yield from asyncio.sleep(0.1, loop=loop)
@@ -345,7 +346,7 @@ def test_cancelled_connection_is_not_usable_until_cancellation(connect, loop):
     else:
         assert False, "Connection did not start cancelling"
 
-    cur = yield from conn.cursor()
+    # cur = yield from conn.cursor()
     with pytest.raises(RuntimeError) as e:
         yield from cur.execute('SELECT 1')
     assert str(e.value) == ('cursor.execute() called while connection '
@@ -480,14 +481,16 @@ def test_ready_unknown_answer(connect, loop):
 def test_execute_twice(connect):
     conn = yield from connect()
     cur1 = yield from conn.cursor()
-    cur2 = yield from conn.cursor()
+    # cur2 = yield from conn.cursor()
     coro1 = cur1.execute('SELECT 1')
     fut1 = next(coro1)
     assert isinstance(fut1, asyncio.Future)
-    coro2 = cur2.execute('SELECT 2')
+    coro2 = cur1.execute('SELECT 2')
 
     with pytest.raises(RuntimeError):
         next(coro2)
+
+    yield from conn.cancel()
 
 
 @asyncio.coroutine
@@ -512,20 +515,23 @@ def test_binary_protocol_error(connect):
 
 @asyncio.coroutine
 def test_closing_in_separate_task(connect, loop):
-    event = create_future(loop)
+    closed_event = asyncio.Event(loop=loop)
+    exec_created = asyncio.Event(loop=loop)
 
     @asyncio.coroutine
     def waiter(conn):
         cur = yield from conn.cursor()
         fut = cur.execute("SELECT pg_sleep(1000)")
-        event.set_result(None)
-        with pytest.raises(psycopg2.OperationalError):
+        exec_created.set()
+        yield from closed_event.wait()
+        with pytest.raises(psycopg2.InterfaceError):
             yield from fut
 
     @asyncio.coroutine
     def closer(conn):
-        yield from event
+        yield from exec_created.wait()
         yield from conn.close()
+        closed_event.set()
 
     conn = yield from connect()
     yield from asyncio.gather(waiter(conn), closer(conn),

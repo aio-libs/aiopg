@@ -5,6 +5,7 @@ from setuptools import setup
 
 
 install_requires = ['psycopg2>=2.7.0']
+extras_require = {'sa': ['sqlalchemy>=1.1']}
 
 PY_VER = sys.version_info
 
@@ -14,9 +15,6 @@ if PY_VER < (3, 4):
 
 def read(f):
     return open(os.path.join(os.path.dirname(__file__), f)).read().strip()
-
-
-extras_require = {'sa': ['sqlalchemy>=1.1'], }
 
 
 def read_version():
