@@ -53,6 +53,27 @@ def test_simple_select(connect):
 
 
 @asyncio.coroutine
+def test_simple_select_with_hstore(connect):
+    conn = yield from connect()
+    cur = yield from conn.cursor()
+    yield from cur.execute("""
+        CREATE EXTENSION IF NOT EXISTS hstore;
+        CREATE TABLE hfoo (id serial, hcol hstore);
+        INSERT INTO hfoo (hcol) VALUES ('"col1"=>"456", "col2"=>"zzz"');
+    """)
+
+    # Reconnect because this is where the problem happens.
+    cur.close()
+    conn.close()
+    conn = yield from connect(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur = yield from conn.cursor()
+    yield from cur.execute("SELECT * FROM hfoo;")
+    ret = yield from cur.fetchone()
+    yield from cur.execute("DROP TABLE hfoo;")
+    assert {'hcol': {'col1': '456', 'col2': 'zzz'}, 'id': 1} == ret
+
+
+@asyncio.coroutine
 def test_default_event_loop(connect, loop):
     asyncio.set_event_loop(loop)
 
