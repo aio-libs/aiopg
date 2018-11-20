@@ -14,31 +14,29 @@ from psycopg2.extensions import (
 from psycopg2 import extras
 
 from .cursor import Cursor
-from .utils import _ContextManager, PY_35, create_future
+from .utils import _ContextManager, create_future
 
 
 __all__ = ('connect',)
 
 
 TIMEOUT = 60.0
-PY_341 = sys.version_info >= (3, 4, 1)
 
 # Windows specific error code, not in errno for some reason, and doesnt map
 # to OSError.errno EBADF
 WSAENOTSOCK = 10038
 
 
-@asyncio.coroutine
-def _enable_hstore(conn):
-    cur = yield from conn.cursor()
-    yield from cur.execute("""\
+async def _enable_hstore(conn):
+    cur = await conn.cursor()
+    await cur.execute("""\
         SELECT t.oid, typarray
         FROM pg_type t JOIN pg_namespace ns
             ON typnamespace = ns.oid
         WHERE typname = 'hstore';
         """)
     rv0, rv1 = [], []
-    for oids in (yield from cur.fetchall()):
+    for oids in (await cur.fetchall()):
         if isinstance(oids, dict):
             rv0.append(oids['oid'])
             rv1.append(oids['typarray'])
@@ -66,16 +64,15 @@ def connect(dsn=None, *, timeout=TIMEOUT, loop=None, enable_json=True,
     return _ContextManager(coro)
 
 
-@asyncio.coroutine
-def _connect(dsn=None, *, timeout=TIMEOUT, loop=None, enable_json=True,
-             enable_hstore=True, enable_uuid=True, echo=False, **kwargs):
+async def _connect(dsn=None, *, timeout=TIMEOUT, loop=None, enable_json=True,
+                   enable_hstore=True, enable_uuid=True, echo=False, **kwargs):
     if loop is None:
         loop = asyncio.get_event_loop()
 
     waiter = create_future(loop)
     conn = Connection(dsn, loop, timeout, waiter, bool(echo), **kwargs)
     try:
-        yield from conn._poll(waiter, timeout)
+        await conn._poll(waiter, timeout)
     except Exception:
         conn.close()
         raise
@@ -84,7 +81,7 @@ def _connect(dsn=None, *, timeout=TIMEOUT, loop=None, enable_json=True,
     if enable_uuid:
         extras.register_uuid(conn_or_curs=conn._conn)
     if enable_hstore:
-        oids = yield from _enable_hstore(conn)
+        oids = await _enable_hstore(conn)
         if oids is not None:
             oid, array_oid = oids
             extras.register_hstore(conn._conn, oid=oid, array_oid=array_oid)
@@ -219,13 +216,11 @@ class Connection:
         self._waiter = create_future(self._loop)
         return self._waiter
 
-    @asyncio.coroutine
-    def _poll(self, waiter, timeout):
+    async def _poll(self, waiter, timeout):
         assert waiter is self._waiter, (waiter, self._waiter)
         self._ready(self._weakref)
 
-        @asyncio.coroutine
-        def cancel():
+        async def cancel():
             self._waiter = create_future(self._loop)
             self._cancelling = True
             self._cancellation_waiter = self._waiter
@@ -233,17 +228,17 @@ class Connection:
             if not self._conn.isexecuting():
                 return
             try:
-                yield from asyncio.wait_for(self._waiter, timeout,
-                                            loop=self._loop)
+                await asyncio.wait_for(self._waiter, timeout,
+                                       loop=self._loop)
             except psycopg2.extensions.QueryCanceledError:
                 pass
             except asyncio.TimeoutError:
                 self._close()
 
         try:
-            yield from asyncio.wait_for(self._waiter, timeout, loop=self._loop)
+            await asyncio.wait_for(self._waiter, timeout, loop=self._loop)
         except (asyncio.CancelledError, asyncio.TimeoutError) as exc:
-            yield from asyncio.shield(cancel(), loop=self._loop)
+            await asyncio.shield(cancel(), loop=self._loop)
             raise exc
         except psycopg2.extensions.QueryCanceledError:
             raise asyncio.CancelledError
@@ -293,22 +288,20 @@ class Connection:
 
         self._conn_cursor = None
 
-    @asyncio.coroutine
-    def _cursor(self, name=None, cursor_factory=None,
-                scrollable=None, withhold=False, timeout=None):
+    async def _cursor(self, name=None, cursor_factory=None,
+                      scrollable=None, withhold=False, timeout=None):
         if timeout is None:
             timeout = self._timeout
 
-        impl = yield from self._cursor_impl(name=name,
-                                            cursor_factory=cursor_factory,
-                                            scrollable=scrollable,
-                                            withhold=withhold)
+        impl = await self._cursor_impl(name=name,
+                                       cursor_factory=cursor_factory,
+                                       scrollable=scrollable,
+                                       withhold=withhold)
         cursor = Cursor(self, impl, timeout, self._echo)
         return cursor
 
-    @asyncio.coroutine
-    def _cursor_impl(self, name=None, cursor_factory=None,
-                     scrollable=None, withhold=False):
+    async def _cursor_impl(self, name=None, cursor_factory=None,
+                           scrollable=None, withhold=False):
         if cursor_factory is None:
             impl = self._conn.cursor(name=name,
                                      scrollable=scrollable, withhold=withhold)
@@ -359,65 +352,54 @@ class Connection:
         """Underlying psycopg connection object, readonly"""
         return self._conn
 
-    @asyncio.coroutine
-    def commit(self):
+    async def commit(self):
         raise psycopg2.ProgrammingError(
             "commit cannot be used in asynchronous mode")
 
-    @asyncio.coroutine
-    def rollback(self):
+    async def rollback(self):
         raise psycopg2.ProgrammingError(
             "rollback cannot be used in asynchronous mode")
 
     # TPC
 
-    @asyncio.coroutine
-    def xid(self, format_id, gtrid, bqual):
+    async def xid(self, format_id, gtrid, bqual):
         return self._conn.xid(format_id, gtrid, bqual)
 
-    @asyncio.coroutine
-    def tpc_begin(self, xid=None):
+    async def tpc_begin(self, xid=None):
         raise psycopg2.ProgrammingError(
             "tpc_begin cannot be used in asynchronous mode")
 
-    @asyncio.coroutine
-    def tpc_prepare(self):
+    async def tpc_prepare(self):
         raise psycopg2.ProgrammingError(
             "tpc_prepare cannot be used in asynchronous mode")
 
-    @asyncio.coroutine
-    def tpc_commit(self, xid=None):
+    async def tpc_commit(self, xid=None):
         raise psycopg2.ProgrammingError(
             "tpc_commit cannot be used in asynchronous mode")
 
-    @asyncio.coroutine
-    def tpc_rollback(self, xid=None):
+    async def tpc_rollback(self, xid=None):
         raise psycopg2.ProgrammingError(
             "tpc_rollback cannot be used in asynchronous mode")
 
-    @asyncio.coroutine
-    def tpc_recover(self):
+    async def tpc_recover(self):
         raise psycopg2.ProgrammingError(
             "tpc_recover cannot be used in asynchronous mode")
 
-    @asyncio.coroutine
-    def cancel(self):
+    async def cancel(self):
         """Cancel the current database operation."""
         if self._waiter is None:
             return
 
-        @asyncio.coroutine
-        def cancel():
+        async def cancel():
             self._conn.cancel()
             try:
-                yield from self._waiter
+                await self._waiter
             except psycopg2.extensions.QueryCanceledError:
                 pass
 
-        yield from asyncio.shield(cancel(), loop=self._loop)
+        await asyncio.shield(cancel(), loop=self._loop)
 
-    @asyncio.coroutine
-    def reset(self):
+    async def reset(self):
         raise psycopg2.ProgrammingError(
             "reset cannot be used in asynchronous mode")
 
@@ -431,9 +413,8 @@ class Connection:
         """
         return self._dsn
 
-    @asyncio.coroutine
-    def set_session(self, *, isolation_level=None, readonly=None,
-                    deferrable=None, autocommit=None):
+    async def set_session(self, *, isolation_level=None, readonly=None,
+                          deferrable=None, autocommit=None):
         raise psycopg2.ProgrammingError(
             "set_session cannot be used in asynchronous mode")
 
@@ -456,8 +437,7 @@ class Connection:
         """
         return self._conn.isolation_level
 
-    @asyncio.coroutine
-    def set_isolation_level(self, val):
+    async def set_isolation_level(self, val):
         """Transaction isolation level.
 
         The only allowed value is ISOLATION_LEVEL_READ_COMMITTED.
@@ -470,8 +450,7 @@ class Connection:
         """Client encoding for SQL operations."""
         return self._conn.encoding
 
-    @asyncio.coroutine
-    def set_client_encoding(self, val):
+    async def set_client_encoding(self, val):
         self._conn.set_client_encoding(val)
 
     @property
@@ -484,18 +463,15 @@ class Connection:
         """The default cursor factory used by .cursor()."""
         return self._conn.cursor_factory
 
-    @asyncio.coroutine
-    def get_backend_pid(self):
+    async def get_backend_pid(self):
         """Returns the PID of the backend server process."""
         return self._conn.get_backend_pid()
 
-    @asyncio.coroutine
-    def get_parameter_status(self, parameter):
+    async def get_parameter_status(self, parameter):
         """Look up a current parameter setting of the server."""
         return self._conn.get_parameter_status(parameter)
 
-    @asyncio.coroutine
-    def get_transaction_status(self):
+    async def get_transaction_status(self):
         """Return the current session transaction status as an integer."""
         return self._conn.get_transaction_status()
 
@@ -514,8 +490,7 @@ class Connection:
         """A read-only integer representing the status of the connection."""
         return self._conn.status
 
-    @asyncio.coroutine
-    def lobject(self, *args, **kwargs):
+    async def lobject(self, *args, **kwargs):
         raise psycopg2.ProgrammingError(
             "lobject cannot be used in asynchronous mode")
 
@@ -534,33 +509,29 @@ class Connection:
         """Return echo mode status."""
         return self._echo
 
-    if PY_341:  # pragma: no branch
-        def __del__(self):
-            try:
-                _conn = self._conn
-            except AttributeError:
-                return
-            if _conn is not None and not _conn.closed:
-                self.close()
-                warnings.warn("Unclosed connection {!r}".format(self),
-                              ResourceWarning)
+    def __del__(self):
+        try:
+            _conn = self._conn
+        except AttributeError:
+            return
+        if _conn is not None and not _conn.closed:
+            self.close()
+            warnings.warn("Unclosed connection {!r}".format(self),
+                          ResourceWarning)
 
-                context = {'connection': self,
-                           'message': 'Unclosed connection'}
-                if self._source_traceback is not None:
-                    context['source_traceback'] = self._source_traceback
-                self._loop.call_exception_handler(context)
+            context = {'connection': self,
+                       'message': 'Unclosed connection'}
+            if self._source_traceback is not None:
+                context['source_traceback'] = self._source_traceback
+            self._loop.call_exception_handler(context)
 
     @property
     def notifies(self):
         """Return notification queue."""
         return self._notifies
 
-    if PY_35:  # pragma: no branch
-        @asyncio.coroutine
-        def __aenter__(self):
-            return self
+    async def __aenter__(self):
+        return self
 
-        @asyncio.coroutine
-        def __aexit__(self, exc_type, exc_val, exc_tb):
-            self.close()
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        self.close()

@@ -16,13 +16,12 @@ tbl = Table('sa_tbl3', meta,
 
 @pytest.fixture
 def engine(make_engine, loop):
-    @asyncio.coroutine
-    def start():
-        engine = yield from make_engine()
-        with (yield from engine) as conn:
-            yield from conn.execute("DROP TABLE IF EXISTS sa_tbl3")
-            yield from conn.execute("CREATE TABLE sa_tbl3 "
-                                    "(id serial, name varchar(255))")
+    async def start():
+        engine = await make_engine()
+        with (await engine) as conn:
+            await conn.execute("DROP TABLE IF EXISTS sa_tbl3")
+            await conn.execute("CREATE TABLE sa_tbl3 "
+                               "(id serial, name varchar(255))")
         return engine
     return loop.run_until_complete(start())
 
@@ -63,12 +62,11 @@ def test_freesize(engine):
     assert 1 == engine.freesize
 
 
-@asyncio.coroutine
-def test_make_engine_with_default_loop(make_engine, loop):
+async def test_make_engine_with_default_loop(make_engine, loop):
     asyncio.set_event_loop(loop)
-    engine = yield from make_engine(use_loop=False)
+    engine = await make_engine(use_loop=False)
     engine.close()
-    yield from engine.wait_closed()
+    await engine.wait_closed()
 
 
 def test_not_context_manager(engine):
@@ -77,80 +75,73 @@ def test_not_context_manager(engine):
             pass
 
 
-@asyncio.coroutine
-def test_release_transacted(engine):
-    conn = yield from engine.acquire()
-    tr = yield from conn.begin()
+async def test_release_transacted(engine):
+    conn = await engine.acquire()
+    tr = await conn.begin()
     with pytest.raises(sa.InvalidRequestError):
         engine.release(conn)
     del tr
-    yield from conn.close()
+    await conn.close()
 
 
 def test_timeout(engine):
     assert TIMEOUT == engine.timeout
 
 
-@asyncio.coroutine
-def test_timeout_override(make_engine):
+async def test_timeout_override(make_engine):
     timeout = 1
-    engine = yield from make_engine(timeout=timeout)
+    engine = await make_engine(timeout=timeout)
     assert timeout == engine.timeout
-    conn = yield from engine.acquire()
+    conn = await engine.acquire()
     with pytest.raises(asyncio.TimeoutError):
-        yield from conn.execute("SELECT pg_sleep(10)")
+        await conn.execute("SELECT pg_sleep(10)")
 
     engine.terminate()
-    yield from engine.wait_closed()
+    await engine.wait_closed()
 
 
-@asyncio.coroutine
-def test_cannot_acquire_after_closing(make_engine):
-    engine = yield from make_engine()
+async def test_cannot_acquire_after_closing(make_engine):
+    engine = await make_engine()
     engine.close()
 
     with pytest.raises(RuntimeError):
-        yield from engine.acquire()
+        await engine.acquire()
 
-    yield from engine.wait_closed()
+    await engine.wait_closed()
 
 
-@asyncio.coroutine
-def test_wait_closed(make_engine, loop):
-    engine = yield from make_engine(minsize=10)
+async def test_wait_closed(make_engine, loop):
+    engine = await make_engine(minsize=10)
 
-    c1 = yield from engine.acquire()
-    c2 = yield from engine.acquire()
+    c1 = await engine.acquire()
+    c2 = await engine.acquire()
     assert 10 == engine.size
     assert 8 == engine.freesize
 
     ops = []
 
-    @asyncio.coroutine
-    def do_release(conn):
-        yield from asyncio.sleep(0, loop=loop)
+    async def do_release(conn):
+        await asyncio.sleep(0, loop=loop)
         engine.release(conn)
         ops.append('release')
 
-    @asyncio.coroutine
-    def wait_closed():
-        yield from engine.wait_closed()
+    async def wait_closed():
+        await engine.wait_closed()
         ops.append('wait_closed')
 
     engine.close()
-    yield from asyncio.gather(wait_closed(),
-                              do_release(c1),
-                              do_release(c2),
-                              loop=loop)
+    await asyncio.gather(wait_closed(),
+                         do_release(c1),
+                         do_release(c2),
+                         loop=loop)
     assert ['release', 'release', 'wait_closed'] == ops
     assert 0 == engine.freesize
 
 
-@asyncio.coroutine
-def test_terminate_with_acquired_connections(make_engine):
-    engine = yield from make_engine()
-    conn = yield from engine.acquire()
+async def test_terminate_with_acquired_connections(make_engine):
+    engine = await make_engine()
+    conn = await engine.acquire()
     engine.terminate()
-    yield from engine.wait_closed()
+    await engine.wait_closed()
 
     assert conn.closed

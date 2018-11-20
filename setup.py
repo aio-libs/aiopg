@@ -9,8 +9,8 @@ extras_require = {'sa': ['sqlalchemy>=1.1']}
 
 PY_VER = sys.version_info
 
-if PY_VER < (3, 4):
-    raise RuntimeError("aiopg doesn't support Python earlier than 3.4")
+if PY_VER < (3, 5, 2):
+    raise RuntimeError("aiopg doesn't support Python earlier than 3.5.2")
 
 
 def read(f):

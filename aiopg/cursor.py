@@ -5,7 +5,7 @@ import psycopg2
 
 from .log import logger
 from .transaction import Transaction, IsolationLevel
-from .utils import PY_35, PY_352, _TransactionBeginContextManager
+from .utils import _TransactionBeginContextManager
 
 
 class Cursor:
@@ -94,8 +94,7 @@ class Cursor:
         # Not supported
         self._impl.withhold = val
 
-    @asyncio.coroutine
-    def execute(self, operation, parameters=None, *, timeout=None):
+    async def execute(self, operation, parameters=None, *, timeout=None):
         """Prepare and execute a database operation (query or command).
 
         Parameters may be provided as sequence or mapping and will be
@@ -115,19 +114,17 @@ class Cursor:
             self._conn._waiter = None
             raise
         try:
-            yield from self._conn._poll(waiter, timeout)
+            await self._conn._poll(waiter, timeout)
         except asyncio.TimeoutError:
             self._impl.close()
             raise
 
-    @asyncio.coroutine
-    def executemany(self, operation, seq_of_parameters):
+    async def executemany(self, operation, seq_of_parameters):
         # Not supported
         raise psycopg2.ProgrammingError(
             "executemany cannot be used in asynchronous mode")
 
-    @asyncio.coroutine
-    def callproc(self, procname, parameters=None, *, timeout=None):
+    async def callproc(self, procname, parameters=None, *, timeout=None):
         """Call a stored database procedure with the given name.
 
         The sequence of parameters must contain one entry for each
@@ -149,7 +146,7 @@ class Cursor:
             self._conn._waiter = None
             raise
         else:
-            yield from self._conn._poll(waiter, timeout)
+            await self._conn._poll(waiter, timeout)
 
     def begin(self):
         return _TransactionBeginContextManager(self._transaction.begin())
@@ -161,8 +158,7 @@ class Cursor:
         else:
             return self._transaction.point()
 
-    @asyncio.coroutine
-    def mogrify(self, operation, parameters=None):
+    async def mogrify(self, operation, parameters=None):
         """Return a query string after arguments binding.
 
         The string returned is exactly the one that would be sent to
@@ -174,8 +170,7 @@ class Cursor:
                                                "mogrify")
         return ret
 
-    @asyncio.coroutine
-    def setinputsizes(self, sizes):
+    async def setinputsizes(self, sizes):
         """This method is exposed in compliance with the DBAPI.
 
         It currently does nothing but it is safe to call it.
@@ -183,8 +178,7 @@ class Cursor:
         """
         self._impl.setinputsizes(sizes)
 
-    @asyncio.coroutine
-    def fetchone(self):
+    async def fetchone(self):
         """Fetch the next row of a query result set.
 
         Returns a single tuple, or None when no more data is
@@ -196,8 +190,7 @@ class Cursor:
                                                "cursors yet")
         return ret
 
-    @asyncio.coroutine
-    def fetchmany(self, size=None):
+    async def fetchmany(self, size=None):
         """Fetch the next set of rows of a query result.
 
         Returns a list of tuples. An empty list is returned when no
@@ -218,8 +211,7 @@ class Cursor:
                                                "cursors yet")
         return ret
 
-    @asyncio.coroutine
-    def fetchall(self):
+    async def fetchall(self):
         """Fetch all (remaining) rows of a query result.
 
         Returns them as a list of tuples.  An empty list is returned
@@ -231,8 +223,7 @@ class Cursor:
                                                "cursors yet")
         return ret
 
-    @asyncio.coroutine
-    def scroll(self, value, mode="relative"):
+    async def scroll(self, value, mode="relative"):
         """Scroll to a new position according to mode.
 
         If mode is relative (default), value is taken as offset
@@ -332,8 +323,7 @@ class Cursor:
 
         return self._impl.statusmessage
 
-    # @asyncio.coroutine
-    # def cast(self, old, s):
+    # async def cast(self, old, s):
     #     ...
 
     @property
@@ -350,29 +340,24 @@ class Cursor:
         """
         self._impl.tzinfo_factory = val
 
-    @asyncio.coroutine
-    def nextset(self):
+    async def nextset(self):
         # Not supported
         self._impl.nextset()  # raises psycopg2.NotSupportedError
 
-    @asyncio.coroutine
-    def setoutputsize(self, size, column=None):
+    async def setoutputsize(self, size, column=None):
         # Does nothing
         self._impl.setoutputsize(size, column)
 
-    @asyncio.coroutine
-    def copy_from(self, file, table, sep='\t', null='\\N', size=8192,
-                  columns=None):
+    async def copy_from(self, file, table, sep='\t', null='\\N', size=8192,
+                        columns=None):
         raise psycopg2.ProgrammingError(
             "copy_from cannot be used in asynchronous mode")
 
-    @asyncio.coroutine
-    def copy_to(self, file, table, sep='\t', null='\\N', columns=None):
+    async def copy_to(self, file, table, sep='\t', null='\\N', columns=None):
         raise psycopg2.ProgrammingError(
             "copy_to cannot be used in asynchronous mode")
 
-    @asyncio.coroutine
-    def copy_expert(self, sql, file, size=8192):
+    async def copy_expert(self, sql, file, size=8192):
         raise psycopg2.ProgrammingError(
             "copy_expert cannot be used in asynchronous mode")
 
@@ -386,33 +371,25 @@ class Cursor:
                       DeprecationWarning,
                       stacklevel=2)
         while True:
-            row = yield from self.fetchone()
+            row = yield from self.fetchone().__await__()
             if row is None:
                 return
             else:
                 yield row
 
-    if PY_35:  # pragma: no branch
+    def __aiter__(self):
+        return self
 
-        def __aiter__(self):
-            return self
+    async def __anext__(self):
+        ret = await self.fetchone()
+        if ret is not None:
+            return ret
+        else:
+            raise StopAsyncIteration
 
-        if not PY_352:
-            __aiter__ = asyncio.coroutine(__aiter__)
+    async def __aenter__(self):
+        return self
 
-        @asyncio.coroutine
-        def __anext__(self):
-            ret = yield from self.fetchone()
-            if ret is not None:
-                return ret
-            else:
-                raise StopAsyncIteration
-
-        @asyncio.coroutine
-        def __aenter__(self):
-            return self
-
-        @asyncio.coroutine
-        def __aexit__(self, exc_type, exc_val, exc_tb):
-            self.close()
-            return
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return

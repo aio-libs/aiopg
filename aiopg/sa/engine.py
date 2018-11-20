@@ -6,7 +6,7 @@ import aiopg
 from .connection import SAConnection
 from .exc import InvalidRequestError
 from ..connection import TIMEOUT
-from ..utils import PY_35, _PoolContextManager, _PoolAcquireContextManager
+from ..utils import _PoolContextManager, _PoolAcquireContextManager
 
 try:
     from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
@@ -65,21 +65,20 @@ def create_engine(dsn=None, *, minsize=1, maxsize=10, loop=None,
     return _EngineContextManager(coro)
 
 
-@asyncio.coroutine
-def _create_engine(dsn=None, *, minsize=1, maxsize=10, loop=None,
-                   dialect=_dialect, timeout=TIMEOUT, pool_recycle=-1,
-                   **kwargs):
+async def _create_engine(dsn=None, *, minsize=1, maxsize=10, loop=None,
+                         dialect=_dialect, timeout=TIMEOUT, pool_recycle=-1,
+                         **kwargs):
     if loop is None:
         loop = asyncio.get_event_loop()
-    pool = yield from aiopg.create_pool(dsn, minsize=minsize, maxsize=maxsize,
-                                        loop=loop, timeout=timeout,
-                                        pool_recycle=pool_recycle, **kwargs)
-    conn = yield from pool.acquire()
+    pool = await aiopg.create_pool(dsn, minsize=minsize, maxsize=maxsize,
+                                   loop=loop, timeout=timeout,
+                                   pool_recycle=pool_recycle, **kwargs)
+    conn = await pool.acquire()
     try:
         real_dsn = conn.dsn
         return Engine(dialect, pool, real_dsn)
     finally:
-        yield from pool.release(conn)
+        await pool.release(conn)
 
 
 class Engine:
@@ -156,19 +155,17 @@ class Engine:
         """
         self._pool.terminate()
 
-    @asyncio.coroutine
-    def wait_closed(self):
+    async def wait_closed(self):
         """Wait for closing all engine's connections."""
-        yield from self._pool.wait_closed()
+        await self._pool.wait_closed()
 
     def acquire(self):
         """Get a connection from pool."""
         coro = self._acquire()
         return _EngineAcquireContextManager(coro, self)
 
-    @asyncio.coroutine
-    def _acquire(self):
-        raw = yield from self._pool.acquire()
+    async def _acquire(self):
+        raw = await self._pool.acquire()
         conn = SAConnection(raw, self)
         return conn
 
@@ -183,38 +180,35 @@ class Engine:
 
     def __enter__(self):
         raise RuntimeError(
-            '"yield from" should be used as context manager expression')
+            '"await" should be used as context manager expression')
 
     def __exit__(self, *args):
         # This must exist because __enter__ exists, even though that
         # always raises; that's how the with-statement works.
         pass  # pragma: nocover
 
-    def __iter__(self):
+    def __await__(self):
         # This is not a coroutine.  It is meant to enable the idiom:
         #
-        #     with (yield from engine) as conn:
+        #     with (await engine) as conn:
         #         <block>
         #
         # as an alternative to:
         #
-        #     conn = yield from engine.acquire()
+        #     conn = await engine.acquire()
         #     try:
         #         <block>
         #     finally:
         #         engine.release(conn)
-        conn = yield from self.acquire()
+        conn = yield from self._acquire().__await__()
         return _ConnectionContextManager(self, conn)
 
-    if PY_35:  # pragma: no branch
-        @asyncio.coroutine
-        def __aenter__(self):
-            return self
+    async def __aenter__(self):
+        return self
 
-        @asyncio.coroutine
-        def __aexit__(self, exc_type, exc_val, exc_tb):
-            self.close()
-            yield from self.wait_closed()
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        await self.wait_closed()
 
 
 _EngineContextManager = _PoolContextManager
@@ -227,8 +221,8 @@ class _ConnectionContextManager:
     This enables the following idiom for acquiring and releasing a
     connection around a block:
 
-        with (yield from engine) as conn:
-            cur = yield from conn.cursor()
+        with (await engine) as conn:
+            cur = await conn.cursor()
 
     while failing loudly when accidentally using:
 

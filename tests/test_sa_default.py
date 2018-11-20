@@ -1,4 +1,3 @@
-import asyncio
 import datetime
 
 import pytest
@@ -21,27 +20,25 @@ tbl = sa.Table('sa_tbl4', meta,
 
 @pytest.fixture
 def engine(make_engine, loop):
-    @asyncio.coroutine
-    def start():
-        engine = yield from make_engine()
-        with (yield from engine) as conn:
-            yield from conn.execute('DROP TABLE IF EXISTS sa_tbl4')
-            yield from conn.execute('DROP SEQUENCE IF EXISTS id_sequence_seq')
-            yield from conn.execute(CreateTable(tbl))
-            yield from conn.execute('CREATE SEQUENCE id_sequence_seq')
+    async def start():
+        engine = await make_engine()
+        with (await engine) as conn:
+            await conn.execute('DROP TABLE IF EXISTS sa_tbl4')
+            await conn.execute('DROP SEQUENCE IF EXISTS id_sequence_seq')
+            await conn.execute(CreateTable(tbl))
+            await conn.execute('CREATE SEQUENCE id_sequence_seq')
 
         return engine
 
     return loop.run_until_complete(start())
 
 
-@asyncio.coroutine
-def test_default_fields(engine):
-    with (yield from engine) as conn:
-        yield from conn.execute(tbl.insert().values())
+async def test_default_fields(engine):
+    with (await engine) as conn:
+        await conn.execute(tbl.insert().values())
 
-        res = yield from conn.execute(tbl.select())
-        row = yield from res.fetchone()
+        res = await conn.execute(tbl.select())
+        row = await res.fetchone()
         assert row.count == 100
         assert row.id_sequence == 1
         assert row.count_str == 6
@@ -50,16 +47,15 @@ def test_default_fields(engine):
         assert type(row.date) == datetime.datetime
 
 
-@asyncio.coroutine
-def test_default_fields_isnull(engine):
-    with (yield from engine) as conn:
-        yield from conn.execute(tbl.insert().values(
+async def test_default_fields_isnull(engine):
+    with (await engine) as conn:
+        await conn.execute(tbl.insert().values(
             is_active=False,
             date=None,
         ))
 
-        res = yield from conn.execute(tbl.select())
-        row = yield from res.fetchone()
+        res = await conn.execute(tbl.select())
+        row = await res.fetchone()
         assert row.count == 100
         assert row.id_sequence == 1
         assert row.count_str == 6
@@ -68,19 +64,18 @@ def test_default_fields_isnull(engine):
         assert row.date is None
 
 
-@asyncio.coroutine
-def test_default_fields_edit(engine):
-    with (yield from engine) as conn:
+async def test_default_fields_edit(engine):
+    with (await engine) as conn:
         date = datetime.datetime.now()
-        yield from conn.execute(tbl.insert().values(
+        await conn.execute(tbl.insert().values(
             name='edit name',
             is_active=False,
             date=date,
             count=1,
         ))
 
-        res = yield from conn.execute(tbl.select())
-        row = yield from res.fetchone()
+        res = await conn.execute(tbl.select())
+        row = await res.fetchone()
         assert row.count == 1
         assert row.id_sequence == 1
         assert row.count_str == 6
