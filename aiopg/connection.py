@@ -36,7 +36,7 @@ async def _enable_hstore(conn):
         WHERE typname = 'hstore';
         """)
     rv0, rv1 = [], []
-    for oids in (await cur.fetchall()):
+    async for oids in cur:
         if isinstance(oids, dict):
             rv0.append(oids['oid'])
             rv1.append(oids['typarray'])
