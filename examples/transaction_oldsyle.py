@@ -7,36 +7,34 @@ from aiopg.transaction import Transaction, IsolationLevel
 dsn = 'dbname=aiopg user=aiopg password=passwd host=127.0.0.1'
 
 
-@asyncio.coroutine
-def transaction(cur, isolation_level,
-                readonly=False, deferrable=False):
+async def transaction(cur, isolation_level,
+                      readonly=False, deferrable=False):
     transaction = Transaction(cur, isolation_level, readonly, deferrable)
 
-    yield from transaction.begin()
+    await transaction.begin()
     try:
-        yield from cur.execute('insert into tbl values (1)')
+        await cur.execute('insert into tbl values (1)')
 
-        yield from transaction.savepoint()
+        await transaction.savepoint()
         try:
-            yield from cur.execute('insert into tbl values (3)')
-            yield from transaction.release_savepoint()
+            await cur.execute('insert into tbl values (3)')
+            await transaction.release_savepoint()
         except psycopg2.Error:
-            yield from transaction.rollback_savepoint()
+            await transaction.rollback_savepoint()
 
-        yield from cur.execute('insert into tbl values (4)')
-        yield from transaction.commit()
+        await cur.execute('insert into tbl values (4)')
+        await transaction.commit()
 
     except psycopg2.Error:
-        yield from transaction.rollback()
+        await transaction.rollback()
 
 
-@asyncio.coroutine
-def main():
-    pool = yield from aiopg.create_pool(dsn)
-    with (yield from pool.cursor()) as cur:
-        yield from transaction(cur, IsolationLevel.repeatable_read)
-        yield from transaction(cur, IsolationLevel.read_committed)
-        yield from transaction(cur, IsolationLevel.serializable)
+async def main():
+    pool = await aiopg.create_pool(dsn)
+    with (await pool.cursor()) as cur:
+        await transaction(cur, IsolationLevel.repeatable_read)
+        await transaction(cur, IsolationLevel.read_committed)
+        await transaction(cur, IsolationLevel.serializable)
 
         cur.execute('select * from tbl')
 
