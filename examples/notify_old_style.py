@@ -33,9 +33,9 @@ async def listen(conn):
 
 async def main():
     pool = await aiopg.create_pool(dsn)
-    with (await pool) as conn1:
+    async with pool as conn1:
         listener = listen(conn1)
-        with (await pool) as conn2:
+        async with pool as conn2:
             notifier = notify(conn2)
             await asyncio.gather(listener, notifier)
     print("ALL DONE")

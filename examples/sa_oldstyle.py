@@ -20,7 +20,7 @@ emails = sa.Table('emails', metadata,
 
 
 async def create_tables(engine):
-    with (await engine) as conn:
+    async with engine as conn:
         await conn.execute('DROP TABLE IF EXISTS emails')
         await conn.execute('DROP TABLE IF EXISTS users')
         await conn.execute('''CREATE TABLE users (
@@ -49,7 +49,7 @@ def gen_birthday():
 
 
 async def fill_data(engine):
-    with (await engine) as conn:
+    async with engine as conn:
         tr = await conn.begin()
 
         for name in random.sample(names, len(names)):
@@ -66,9 +66,9 @@ async def fill_data(engine):
 
 
 async def count(engine):
-    with (await engine) as conn:
-        c1 = (await conn.scalar(users.count()))
-        c2 = (await conn.scalar(emails.count()))
+    async with engine as conn:
+        c1 = await conn.scalar(users.count())
+        c2 = await conn.scalar(emails.count())
         print("Population consists of", c1, "people with",
               c2, "emails in total")
         join = sa.join(emails, users, users.c.id == emails.c.user_id)
@@ -87,7 +87,7 @@ async def count(engine):
 
 
 async def show_julia(engine):
-    with (await engine) as conn:
+    async with engine as conn:
         print("Lookup for Julia:")
         join = sa.join(emails, users, users.c.id == emails.c.user_id)
         query = (sa.select([users, emails], use_labels=True)
@@ -100,10 +100,10 @@ async def show_julia(engine):
 
 
 async def ave_age(engine):
-    with (await engine) as conn:
+    async with engine as conn:
         query = (sa.select([sa.func.avg(sa.func.age(users.c.birthday))])
                  .select_from(users))
-        ave = (await conn.scalar(query))
+        ave = await conn.scalar(query)
         print("Average age of population is", ave,
               "or ~", int(ave.days / 365), "years")
         print()

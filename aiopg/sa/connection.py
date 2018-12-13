@@ -115,7 +115,7 @@ class SAConnection:
     async def scalar(self, query, *multiparams, **params):
         """Executes a SQL query and returns a scalar value."""
         res = await self.execute(query, *multiparams, **params)
-        return (await res.scalar())
+        return await res.scalar()
 
     @property
     def closed(self):

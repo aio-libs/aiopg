@@ -781,12 +781,12 @@ The basic usage is::
 
    The most important way to use it is getting connection in *with statement*::
 
-      with (await pool) as conn:
+      async with pool as conn:
           cur = await conn.cursor()
 
    and shortcut for getting *cursor* directly::
 
-      with (await pool.cursor()) as cur:
+      async with pool.cursor() as cur:
           await cur.execute('SELECT 1')
 
    See also :meth:`Pool.acquire` and :meth:`Pool.release` for acquring
@@ -904,7 +904,7 @@ The basic usage is::
 
       The usage is::
 
-         with (await pool.cursor()) as cur:
+         async with pool.cursor() as cur:
              await cur.execute('SELECT 1')
 
       After exiting from *with block* cursor *cur* will be closed.

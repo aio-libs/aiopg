@@ -221,7 +221,7 @@ class _ConnectionContextManager:
     This enables the following idiom for acquiring and releasing a
     connection around a block:
 
-        with (await engine) as conn:
+        async with engine as conn:
             cur = await conn.cursor()
 
     while failing loudly when accidentally using:

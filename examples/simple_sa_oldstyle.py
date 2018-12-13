@@ -11,7 +11,7 @@ tbl = sa.Table('tbl', metadata,
 
 
 async def create_table(engine):
-    with (await engine) as conn:
+    async with engine as conn:
         await conn.execute('DROP TABLE IF EXISTS tbl')
         await conn.execute('''CREATE TABLE tbl (
                                             id serial PRIMARY KEY,
@@ -25,7 +25,7 @@ async def go():
                                       password='passwd')
 
     await create_table(engine)
-    with (await engine) as conn:
+    async with engine as conn:
         await conn.execute(tbl.insert().values(val='abc'))
 
         res = await conn.execute(tbl.select())

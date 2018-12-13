@@ -144,7 +144,7 @@ class _PoolConnectionContextManager:
     This enables the following idiom for acquiring and releasing a
     connection around a block:
 
-        with (await pool) as conn:
+        async with pool as conn:
             cur = await conn.cursor()
 
     while failing loudly when accidentally using:
@@ -189,7 +189,7 @@ class _PoolCursorContextManager:
     This enables the following idiom for acquiring and releasing a
     cursor around a block:
 
-        with (await pool.cursor()) as cur:
+        async with pool.cursor() as cur:
             await cur.execute("SELECT 1")
 
     while failing loudly when accidentally using:

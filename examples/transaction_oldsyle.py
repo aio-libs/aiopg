@@ -31,7 +31,7 @@ async def transaction(cur, isolation_level,
 
 async def main():
     pool = await aiopg.create_pool(dsn)
-    with (await pool.cursor()) as cur:
+    async with pool.cursor() as cur:
         await transaction(cur, IsolationLevel.repeatable_read)
         await transaction(cur, IsolationLevel.read_committed)
         await transaction(cur, IsolationLevel.serializable)

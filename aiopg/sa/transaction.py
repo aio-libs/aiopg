@@ -8,7 +8,7 @@ class Transaction(object):
     calling the SAConnection.begin() method of
     SAConnection:
 
-        with (await engine) as conn:
+        async with engine as conn:
             trans = await conn.begin()
             try:
                 await conn.execute("insert into x (a, b) values (1, 2)")

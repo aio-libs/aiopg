@@ -419,7 +419,7 @@ class ResultProxy:
         if self._metadata is None:
             self._non_result()
         try:
-            return (await self.fetchone())
+            return await self.fetchone()
         finally:
             self.close()
 
