@@ -326,17 +326,6 @@ class ResultProxy:
             self._cursor = None
             self._weak = None
 
-    def __iter__(self):
-        warnings.warn("Iteration over ResultProxy is deprecated",
-                      DeprecationWarning,
-                      stacklevel=2)
-        while True:
-            row = yield from self.fetchone().__await__()
-            if row is None:
-                return
-            else:
-                yield row
-
     def __aiter__(self):
         return self
 
