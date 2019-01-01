@@ -31,3 +31,37 @@ async def test_priority_name(connect):
     row = await (await connect.execute(tbl.select())).fetchone()
     assert row.name == 'test_name'
     assert row.id == 'test_id'
+
+
+async def test_priority_name_label(connect):
+    await connect.execute(tbl.insert().values(id='test_id', name='test_name'))
+    query = sa.select(
+        [tbl.c.name.label('test_label_name'), tbl.c.id]
+    )
+    query = query.select_from(tbl)
+    row = await (await connect.execute(query)).fetchone()
+    assert row.test_label_name == 'test_name'
+    assert row.id == 'test_id'
+
+
+async def test_priority_name_and_label(connect):
+    await connect.execute(tbl.insert().values(id='test_id', name='test_name'))
+    query = sa.select(
+        [tbl.c.name.label('test_label_name'), tbl.c.name, tbl.c.id]
+    )
+    query = query.select_from(tbl)
+    row = await (await connect.execute(query)).fetchone()
+    assert row.test_label_name == 'test_name'
+    assert row.name == 'test_name'
+    assert row.id == 'test_id'
+
+
+async def test_priority_name_all_get(connect):
+    await connect.execute(tbl.insert().values(id='test_id', name='test_name'))
+    query = sa.select([tbl.c.name])
+    query = query.select_from(tbl)
+    row = await (await connect.execute(query)).fetchone()
+    assert row.name == 'test_name'
+    assert row['name'] == 'test_name'
+    assert row[0] == 'test_name'
+    assert row[tbl.c.name] == 'test_name'

@@ -182,9 +182,9 @@ class ResultMetaData(object):
         elif isinstance(key, expression.ColumnElement):
             if (key._label and key._label in map):
                 result = map[key._label]
-            elif (hasattr(key, 'name') and key.name in map):
+            elif (hasattr(key, 'key') and key.key in map):
                 # match is only on name.
-                result = map[key.name]
+                result = map[key.key]
             # search extra hard to make sure this
             # isn't a column/label name overlap.
             # this check isn't currently available if the row
