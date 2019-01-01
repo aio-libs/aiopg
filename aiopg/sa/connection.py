@@ -134,8 +134,18 @@ class SAConnection:
     def connection(self):
         return self._connection
 
-    def begin(self):
+    def begin(self, isolation_level=None, readonly=False, deferrable=False):
         """Begin a transaction and return a transaction handle.
+
+        isolation_level - The isolation level of the transaction,
+        should be one of 'SERIALIZABLE', 'REPEATABLE READ', 'READ COMMITTED',
+        'READ UNCOMMITTED', default (None) is 'READ COMMITTED'
+
+        readonly - The transaction is read only
+
+        deferrable - The transaction may block when acquiring data before
+        running without overhead of SERLIALIZABLE, has no effect unless
+        transaction is both SERIALIZABLE and readonly
 
         The returned object is an instance of Transaction.  This
         object represents the "scope" of the transaction, which
@@ -161,23 +171,31 @@ class SAConnection:
           .begin_twophase - use a two phase/XA transaction
 
         """
-        coro = self._begin()
+        coro = self._begin(isolation_level, readonly, deferrable)
         return _TransactionContextManager(coro)
 
     @asyncio.coroutine
-    def _begin(self):
+    def _begin(self, isolation_level, readonly, deferrable):
         if self._transaction is None:
             self._transaction = RootTransaction(self)
-            yield from self._begin_impl()
+            yield from self._begin_impl(isolation_level, readonly, deferrable)
             return self._transaction
         else:
             return Transaction(self, self._transaction)
 
     @asyncio.coroutine
-    def _begin_impl(self):
+    def _begin_impl(self, isolation_level, readonly, deferrable):
+        stmt = 'BEGIN'
+        if isolation_level is not None:
+            stmt += ' ISOLATION LEVEL ' + isolation_level
+        if readonly:
+            stmt += ' READ ONLY'
+        if deferrable:
+            stmt += ' DEFERRABLE'
+
         cur = yield from self._connection.cursor()
         try:
-            yield from cur.execute('BEGIN')
+            yield from cur.execute(stmt)
         finally:
             cur.close()
 
@@ -217,7 +235,7 @@ class SAConnection:
     def _begin_nested(self):
         if self._transaction is None:
             self._transaction = RootTransaction(self)
-            yield from self._begin_impl()
+            yield from self._begin_impl(None, False, False)
         else:
             self._transaction = NestedTransaction(self, self._transaction)
             self._transaction._savepoint = yield from self._savepoint_impl()

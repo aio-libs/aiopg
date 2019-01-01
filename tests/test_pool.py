@@ -343,6 +343,7 @@ def test_true_parallel_tasks(create_pool, loop):
     maxsize = 0
     minfreesize = 100
 
+    @asyncio.coroutine
     def inner():
         nonlocal maxsize, minfreesize
         maxsize = max(maxsize, pool.size)
@@ -498,6 +499,7 @@ def test_connection_in_good_state_after_timeout(create_pool):
             yield from sleep(conn)
 
     assert 1 == pool.freesize
+
     with (yield from pool) as conn:
         cur = yield from conn.cursor()
         yield from cur.execute('SELECT 1;')

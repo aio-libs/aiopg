@@ -55,6 +55,15 @@ async def test_cursor_create_with_context_manager(make_connection):
 
 
 @asyncio.coroutine
+async def test_two_cursor_create_with_context_manager(make_connection):
+    conn = await make_connection()
+
+    async with conn.cursor() as cursor1, conn.cursor() as cursor2:
+        assert cursor1.closed
+        assert not cursor2.closed
+
+
+@asyncio.coroutine
 async def test_pool_context_manager_timeout(pg_params, loop):
     async with aiopg.create_pool(loop=loop, **pg_params, minsize=1,
                                  maxsize=1) as pool:

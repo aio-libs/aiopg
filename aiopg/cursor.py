@@ -16,6 +16,8 @@ class Cursor:
         self._echo = echo
         self._transaction = Transaction(self, IsolationLevel.repeatable_read)
 
+        conn.cursor_created(self)
+
     @property
     def echo(self):
         """Return echo mode status."""
@@ -48,7 +50,9 @@ class Cursor:
 
     def close(self):
         """Close the cursor now."""
-        self._impl.close()
+        if not self.closed:
+            self._impl.close()
+            self._conn.cursor_closed(self)
 
     @property
     def closed(self):
@@ -107,7 +111,7 @@ class Cursor:
             logger.info("%r", parameters)
         try:
             self._impl.execute(operation, parameters)
-        except:
+        except BaseException:
             self._conn._waiter = None
             raise
         try:
@@ -141,7 +145,7 @@ class Cursor:
             logger.info("%r", parameters)
         try:
             self._impl.callproc(procname, parameters)
-        except:
+        except BaseException:
             self._conn._waiter = None
             raise
         else:
@@ -384,7 +388,7 @@ class Cursor:
         while True:
             row = yield from self.fetchone()
             if row is None:
-                raise StopIteration
+                return
             else:
                 yield row
 
@@ -402,7 +406,7 @@ class Cursor:
             if ret is not None:
                 return ret
             else:
-                raise StopAsyncIteration  # noqa
+                raise StopAsyncIteration
 
         @asyncio.coroutine
         def __aenter__(self):
