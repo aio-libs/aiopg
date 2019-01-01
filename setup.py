@@ -4,8 +4,8 @@ import sys
 from setuptools import setup
 
 
-install_requires = ['psycopg2>=2.7.0']
-extras_require = {'sa': ['sqlalchemy>=1.1']}
+install_requires = ['psycopg2-binary>=2.7.0']
+extras_require = {'sa': ['sqlalchemy[postgresql_psycopg2binary]>=1.1']}
 
 PY_VER = sys.version_info
 
