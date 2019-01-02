@@ -89,10 +89,7 @@ class ResultMetaData(object):
     def __init__(self, result_proxy, metadata):
         self._processors = processors = []
 
-        result_map = {}
-        if result_proxy._result_map:
-            result_map = {elem[0]: elem[3] for elem in
-                          result_proxy._result_map}
+        map_type, map_column_name = self.result_map(result_proxy._result_map)
 
         # We do not strictly need to store the processor in the key mapping,
         # though it is faster in the Python version (probably because of the
@@ -124,11 +121,9 @@ class ResultMetaData(object):
             #     colname = dialect.normalize_name(colname)
 
             name, obj, type_ = (
-                colname,
+                map_column_name.get(colname, colname),
                 None,
-                result_map.get(
-                    colname,
-                    typemap.get(coltype, sqltypes.NULLTYPE))
+                map_type.get(colname, typemap.get(coltype, sqltypes.NULLTYPE))
             )
 
             processor = type_._cached_result_processor(dialect, coltype)
@@ -150,7 +145,7 @@ class ResultMetaData(object):
                 # unambiguous.
                 primary_keymap[name] = rec = (None, obj, None)
 
-            self.keys.append(colname)
+            self.keys.append(name)
             if obj:
                 for o in obj:
                     keymap[o] = rec
@@ -162,6 +157,18 @@ class ResultMetaData(object):
         # overwrite keymap values with those of the
         # high precedence keymap.
         keymap.update(primary_keymap)
+
+    def result_map(self, data_map):
+        data_map = data_map or {}
+        map_type = {}
+        map_column_name = {}
+        for elem in data_map:
+            name = elem[0]
+            priority_name = getattr(elem[2][0], 'key', name)
+            map_type[name] = elem[3]  # type column
+            map_column_name[name] = priority_name
+
+        return map_type, map_column_name
 
     def _key_fallback(self, key, raiseerr=True):
         map = self._keymap
@@ -175,9 +182,9 @@ class ResultMetaData(object):
         elif isinstance(key, expression.ColumnElement):
             if (key._label and key._label in map):
                 result = map[key._label]
-            elif (hasattr(key, 'name') and key.name in map):
+            elif (hasattr(key, 'key') and key.key in map):
                 # match is only on name.
-                result = map[key.name]
+                result = map[key.key]
             # search extra hard to make sure this
             # isn't a column/label name overlap.
             # this check isn't currently available if the row
