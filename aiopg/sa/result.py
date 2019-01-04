@@ -1,4 +1,3 @@
-import warnings
 import weakref
 from collections.abc import Mapping, Sequence
 
