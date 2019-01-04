@@ -43,7 +43,7 @@ async def test_execute_text_select(connect):
     res = await conn.execute("SELECT * FROM sa_tbl;")
     assert isinstance(res.cursor, Cursor)
     assert ('id', 'name') == res.keys()
-    rows = [r async for r in res]
+    rows = await res.fetchall()
     assert res.closed
     assert res.cursor is None
     assert 1 == len(rows)
@@ -61,7 +61,7 @@ async def test_execute_sa_select(connect):
     res = await conn.execute(tbl.select())
     assert isinstance(res.cursor, Cursor)
     assert ('id', 'name') == res.keys()
-    rows = [r async for r in res]
+    rows = await res.fetchall()
     assert res.closed
     assert res.cursor is None
     assert res.returns_rows
@@ -81,7 +81,7 @@ async def test_execute_sa_insert_with_dict(connect):
     await conn.execute(tbl.insert(), {"id": 2, "name": "second"})
 
     res = await conn.execute(tbl.select())
-    rows = [r async for r in res]
+    rows = await res.fetchall()
     assert 2 == len(rows)
     assert (1, 'first') == rows[0]
     assert (2, 'second') == rows[1]
@@ -92,7 +92,7 @@ async def test_execute_sa_insert_with_tuple(connect):
     await conn.execute(tbl.insert(), (2, "second"))
 
     res = await conn.execute(tbl.select())
-    rows = [r async for r in res]
+    rows = await res.fetchall()
     assert 2 == len(rows)
     assert (1, 'first') == rows[0]
     assert (2, 'second') == rows[1]
@@ -103,7 +103,7 @@ async def test_execute_sa_insert_named_params(connect):
     await conn.execute(tbl.insert(), id=2, name="second")
 
     res = await conn.execute(tbl.select())
-    rows = [r async for r in res]
+    rows = await res.fetchall()
     assert 2 == len(rows)
     assert (1, 'first') == rows[0]
     assert (2, 'second') == rows[1]
@@ -114,7 +114,7 @@ async def test_execute_sa_insert_positional_params(connect):
     await conn.execute(tbl.insert(), 2, "second")
 
     res = await conn.execute(tbl.select())
-    rows = [r async for r in res]
+    rows = await res.fetchall()
     assert 2 == len(rows)
     assert (1, 'first') == rows[0]
     assert (2, 'second') == rows[1]
@@ -136,7 +136,7 @@ async def test_scalar_None(connect):
 async def test_row_proxy(connect):
     conn = await connect()
     res = await conn.execute(tbl.select())
-    rows = [r async for r in res]
+    rows = await res.fetchall()
     row = rows[0]
     row2 = await (await conn.execute(tbl.select())).first()
     assert 2 == len(row)
@@ -162,7 +162,7 @@ async def test_insert(connect):
     assert 1 == res.rowcount
     assert res.returns_rows
 
-    rows = [r async for r in res]
+    rows = await res.fetchall()
     assert 1 == len(rows)
     assert 2 == rows[0].id
 
@@ -176,7 +176,7 @@ async def test_raw_insert(connect):
     assert ('id', 'name') == res.keys()
     assert res.returns_rows
 
-    rows = [r async for r in res]
+    rows = await res.fetchall()
     assert 2 == len(rows)
     assert 2 == rows[1].id
 
@@ -191,7 +191,7 @@ async def test_raw_insert_with_params(connect):
     assert ('id', 'name') == res.keys()
     assert res.returns_rows
 
-    rows = [r async for r in res]
+    rows = await res.fetchall()
     assert 2 == len(rows)
     assert 2 == rows[1].id
 
@@ -206,7 +206,7 @@ async def test_raw_insert_with_params_dict(connect):
     assert ('id', 'name') == res.keys()
     assert res.returns_rows
 
-    rows = [r async for r in res]
+    rows = await res.fetchall()
     assert 2 == len(rows)
     assert 2 == rows[1].id
 
@@ -221,7 +221,7 @@ async def test_raw_insert_with_named_params(connect):
     assert ('id', 'name') == res.keys()
     assert res.returns_rows
 
-    rows = [r async for r in res]
+    rows = await res.fetchall()
     assert 2 == len(rows)
     assert 2 == rows[1].id
 
@@ -380,4 +380,4 @@ async def test_create_table(connect):
         await res.fetchmany()
 
     res = await conn.execute("SELECT * FROM sa_tbl")
-    assert 0 == len([r async for r in res])
+    assert 0 == len(await res.fetchall())
