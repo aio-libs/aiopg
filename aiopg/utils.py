@@ -52,10 +52,6 @@ class _ContextManager(Coroutine):
     def __next__(self):
         return self.send(None)
 
-    async def __iter__(self):
-        resp = await self._coro
-        return resp
-
     def __await__(self):
         resp = self._coro.__await__()
         return resp
