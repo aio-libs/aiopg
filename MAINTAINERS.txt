@@ -5,3 +5,4 @@ The list of *aiopg* maintainers.
 
 Andrew Svetlov <andrew.svetlov@gmail.com>
 Alexey Popravka <alexey.popravka@horsedevel.com>
+Alexey Firsov <virmir49@gmail.com>

@@ -1,6 +1,20 @@
 CHANGES
 -------
 
+0.16.0 (2019-01-25)
+^^^^^^^^^^^^^^^^^^^
+
+* Fix select priority name (#525)
+
+* Rename `psycopg2` to `psycopg2-binary` to fix deprecation warning (#507)
+
+* Fix #189 hstore when using ReadDictCursor (#512)
+
+* close cannot be used while an asynchronous query is underway (#452)
+
+* sqlalchemy adapter trx begin allow transaction_mode (#498)
+
+
 0.15.0 (2018-08-14)
 ^^^^^^^^^^^^^^^^^^^
 
