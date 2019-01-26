@@ -6,7 +6,6 @@ import aiopg.sa
 from aiopg.sa import SAConnection
 
 
-@asyncio.coroutine
 async def test_cursor_await(make_connection):
     conn = await make_connection()
 
@@ -17,7 +16,6 @@ async def test_cursor_await(make_connection):
     cursor.close()
 
 
-@asyncio.coroutine
 async def test_connect_context_manager(loop, pg_params):
     async with aiopg.connect(loop=loop, **pg_params) as conn:
         cursor = await conn.cursor()
@@ -28,7 +26,26 @@ async def test_connect_context_manager(loop, pg_params):
     assert conn.closed
 
 
-@asyncio.coroutine
+async def test_pool_cursor_context_manager(loop, pg_params):
+    async with aiopg.create_pool(loop=loop, **pg_params) as pool:
+        async with pool.cursor() as cursor:
+            await cursor.execute('SELECT 42')
+            resp = await cursor.fetchone()
+            assert resp == (42, )
+        assert cursor.closed
+    assert pool.closed
+
+
+async def test_pool_cursor_await_context_manager(loop, pg_params):
+    async with aiopg.create_pool(loop=loop, **pg_params) as pool:
+        with (await pool.cursor()) as cursor:
+            await cursor.execute('SELECT 42')
+            resp = await cursor.fetchone()
+            assert resp == (42, )
+        assert cursor.closed
+    assert pool.closed
+
+
 async def test_connection_context_manager(make_connection):
     conn = await make_connection()
     assert not conn.closed
@@ -41,7 +58,6 @@ async def test_connection_context_manager(make_connection):
     assert conn.closed
 
 
-@asyncio.coroutine
 async def test_cursor_create_with_context_manager(make_connection):
     conn = await make_connection()
 
@@ -54,7 +70,6 @@ async def test_cursor_create_with_context_manager(make_connection):
     assert cursor.closed
 
 
-@asyncio.coroutine
 async def test_two_cursor_create_with_context_manager(make_connection):
     conn = await make_connection()
 
@@ -63,7 +78,6 @@ async def test_two_cursor_create_with_context_manager(make_connection):
         assert not cursor2.closed
 
 
-@asyncio.coroutine
 async def test_pool_context_manager_timeout(pg_params, loop):
     async with aiopg.create_pool(loop=loop, **pg_params, minsize=1,
                                  maxsize=1) as pool:
@@ -79,7 +93,7 @@ async def test_pool_context_manager_timeout(pg_params, loop):
         fut.cancel()
         cursor_ctx = await pool.cursor()
         with cursor_ctx as cursor:
-            resp = await cursor.execute('SELECT 42;')
+            await cursor.execute('SELECT 42;')
             resp = await cursor.fetchone()
             assert resp == (42, )
 
@@ -87,7 +101,6 @@ async def test_pool_context_manager_timeout(pg_params, loop):
     assert pool.closed
 
 
-@asyncio.coroutine
 async def test_cursor_with_context_manager(make_connection):
     conn = await make_connection()
     cursor = await conn.cursor()
@@ -100,7 +113,6 @@ async def test_cursor_with_context_manager(make_connection):
     assert cursor.closed
 
 
-@asyncio.coroutine
 async def test_cursor_lightweight(make_connection):
     conn = await make_connection()
     cursor = await conn.cursor()
@@ -112,7 +124,6 @@ async def test_cursor_lightweight(make_connection):
     assert cursor.closed
 
 
-@asyncio.coroutine
 async def test_pool_context_manager(pg_params, loop):
     pool = await aiopg.create_pool(loop=loop, **pg_params)
 
@@ -127,7 +138,6 @@ async def test_pool_context_manager(pg_params, loop):
     assert pool.closed
 
 
-@asyncio.coroutine
 async def test_create_pool_context_manager(pg_params, loop):
     async with aiopg.create_pool(loop=loop, **pg_params) as pool:
         async with pool.acquire() as conn:
@@ -141,7 +151,6 @@ async def test_create_pool_context_manager(pg_params, loop):
     assert pool.closed
 
 
-@asyncio.coroutine
 async def test_cursor_aiter(make_connection):
     result = []
     conn = await make_connection()
@@ -156,7 +165,6 @@ async def test_cursor_aiter(make_connection):
     assert conn.closed
 
 
-@asyncio.coroutine
 async def test_engine_context_manager(pg_params, loop):
     engine = await aiopg.sa.create_engine(loop=loop, **pg_params)
     async with engine:
@@ -166,7 +174,6 @@ async def test_engine_context_manager(pg_params, loop):
     assert engine.closed
 
 
-@asyncio.coroutine
 async def test_create_engine_context_manager(pg_params, loop):
     async with aiopg.sa.create_engine(loop=loop, **pg_params) as engine:
         async with engine.acquire() as conn:
@@ -174,7 +181,6 @@ async def test_create_engine_context_manager(pg_params, loop):
     assert engine.closed
 
 
-@asyncio.coroutine
 async def test_result_proxy_aiter(pg_params, loop):
     sql = 'SELECT generate_series(1, 5);'
     result = []
@@ -188,7 +194,6 @@ async def test_result_proxy_aiter(pg_params, loop):
     assert conn.closed
 
 
-@asyncio.coroutine
 async def test_transaction_context_manager(pg_params, loop):
     sql = 'SELECT generate_series(1, 5);'
     result = []
@@ -215,7 +220,6 @@ async def test_transaction_context_manager(pg_params, loop):
     assert conn.closed
 
 
-@asyncio.coroutine
 async def test_transaction_context_manager_error(pg_params, loop):
     async with aiopg.sa.create_engine(loop=loop, **pg_params) as engine:
         async with engine.acquire() as conn:
@@ -228,7 +232,6 @@ async def test_transaction_context_manager_error(pg_params, loop):
     assert conn.closed
 
 
-@asyncio.coroutine
 async def test_transaction_context_manager_commit_once(pg_params, loop):
     async with aiopg.sa.create_engine(loop=loop, **pg_params) as engine:
         async with engine.acquire() as conn:
@@ -248,7 +251,6 @@ async def test_transaction_context_manager_commit_once(pg_params, loop):
     assert conn.closed
 
 
-@asyncio.coroutine
 async def test_transaction_context_manager_nested_commit(pg_params, loop):
     sql = 'SELECT generate_series(1, 5);'
     result = []
@@ -278,7 +280,6 @@ async def test_transaction_context_manager_nested_commit(pg_params, loop):
     assert conn.closed
 
 
-@asyncio.coroutine
 async def test_sa_connection_execute(pg_params, loop):
     sql = 'SELECT generate_series(1, 5);'
     result = []

@@ -1,6 +1,5 @@
 import asyncio
 import sys
-import psycopg2
 
 PY_35 = sys.version_info >= (3, 5)
 PY_352 = sys.version_info >= (3, 5, 2)
@@ -191,6 +190,10 @@ class _PoolConnectionContextManager:
         self._pool = pool
         self._conn = conn
 
+    @property
+    def conn(self):
+        return self._conn
+
     def __enter__(self):
         assert self._conn
         return self._conn
@@ -221,10 +224,13 @@ class _PoolConnectionContextManager:
 class _PoolCursorContextManager:
     """Context manager.
 
-    This enables the following idiom for acquiring and releasing a
+    This enables the following idioms for acquiring and releasing a
     cursor around a block:
 
         with (yield from pool.cursor()) as cur:
+            yield from cur.execute("SELECT 1")
+
+        async with pool.cursor() as cur:
             yield from cur.execute("SELECT 1")
 
     while failing loudly when accidentally using:
@@ -233,12 +239,12 @@ class _PoolCursorContextManager:
             <block>
     """
 
-    __slots__ = ('_pool', '_conn', '_cur')
+    __slots__ = ('_pool', '_cursor_kwargs', '_cur')
 
-    def __init__(self, pool, conn, cur):
+    def __init__(self, pool, cursor_kwargs=None):
         self._pool = pool
-        self._conn = conn
-        self._cur = cur
+        self._cursor_kwargs = cursor_kwargs
+        self._cur = None
 
     def __enter__(self):
         return self._cur
@@ -246,19 +252,67 @@ class _PoolCursorContextManager:
     def __exit__(self, *args):
         try:
             self._cur.close()
-        except psycopg2.ProgrammingError:
-            # seen instances where the cursor fails to close:
-            #   https://github.com/aio-libs/aiopg/issues/364
-            # We close it here so we don't return a bad connection to the pool
-            self._conn.close()
-            raise
         finally:
             try:
-                self._pool.release(self._conn)
+                self._pool.__exit__(*args)
             finally:
-                self._pool = None
-                self._conn = None
                 self._cur = None
+
+    @asyncio.coroutine
+    def _init_cursor(self, with_aenter):
+        assert not self._cur
+
+        if with_aenter:
+            conn = None
+        else:
+            conn = yield from self._pool.acquire()
+
+        # self._pool now morphs into a _PoolConnectionContextManager
+        self._pool = _PoolConnectionContextManager(self._pool, conn)
+
+        if with_aenter:
+            # this will create the connection
+            yield from self._pool.__aenter__()
+            self._cur = yield from self._pool.conn.cursor(
+                **self._cursor_kwargs)
+
+            return self._cur
+        else:
+            self._cur = yield from self._pool.conn.cursor(
+                **self._cursor_kwargs)
+            return self
+
+    @asyncio.coroutine
+    def __iter__(self):
+        # This will get hit if you use "yield from pool.cursor()"
+        result = yield from self._init_cursor(False)
+        return result
+
+    def __await__(self):
+        # This will get hit directly if you "await pool.cursor()"
+        # this is using a trick similar to the one here:
+        # https://magicstack.github.io/asyncpg/current/_modules/asyncpg/pool.html
+        # however since `self._init()` is an "asyncio.coroutine" we can't use
+        # just return self._init().__await__() as that returns a generator
+        # without an "__await__" attribute and we can't return a coroutine from
+        # here
+        value = yield from self._init_cursor(False)
+        return value
+
+    if PY_35:
+        @asyncio.coroutine
+        def __aenter__(self):
+            value = yield from self._init_cursor(True)
+            return value
+
+        @asyncio.coroutine
+        def __aexit__(self, exc_type, exc_val, exc_tb):
+            try:
+                yield from self._cur.__aexit__(exc_type, exc_val, exc_tb)
+                self._cur = None
+            finally:
+                yield from self._pool.__aexit__(exc_type, exc_val, exc_tb)
+                self._pool = None
 
 
 if not PY_35:

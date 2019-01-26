@@ -9,6 +9,7 @@ import socket
 import time
 import sys
 
+from psycopg2.extensions import parse_dsn
 from aiopg.connection import Connection, TIMEOUT
 from aiopg.cursor import Cursor
 from aiopg.utils import ensure_future
@@ -168,12 +169,13 @@ def test_set_session(connect):
 @asyncio.coroutine
 def test_dsn(connect, pg_params):
     conn = yield from connect()
-    pg_params['password'] = 'x' * len(pg_params['password'])
-    assert 'dbname' in conn.dsn
-    assert 'user' in conn.dsn
-    assert 'password' in conn.dsn
-    assert 'host' in conn.dsn
-    assert 'port' in conn.dsn
+
+    pg_params = pg_params.copy()
+    pg_params['password'] = 'xxx'
+    pg_params['dbname'] = pg_params.pop('database')
+    pg_params['port'] = str(pg_params['port'])
+
+    assert parse_dsn(conn.dsn) == pg_params
 
 
 @asyncio.coroutine
@@ -232,7 +234,8 @@ def test_isolation_level(connect):
 
     assert psycopg2.extensions.ISOLATION_LEVEL_DEFAULT == conn.isolation_level
     with pytest.raises(psycopg2.ProgrammingError):
-        yield from conn.set_isolation_level(1)
+        yield from conn.set_isolation_level(
+            psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
 
     assert psycopg2.extensions.ISOLATION_LEVEL_DEFAULT == conn.isolation_level
 
@@ -520,7 +523,7 @@ def test_connect_to_unsupported_port(unused_port, loop, pg_params):
     pg_params['port'] = port
 
     with pytest.raises(psycopg2.OperationalError):
-        yield from aiopg.connect(loop=loop, **pg_params)
+        yield from aiopg.connect(loop=loop, timeout=3, **pg_params)
 
 
 @asyncio.coroutine
@@ -710,6 +713,7 @@ def test_connection_on_server_restart(connect, pg_server, docker):
     yield from cur.execute('SELECT 1')
     ret = yield from cur.fetchone()
     assert (1,) == ret
+
     docker.restart(container=pg_server['Id'])
 
     with pytest.raises(psycopg2.OperationalError):

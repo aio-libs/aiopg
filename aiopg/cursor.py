@@ -50,9 +50,18 @@ class Cursor:
 
     def close(self):
         """Close the cursor now."""
-        if not self.closed:
+        if self.closed:
+            return
+
+        try:
             self._impl.close()
             self._conn.cursor_closed(self)
+        except psycopg2.ProgrammingError:
+            # seen instances where the cursor fails to close:
+            #   https://github.com/aio-libs/aiopg/issues/364
+            # We close it here so we don't return a bad connection to the pool
+            self._conn.cursor_closed(self)
+            raise
 
     @property
     def closed(self):
