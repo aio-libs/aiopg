@@ -14,6 +14,12 @@ aiopg
 from the asyncio_ (PEP-3156/tulip) framework. It wraps
 asynchronous features of the Psycopg database driver.
 
+.. note::
+          **aiopg** from version **1.0.0** only supports **python >= 3.5.2**.
+
+          Motivation and discussion can be found here https://github.com/aio-libs/aiopg/pull/517
+
+
 Features
 --------
 
