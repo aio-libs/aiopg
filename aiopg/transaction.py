@@ -1,11 +1,10 @@
-import asyncio
 import enum
 import uuid
 import warnings
 from abc import ABC, abstractmethod
 
 import psycopg2
-from aiopg.utils import PY_35, _TransactionPointContextManager
+from aiopg.utils import _TransactionPointContextManager
 
 __all__ = ('IsolationLevel', 'Transaction')
 
@@ -100,49 +99,43 @@ class Transaction:
     def is_begin(self):
         return self._is_begin
 
-    @asyncio.coroutine
-    def begin(self):
+    async def begin(self):
         if self._is_begin:
             raise psycopg2.ProgrammingError(
                 'You are trying to open a new transaction, use the save point')
         self._is_begin = True
-        yield from self._cur.execute(self._isolation.begin())
+        await self._cur.execute(self._isolation.begin())
         return self
 
-    @asyncio.coroutine
-    def commit(self):
+    async def commit(self):
         self._check_commit_rollback()
-        yield from self._cur.execute(self._isolation.commit())
+        await self._cur.execute(self._isolation.commit())
         self._is_begin = False
 
-    @asyncio.coroutine
-    def rollback(self):
+    async def rollback(self):
         self._check_commit_rollback()
-        yield from self._cur.execute(self._isolation.rollback())
+        await self._cur.execute(self._isolation.rollback())
         self._is_begin = False
 
-    @asyncio.coroutine
-    def rollback_savepoint(self):
+    async def rollback_savepoint(self):
         self._check_release_rollback()
-        yield from self._cur.execute(
+        await self._cur.execute(
             self._isolation.rollback_savepoint(self._unique_id))
         self._unique_id = None
 
-    @asyncio.coroutine
-    def release_savepoint(self):
+    async def release_savepoint(self):
         self._check_release_rollback()
-        yield from self._cur.execute(
+        await self._cur.execute(
             self._isolation.release_savepoint(self._unique_id))
         self._unique_id = None
 
-    @asyncio.coroutine
-    def savepoint(self):
+    async def savepoint(self):
         self._check_commit_rollback()
         if self._unique_id is not None:
             raise psycopg2.ProgrammingError('You do not shut down savepoint')
 
         self._unique_id = 's{}'.format(uuid.uuid1().hex)
-        yield from self._cur.execute(
+        await self._cur.execute(
             self._isolation.savepoint(self._unique_id))
 
         return self
@@ -178,14 +171,11 @@ class Transaction:
                 "You have not closed savepoint {!r}".format(self),
                 ResourceWarning)
 
-    if PY_35:
-        @asyncio.coroutine
-        def __aenter__(self):
-            return (yield from self.begin())
+    async def __aenter__(self):
+        return (await self.begin())
 
-        @asyncio.coroutine
-        def __aexit__(self, exc_type, exc, tb):
-            if exc_type is not None:
-                yield from self.rollback()
-            else:
-                yield from self.commit()
+    async def __aexit__(self, exc_type, exc, tb):
+        if exc_type is not None:
+            await self.rollback()
+        else:
+            await self.commit()

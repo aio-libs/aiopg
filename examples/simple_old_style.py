@@ -4,12 +4,11 @@ import aiopg
 dsn = 'dbname=aiopg user=aiopg password=passwd host=127.0.0.1'
 
 
-@asyncio.coroutine
-def test_select():
-    pool = yield from aiopg.create_pool(dsn)
-    with (yield from pool.cursor()) as cur:
-        yield from cur.execute("SELECT 1")
-        ret = yield from cur.fetchone()
+async def test_select():
+    pool = await aiopg.create_pool(dsn)
+    async with pool.cursor() as cur:
+        await cur.execute("SELECT 1")
+        ret = await cur.fetchone()
         assert ret == (1,)
     print("ALL DONE")
 

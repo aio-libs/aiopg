@@ -18,15 +18,14 @@ The library provides a way to connect to :term:`PostgreSQL` database.
 
 Example::
 
-  @asyncio.coroutine
-  def go():
-      conn = yield from aiopg.connect(database='aiopg',
-                                      user='aiopg',
-                                      password='secret',
-                                      host='127.0.0.1')
-      cur = yield from conn.cursor()
-      yield from cur.execute("SELECT * FROM tbl")
-      ret = yield from cur.fetchall()
+  async def go():
+      conn = await aiopg.connect(database='aiopg',
+                                 user='aiopg',
+                                 password='secret',
+                                 host='127.0.0.1')
+      cur = await conn.cursor()
+      await cur.execute("SELECT * FROM tbl")
+      ret = await cur.fetchall()
 
 
 .. cofunction:: connect(dsn=None, *, loop=None, timeout=60.0, \
@@ -125,7 +124,7 @@ Example::
          :meth:`close` is regular function now.  For sake of backward
          compatibility the method returns :class:`asyncio.Future`
          instance with result already set to ``None`` (you still can
-         use ``yield from conn.close()`` construction.
+         use ``await conn.close()`` construction.
 
    .. attribute:: closed
 
@@ -198,7 +197,7 @@ Example::
        A list containing all the database messages sent to the client during
        the session::
 
-           >>> yield from cur.execute("CREATE TABLE foo (id serial PRIMARY KEY);")
+           >>> await cur.execute("CREATE TABLE foo (id serial PRIMARY KEY);")
            >>> pprint(conn.notices)
            ['NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "foo_pkey" for table "foo"\n',
             'NOTICE:  CREATE TABLE will create implicit sequence "foo_id_seq" for serial column "foo.id"\n']
@@ -380,7 +379,7 @@ Cursor
       attempted with the cursor.
 
       .. note:: :meth:`close` is not a :ref:`coroutine <coroutine>`,
-                you don't need to wait it via ``yield from
+                you don't need to wait it via ``await
                 curs.close()``.
 
    .. attribute:: closed
@@ -438,7 +437,7 @@ Cursor
 
       The returned string is always a bytes string::
 
-         >>> yield from cur.mogrify("INSERT INTO test (num, data) VALUES (%s, %s)", (42, 'bar'))
+         >>> await cur.mogrify("INSERT INTO test (num, data) VALUES (%s, %s)", (42, 'bar'))
          "INSERT INTO test (num, data) VALUES (42, E'bar')"
 
    .. method:: setinputsizes(sizes)
@@ -470,7 +469,7 @@ Cursor
       :class:`Cursor` objects do **not** support regular iteration
       (using ``for`` statement) since version 0.7.
 
-      Iterable protocol in :class:`Cursor` hides ``yield from`` from user,
+      Iterable protocol in :class:`Cursor` hides ``await`` from user,
       witch should be explicit. Moreover iteration support is optional,
       according to PEP-249 (https://www.python.org/dev/peps/pep-0249/#iter).
 
@@ -479,8 +478,8 @@ Cursor
       Fetch the next row of a query result set, returning a single tuple,
       or ``None`` when no more data is available::
 
-         >>> yield from cur.execute("SELECT * FROM test WHERE id = %s", (3,))
-         >>> yield from cur.fetchone()
+         >>> await cur.execute("SELECT * FROM test WHERE id = %s", (3,))
+         >>> await cur.fetchone()
          (3, 42, 'bar')
 
       A :exc:`psycopg2.ProgrammingError` is raised if the previous
@@ -500,12 +499,12 @@ Cursor
       due to the specified number of rows not being available, fewer rows
       may be returned::
 
-         >>> yield from cur.execute("SELECT * FROM test;")
-         >>> yield from cur.fetchmany(2)
+         >>> await cur.execute("SELECT * FROM test;")
+         >>> await cur.fetchmany(2)
          [(1, 100, "abc'def"), (2, None, 'dada')]
-         >>> yield from cur.fetchmany(2)
+         >>> await cur.fetchmany(2)
          [(3, 42, 'bar')]
-         >>> yield from cur.fetchmany(2)
+         >>> await cur.fetchmany(2)
          []
 
       A :exc:`psycopg2.ProgrammingError` is raised if the previous call to
@@ -524,8 +523,8 @@ Cursor
       of tuples.  An empty list is returned if there is no more record to
       fetch::
 
-         >>> yield from cur.execute("SELECT * FROM test;")
-         >>> yield from cur.fetchall()
+         >>> await cur.execute("SELECT * FROM test;")
+         >>> await cur.fetchall()
          [(1, 100, "abc'def"), (2, None, 'dada'), (3, 42, 'bar')]
 
       A :exc:`psycopg2.ProgrammingError` is raised if the previous
@@ -553,7 +552,7 @@ Cursor
           probably to catch both exceptions in your code::
 
              try:
-                 yield from cur.scroll(1000 * 1000)
+                 await cur.scroll(1000 * 1000)
              except (ProgrammingError, IndexError), exc:
                  deal_with_it(exc)
 
@@ -619,7 +618,7 @@ Cursor
       backend (including bound arguments) as bytes string. ``None`` if no
       query has been executed yet::
 
-         >>> yield from cur.execute("INSERT INTO test (num, data) VALUES (%s, %s)", (42, 'bar'))
+         >>> await cur.execute("INSERT INTO test (num, data) VALUES (%s, %s)", (42, 'bar'))
          >>> cur.query
          "INSERT INTO test (num, data) VALUES (42, E'bar')"
 
@@ -628,7 +627,7 @@ Cursor
       Read-only attribute containing the message returned by the last
       command::
 
-         >>> yield from cur.execute("INSERT INTO test (num, data) VALUES (%s, %s)", (42, 'bar'))
+         >>> await cur.execute("INSERT INTO test (num, data) VALUES (%s, %s)", (42, 'bar'))
          >>> cur.statusmessage
          'INSERT 0 1'
 
@@ -709,13 +708,12 @@ The basic usage is::
     dsn = 'dbname=jetty user=nick password=1234 host=localhost port=5432'
 
 
-    @asyncio.coroutine
-    def test_select():
-        pool = yield from aiopg.create_pool(dsn)
+    async def test_select():
+        pool = await aiopg.create_pool(dsn)
 
-        with (yield from pool.cursor()) as cur:
-            yield from cur.execute('SELECT 1')
-            ret = yield from cur.fetchone()
+        with (await pool.cursor()) as cur:
+            await cur.execute('SELECT 1')
+            ret = await cur.fetchone()
             assert ret == (1,), ret
 
 
@@ -783,13 +781,13 @@ The basic usage is::
 
    The most important way to use it is getting connection in *with statement*::
 
-      with (yield from pool) as conn:
-          cur = yield from conn.cursor()
+      async with pool as conn:
+          cur = await conn.cursor()
 
    and shortcut for getting *cursor* directly::
 
-      with (yield from pool.cursor()) as cur:
-          yield from cur.execute('SELECT 1')
+      async with pool.cursor() as cur:
+          await cur.execute('SELECT 1')
 
    See also :meth:`Pool.acquire` and :meth:`Pool.release` for acquring
    *connection* without *with statement*.
@@ -906,8 +904,8 @@ The basic usage is::
 
       The usage is::
 
-         with (yield from pool.cursor()) as cur:
-             yield from cur.execute('SELECT 1')
+         async with pool.cursor() as cur:
+             await cur.execute('SELECT 1')
 
       After exiting from *with block* cursor *cur* will be closed.
 
@@ -954,13 +952,13 @@ For pushing data to server please wrap json dict into
    from psycopg2.extras import Json
 
    data = {'a': 1, 'b': 'str'}
-   yield from cur.execute("INSERT INTO tbl (val) VALUES (%s)", [Json(data)])
+   await cur.execute("INSERT INTO tbl (val) VALUES (%s)", [Json(data)])
 
 On receiving data from json column :term:`psycopg2` autoconvers result
 into python :class:`dict` object::
 
-   yield from cur.execute("SELECT val FROM tbl")
-   item = yield from cur.fetchone()
+   await cur.execute("SELECT val FROM tbl")
+   item = await cur.fetchone()
    assert item == {'b': 'str', 'a': 1}
 
 

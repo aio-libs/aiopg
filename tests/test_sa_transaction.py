@@ -1,4 +1,3 @@
-import asyncio
 from unittest import mock
 
 import pytest
@@ -15,15 +14,14 @@ tbl = Table('sa_tbl2', meta,
 
 @pytest.fixture
 def connect(make_connection):
-    @asyncio.coroutine
-    def go(**kwargs):
-        conn = yield from make_connection(**kwargs)
-        cur = yield from conn.cursor()
-        yield from cur.execute("DROP TABLE IF EXISTS sa_tbl2")
-        yield from cur.execute("CREATE TABLE sa_tbl2 "
-                               "(id serial, name varchar(255))")
-        yield from cur.execute("INSERT INTO sa_tbl2 (name)"
-                               "VALUES ('first')")
+    async def go(**kwargs):
+        conn = await make_connection(**kwargs)
+        cur = await conn.cursor()
+        await cur.execute("DROP TABLE IF EXISTS sa_tbl2")
+        await cur.execute("CREATE TABLE sa_tbl2 "
+                          "(id serial, name varchar(255))")
+        await cur.execute("INSERT INTO sa_tbl2 (name)"
+                          "VALUES ('first')")
         cur.close()
 
         engine = mock.Mock(from_spec=sa.engine.Engine)
@@ -35,10 +33,9 @@ def connect(make_connection):
 
 @pytest.fixture
 def xa_connect(connect):
-    @asyncio.coroutine
-    def go(**kwargs):
-        conn = yield from connect(**kwargs)
-        val = yield from conn.scalar('show max_prepared_transactions')
+    async def go(**kwargs):
+        conn = await connect(**kwargs)
+        val = await conn.scalar('show max_prepared_transactions')
         if not int(val):
             raise pytest.skip('Twophase transacions are not supported. '
                               'Set max_prepared_transactions to '
@@ -48,389 +45,369 @@ def xa_connect(connect):
     yield go
 
 
-@asyncio.coroutine
-def test_without_transactions(connect):
-    conn1 = yield from connect()
-    conn2 = yield from connect()
-    res1 = yield from conn1.scalar(tbl.count())
+async def test_without_transactions(connect):
+    conn1 = await connect()
+    conn2 = await connect()
+    res1 = await conn1.scalar(tbl.count())
     assert 1 == res1
 
-    yield from conn2.execute(tbl.delete())
+    await conn2.execute(tbl.delete())
 
-    res2 = yield from conn1.scalar(tbl.count())
+    res2 = await conn1.scalar(tbl.count())
     assert 0 == res2
 
 
-@asyncio.coroutine
-def test_connection_attr(connect):
-    conn = yield from connect()
-    tr = yield from conn.begin()
+async def test_connection_attr(connect):
+    conn = await connect()
+    tr = await conn.begin()
     assert tr.connection is conn
 
 
-@asyncio.coroutine
-def test_root_transaction(connect):
-    conn1 = yield from connect()
-    conn2 = yield from connect()
+async def test_root_transaction(connect):
+    conn1 = await connect()
+    conn2 = await connect()
 
-    tr = yield from conn1.begin()
+    tr = await conn1.begin()
     assert tr.is_active
-    yield from conn1.execute(tbl.delete())
+    await conn1.execute(tbl.delete())
 
-    res1 = yield from conn2.scalar(tbl.count())
+    res1 = await conn2.scalar(tbl.count())
     assert 1 == res1
 
-    yield from tr.commit()
+    await tr.commit()
 
     assert not tr.is_active
     assert not conn1.in_transaction
-    res2 = yield from conn2.scalar(tbl.count())
+    res2 = await conn2.scalar(tbl.count())
     assert 0 == res2
 
 
-@asyncio.coroutine
-def test_root_transaction_rollback(connect):
-    conn1 = yield from connect()
-    conn2 = yield from connect()
+async def test_root_transaction_rollback(connect):
+    conn1 = await connect()
+    conn2 = await connect()
 
-    tr = yield from conn1.begin()
+    tr = await conn1.begin()
     assert tr.is_active
-    yield from conn1.execute(tbl.delete())
+    await conn1.execute(tbl.delete())
 
-    res1 = yield from conn2.scalar(tbl.count())
+    res1 = await conn2.scalar(tbl.count())
     assert 1 == res1
 
-    yield from tr.rollback()
+    await tr.rollback()
 
     assert not tr.is_active
-    res2 = yield from conn2.scalar(tbl.count())
+    res2 = await conn2.scalar(tbl.count())
     assert 1 == res2
 
 
-@asyncio.coroutine
-def test_root_transaction_close(connect):
-    conn1 = yield from connect()
-    conn2 = yield from connect()
+async def test_root_transaction_close(connect):
+    conn1 = await connect()
+    conn2 = await connect()
 
-    tr = yield from conn1.begin()
+    tr = await conn1.begin()
     assert tr.is_active
-    yield from conn1.execute(tbl.delete())
+    await conn1.execute(tbl.delete())
 
-    res1 = yield from conn2.scalar(tbl.count())
+    res1 = await conn2.scalar(tbl.count())
     assert 1 == res1
 
-    yield from tr.close()
+    await tr.close()
 
     assert not tr.is_active
-    res2 = yield from conn2.scalar(tbl.count())
+    res2 = await conn2.scalar(tbl.count())
     assert 1 == res2
 
 
-@asyncio.coroutine
-def test_root_transaction_commit_inactive(connect):
-    conn = yield from connect()
-    tr = yield from conn.begin()
+async def test_root_transaction_commit_inactive(connect):
+    conn = await connect()
+    tr = await conn.begin()
     assert tr.is_active
-    yield from tr.commit()
+    await tr.commit()
     assert not tr.is_active
     with pytest.raises(sa.InvalidRequestError):
-        yield from tr.commit()
+        await tr.commit()
 
 
-@asyncio.coroutine
-def test_root_transaction_rollback_inactive(connect):
-    conn = yield from connect()
-    tr = yield from conn.begin()
+async def test_root_transaction_rollback_inactive(connect):
+    conn = await connect()
+    tr = await conn.begin()
     assert tr.is_active
-    yield from tr.rollback()
+    await tr.rollback()
     assert not tr.is_active
-    yield from tr.rollback()
+    await tr.rollback()
     assert not tr.is_active
 
 
-@asyncio.coroutine
-def test_root_transaction_double_close(connect):
-    conn = yield from connect()
-    tr = yield from conn.begin()
+async def test_root_transaction_double_close(connect):
+    conn = await connect()
+    tr = await conn.begin()
     assert tr.is_active
-    yield from tr.close()
+    await tr.close()
     assert not tr.is_active
-    yield from tr.close()
+    await tr.close()
     assert not tr.is_active
 
 
-@asyncio.coroutine
-def test_inner_transaction_commit(connect):
-    conn = yield from connect()
-    tr1 = yield from conn.begin()
-    tr2 = yield from conn.begin()
+async def test_inner_transaction_commit(connect):
+    conn = await connect()
+    tr1 = await conn.begin()
+    tr2 = await conn.begin()
     assert tr2.is_active
 
-    yield from tr2.commit()
+    await tr2.commit()
     assert not tr2.is_active
     assert tr1.is_active
 
-    yield from tr1.commit()
+    await tr1.commit()
     assert not tr2.is_active
     assert not tr1.is_active
 
 
-@asyncio.coroutine
-def test_rollback_on_connection_close(connect):
-    conn1 = yield from connect()
-    conn2 = yield from connect()
+async def test_rollback_on_connection_close(connect):
+    conn1 = await connect()
+    conn2 = await connect()
 
-    tr = yield from conn1.begin()
-    yield from conn1.execute(tbl.delete())
+    tr = await conn1.begin()
+    await conn1.execute(tbl.delete())
 
-    res1 = yield from conn2.scalar(tbl.count())
+    res1 = await conn2.scalar(tbl.count())
     assert 1 == res1
 
-    yield from conn1.close()
+    await conn1.close()
 
-    res2 = yield from conn2.scalar(tbl.count())
+    res2 = await conn2.scalar(tbl.count())
     assert 1 == res2
     del tr
 
 
-@asyncio.coroutine
-def test_inner_transaction_rollback(connect):
-    conn = yield from connect()
-    tr1 = yield from conn.begin()
-    tr2 = yield from conn.begin()
+async def test_inner_transaction_rollback(connect):
+    conn = await connect()
+    tr1 = await conn.begin()
+    tr2 = await conn.begin()
     assert tr2.is_active
-    yield from conn.execute(tbl.insert().values(name='aaaa'))
+    await conn.execute(tbl.insert().values(name='aaaa'))
 
-    yield from tr2.rollback()
+    await tr2.rollback()
     assert not tr2.is_active
     assert not tr1.is_active
 
-    res = yield from conn.scalar(tbl.count())
+    res = await conn.scalar(tbl.count())
     assert 1 == res
 
 
-@asyncio.coroutine
-def test_inner_transaction_close(connect):
-    conn = yield from connect()
-    tr1 = yield from conn.begin()
-    tr2 = yield from conn.begin()
+async def test_inner_transaction_close(connect):
+    conn = await connect()
+    tr1 = await conn.begin()
+    tr2 = await conn.begin()
     assert tr2.is_active
-    yield from conn.execute(tbl.insert().values(name='aaaa'))
+    await conn.execute(tbl.insert().values(name='aaaa'))
 
-    yield from tr2.close()
+    await tr2.close()
     assert not tr2.is_active
     assert tr1.is_active
-    yield from tr1.commit()
+    await tr1.commit()
 
-    res = yield from conn.scalar(tbl.count())
+    res = await conn.scalar(tbl.count())
     assert 2 == res
 
 
-@asyncio.coroutine
-def test_nested_transaction_commit(connect):
-    conn = yield from connect()
-    tr1 = yield from conn.begin_nested()
-    tr2 = yield from conn.begin_nested()
+async def test_nested_transaction_commit(connect):
+    conn = await connect()
+    tr1 = await conn.begin_nested()
+    tr2 = await conn.begin_nested()
     assert tr1.is_active
     assert tr2.is_active
 
-    yield from conn.execute(tbl.insert().values(name='aaaa'))
-    yield from tr2.commit()
+    await conn.execute(tbl.insert().values(name='aaaa'))
+    await tr2.commit()
     assert not tr2.is_active
     assert tr1.is_active
 
-    res = yield from conn.scalar(tbl.count())
+    res = await conn.scalar(tbl.count())
     assert 2 == res
 
-    yield from tr1.commit()
+    await tr1.commit()
     assert not tr2.is_active
     assert not tr1.is_active
 
-    res = yield from conn.scalar(tbl.count())
+    res = await conn.scalar(tbl.count())
     assert 2 == res
 
 
-@asyncio.coroutine
-def test_nested_transaction_commit_twice(connect):
-    conn = yield from connect()
-    tr1 = yield from conn.begin_nested()
-    tr2 = yield from conn.begin_nested()
+async def test_nested_transaction_commit_twice(connect):
+    conn = await connect()
+    tr1 = await conn.begin_nested()
+    tr2 = await conn.begin_nested()
 
-    yield from conn.execute(tbl.insert().values(name='aaaa'))
-    yield from tr2.commit()
+    await conn.execute(tbl.insert().values(name='aaaa'))
+    await tr2.commit()
     assert not tr2.is_active
     assert tr1.is_active
 
-    yield from tr2.commit()
+    await tr2.commit()
     assert not tr2.is_active
     assert tr1.is_active
 
-    res = yield from conn.scalar(tbl.count())
+    res = await conn.scalar(tbl.count())
     assert 2 == res
 
-    yield from tr1.close()
+    await tr1.close()
 
 
-@asyncio.coroutine
-def test_nested_transaction_rollback(connect):
-    conn = yield from connect()
-    tr1 = yield from conn.begin_nested()
-    tr2 = yield from conn.begin_nested()
+async def test_nested_transaction_rollback(connect):
+    conn = await connect()
+    tr1 = await conn.begin_nested()
+    tr2 = await conn.begin_nested()
     assert tr1.is_active
     assert tr2.is_active
 
-    yield from conn.execute(tbl.insert().values(name='aaaa'))
-    yield from tr2.rollback()
+    await conn.execute(tbl.insert().values(name='aaaa'))
+    await tr2.rollback()
     assert not tr2.is_active
     assert tr1.is_active
 
-    res = yield from conn.scalar(tbl.count())
+    res = await conn.scalar(tbl.count())
     assert 1 == res
 
-    yield from tr1.commit()
+    await tr1.commit()
     assert not tr2.is_active
     assert not tr1.is_active
 
-    res = yield from conn.scalar(tbl.count())
+    res = await conn.scalar(tbl.count())
     assert 1 == res
 
 
-@asyncio.coroutine
-def test_nested_transaction_rollback_twice(connect):
-    conn = yield from connect()
-    tr1 = yield from conn.begin_nested()
-    tr2 = yield from conn.begin_nested()
+async def test_nested_transaction_rollback_twice(connect):
+    conn = await connect()
+    tr1 = await conn.begin_nested()
+    tr2 = await conn.begin_nested()
 
-    yield from conn.execute(tbl.insert().values(name='aaaa'))
-    yield from tr2.rollback()
+    await conn.execute(tbl.insert().values(name='aaaa'))
+    await tr2.rollback()
     assert not tr2.is_active
     assert tr1.is_active
 
-    yield from tr2.rollback()
+    await tr2.rollback()
     assert not tr2.is_active
     assert tr1.is_active
 
-    yield from tr1.commit()
-    res = yield from conn.scalar(tbl.count())
+    await tr1.commit()
+    res = await conn.scalar(tbl.count())
     assert 1 == res
 
 
-@asyncio.coroutine
-def test_twophase_transaction_commit(xa_connect):
-    conn = yield from xa_connect()
-    tr = yield from conn.begin_twophase()
-    yield from conn.execute(tbl.insert().values(name='aaaa'))
+async def test_twophase_transaction_commit(xa_connect):
+    conn = await xa_connect()
+    tr = await conn.begin_twophase()
+    await conn.execute(tbl.insert().values(name='aaaa'))
 
-    yield from tr.prepare()
+    await tr.prepare()
     assert tr.is_active
 
-    yield from tr.commit()
+    await tr.commit()
     assert not tr.is_active
 
-    res = yield from conn.scalar(tbl.count())
+    res = await conn.scalar(tbl.count())
     assert 2 == res
 
 
-@asyncio.coroutine
-def test_twophase_transaction_twice(xa_connect):
-    conn = yield from xa_connect()
-    tr = yield from conn.begin_twophase()
+async def test_twophase_transaction_twice(xa_connect):
+    conn = await xa_connect()
+    tr = await conn.begin_twophase()
     with pytest.raises(sa.InvalidRequestError):
-        yield from conn.begin_twophase()
+        await conn.begin_twophase()
 
     assert tr.is_active
-    yield from tr.prepare()
-    yield from tr.commit()
+    await tr.prepare()
+    await tr.commit()
 
 
-@asyncio.coroutine
-def test_transactions_sequence(xa_connect):
-    conn = yield from xa_connect()
+async def test_transactions_sequence(xa_connect):
+    conn = await xa_connect()
 
-    yield from conn.execute(tbl.delete())
+    await conn.execute(tbl.delete())
 
     assert conn._transaction is None
 
-    tr1 = yield from conn.begin()
+    tr1 = await conn.begin()
     assert tr1 is conn._transaction
-    yield from conn.execute(tbl.insert().values(name='a'))
-    res1 = yield from conn.scalar(tbl.count())
+    await conn.execute(tbl.insert().values(name='a'))
+    res1 = await conn.scalar(tbl.count())
     assert 1 == res1
 
-    yield from tr1.commit()
+    await tr1.commit()
     assert conn._transaction is None
 
-    tr2 = yield from conn.begin()
+    tr2 = await conn.begin()
     assert tr2 is conn._transaction
-    yield from conn.execute(tbl.insert().values(name='b'))
-    res2 = yield from conn.scalar(tbl.count())
+    await conn.execute(tbl.insert().values(name='b'))
+    res2 = await conn.scalar(tbl.count())
     assert 2 == res2
 
-    yield from tr2.rollback()
+    await tr2.rollback()
     assert conn._transaction is None
 
-    tr3 = yield from conn.begin()
+    tr3 = await conn.begin()
     assert tr3 is conn._transaction
-    yield from conn.execute(tbl.insert().values(name='b'))
-    res3 = yield from conn.scalar(tbl.count())
+    await conn.execute(tbl.insert().values(name='b'))
+    res3 = await conn.scalar(tbl.count())
     assert 2 == res3
 
-    yield from tr3.commit()
+    await tr3.commit()
     assert conn._transaction is None
 
 
-@asyncio.coroutine
-def test_transaction_mode(connect):
-    conn = yield from connect()
+async def test_transaction_mode(connect):
+    conn = await connect()
 
-    yield from conn.execute(tbl.delete())
+    await conn.execute(tbl.delete())
 
-    tr1 = yield from conn.begin(isolation_level='SERIALIZABLE')
-    yield from conn.execute(tbl.insert().values(name='a'))
-    res1 = yield from conn.scalar(tbl.count())
+    tr1 = await conn.begin(isolation_level='SERIALIZABLE')
+    await conn.execute(tbl.insert().values(name='a'))
+    res1 = await conn.scalar(tbl.count())
     assert 1 == res1
-    yield from tr1.commit()
+    await tr1.commit()
 
-    tr2 = yield from conn.begin(isolation_level='REPEATABLE READ')
-    yield from conn.execute(tbl.insert().values(name='b'))
-    res2 = yield from conn.scalar(tbl.count())
+    tr2 = await conn.begin(isolation_level='REPEATABLE READ')
+    await conn.execute(tbl.insert().values(name='b'))
+    res2 = await conn.scalar(tbl.count())
     assert 2 == res2
-    yield from tr2.commit()
+    await tr2.commit()
 
-    tr3 = yield from conn.begin(isolation_level='READ UNCOMMITTED')
-    yield from conn.execute(tbl.insert().values(name='c'))
-    res3 = yield from conn.scalar(tbl.count())
+    tr3 = await conn.begin(isolation_level='READ UNCOMMITTED')
+    await conn.execute(tbl.insert().values(name='c'))
+    res3 = await conn.scalar(tbl.count())
     assert 3 == res3
-    yield from tr3.commit()
+    await tr3.commit()
 
-    tr4 = yield from conn.begin(readonly=True)
+    tr4 = await conn.begin(readonly=True)
     assert tr4 is conn._transaction
-    res1 = yield from conn.scalar(tbl.count())
+    res1 = await conn.scalar(tbl.count())
     assert 3 == res1
-    yield from tr4.commit()
+    await tr4.commit()
 
-    tr5 = yield from conn.begin(isolation_level='READ UNCOMMITTED',
-                                readonly=True)
-    res1 = yield from conn.scalar(tbl.count())
+    tr5 = await conn.begin(isolation_level='READ UNCOMMITTED',
+                           readonly=True)
+    res1 = await conn.scalar(tbl.count())
     assert 3 == res1
-    yield from tr5.commit()
+    await tr5.commit()
 
-    tr6 = yield from conn.begin(deferrable=True)
-    yield from conn.execute(tbl.insert().values(name='f'))
-    res1 = yield from conn.scalar(tbl.count())
+    tr6 = await conn.begin(deferrable=True)
+    await conn.execute(tbl.insert().values(name='f'))
+    res1 = await conn.scalar(tbl.count())
     assert 4 == res1
-    yield from tr6.commit()
+    await tr6.commit()
 
-    tr7 = yield from conn.begin(isolation_level='REPEATABLE READ',
-                                deferrable=True)
-    yield from conn.execute(tbl.insert().values(name='g'))
-    res1 = yield from conn.scalar(tbl.count())
+    tr7 = await conn.begin(isolation_level='REPEATABLE READ',
+                           deferrable=True)
+    await conn.execute(tbl.insert().values(name='g'))
+    res1 = await conn.scalar(tbl.count())
     assert 5 == res1
-    yield from tr7.commit()
+    await tr7.commit()
 
-    tr8 = yield from conn.begin(isolation_level='SERIALIZABLE',
-                                readonly=True, deferrable=True)
+    tr8 = await conn.begin(isolation_level='SERIALIZABLE',
+                           readonly=True, deferrable=True)
     assert tr8 is conn._transaction
-    res1 = yield from conn.scalar(tbl.count())
+    res1 = await conn.scalar(tbl.count())
     assert 5 == res1
-    yield from tr8.commit()
+    await tr8.commit()

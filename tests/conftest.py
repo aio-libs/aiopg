@@ -186,17 +186,16 @@ def make_connection(loop, pg_params):
 
     conns = []
 
-    @asyncio.coroutine
-    def go(*, no_loop=False, **kwargs):
+    async def go(*, no_loop=False, **kwargs):
         nonlocal conn
         params = pg_params.copy()
         params.update(kwargs)
         useloop = None if no_loop else loop
-        conn = yield from aiopg.connect(loop=useloop, **params)
-        conn2 = yield from aiopg.connect(loop=useloop, **params)
-        cur = yield from conn2.cursor()
-        yield from cur.execute("DROP TABLE IF EXISTS foo")
-        yield from conn2.close()
+        conn = await aiopg.connect(loop=useloop, **params)
+        conn2 = await aiopg.connect(loop=useloop, **params)
+        cur = await conn2.cursor()
+        await cur.execute("DROP TABLE IF EXISTS foo")
+        await conn2.close()
         conns.append(conn)
         return conn
 
@@ -210,13 +209,12 @@ def make_connection(loop, pg_params):
 def create_pool(loop, pg_params):
     pool = None
 
-    @asyncio.coroutine
-    def go(*, no_loop=False, **kwargs):
+    async def go(*, no_loop=False, **kwargs):
         nonlocal pool
         params = pg_params.copy()
         params.update(kwargs)
         useloop = None if no_loop else loop
-        pool = yield from aiopg.create_pool(loop=useloop, **params)
+        pool = await aiopg.create_pool(loop=useloop, **params)
         return pool
 
     yield go
@@ -229,13 +227,12 @@ def create_pool(loop, pg_params):
 def make_engine(loop, pg_params):
     engine = None
 
-    @asyncio.coroutine
-    def go(*, use_loop=True, **kwargs):
+    async def go(*, use_loop=True, **kwargs):
         pg_params.update(kwargs)
         if use_loop:
-            engine = yield from sa.create_engine(loop=loop, **pg_params)
+            engine = await sa.create_engine(loop=loop, **pg_params)
         else:
-            engine = yield from sa.create_engine(**pg_params)
+            engine = await sa.create_engine(**pg_params)
         return engine
 
     yield go
@@ -250,11 +247,10 @@ def make_sa_connection(make_engine):
     conn = None
     engine = None
 
-    @asyncio.coroutine
-    def go(*, use_loop=True, **kwargs):
+    async def go(*, use_loop=True, **kwargs):
         nonlocal conn, engine
-        engine = yield from make_engine(use_loop=use_loop, **kwargs)
-        conn = yield from engine.acquire()
+        engine = await make_engine(use_loop=use_loop, **kwargs)
+        conn = await engine.acquire()
         return conn
 
     yield go

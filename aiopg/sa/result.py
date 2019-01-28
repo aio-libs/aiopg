@@ -1,11 +1,8 @@
-import asyncio
-import warnings
 import weakref
 from collections.abc import Mapping, Sequence
 
 from sqlalchemy.sql import expression, sqltypes
 
-from ..utils import PY_35, PY_352
 from . import exc
 
 
@@ -335,32 +332,15 @@ class ResultProxy:
             self._cursor = None
             self._weak = None
 
-    def __iter__(self):
-        warnings.warn("Iteration over ResultProxy is deprecated",
-                      DeprecationWarning,
-                      stacklevel=2)
-        while True:
-            row = yield from self.fetchone()
-            if row is None:
-                return
-            else:
-                yield row
+    def __aiter__(self):
+        return self
 
-    if PY_35:  # pragma: no branch
-
-        def __aiter__(self):
-            return self
-
-        if not PY_352:
-            __aiter__ = asyncio.coroutine(__aiter__)
-
-        @asyncio.coroutine
-        def __anext__(self):
-            ret = yield from self.fetchone()
-            if ret is not None:
-                return ret
-            else:
-                raise StopAsyncIteration
+    async def __anext__(self):
+        ret = await self.fetchone()
+        if ret is not None:
+            return ret
+        else:
+            raise StopAsyncIteration
 
     def _non_result(self):
         if self._metadata is None:
@@ -378,11 +358,10 @@ class ResultProxy:
         return [process_row(metadata, row, processors, keymap)
                 for row in rows]
 
-    @asyncio.coroutine
-    def fetchall(self):
+    async def fetchall(self):
         """Fetch all rows, just like DB-API cursor.fetchall()."""
         try:
-            rows = yield from self._cursor.fetchall()
+            rows = await self._cursor.fetchall()
         except AttributeError:
             self._non_result()
         else:
@@ -390,15 +369,14 @@ class ResultProxy:
             self.close()
             return res
 
-    @asyncio.coroutine
-    def fetchone(self):
+    async def fetchone(self):
         """Fetch one row, just like DB-API cursor.fetchone().
 
         If a row is present, the cursor remains open after this is called.
         Else the cursor is automatically closed and None is returned.
         """
         try:
-            row = yield from self._cursor.fetchone()
+            row = await self._cursor.fetchone()
         except AttributeError:
             self._non_result()
         else:
@@ -408,8 +386,7 @@ class ResultProxy:
                 self.close()
                 return None
 
-    @asyncio.coroutine
-    def fetchmany(self, size=None):
+    async def fetchmany(self, size=None):
         """Fetch many rows, just like DB-API
         cursor.fetchmany(size=cursor.arraysize).
 
@@ -418,9 +395,9 @@ class ResultProxy:
         """
         try:
             if size is None:
-                rows = yield from self._cursor.fetchmany()
+                rows = await self._cursor.fetchmany()
             else:
-                rows = yield from self._cursor.fetchmany(size)
+                rows = await self._cursor.fetchmany(size)
         except AttributeError:
             self._non_result()
         else:
@@ -429,8 +406,7 @@ class ResultProxy:
                 self.close()
             return res
 
-    @asyncio.coroutine
-    def first(self):
+    async def first(self):
         """Fetch the first row and then close the result set unconditionally.
 
         Returns None if no row is present.
@@ -438,17 +414,16 @@ class ResultProxy:
         if self._metadata is None:
             self._non_result()
         try:
-            return (yield from self.fetchone())
+            return await self.fetchone()
         finally:
             self.close()
 
-    @asyncio.coroutine
-    def scalar(self):
+    async def scalar(self):
         """Fetch the first column of the first row, and close the result set.
 
         Returns None if no row is present.
         """
-        row = yield from self.first()
+        row = await self.first()
         if row is not None:
             return row[0]
         else:

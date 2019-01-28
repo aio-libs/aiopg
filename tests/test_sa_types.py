@@ -1,4 +1,3 @@
-import asyncio
 from enum import Enum
 
 import psycopg2
@@ -64,27 +63,26 @@ tbl2 = Table('sa_tbl_types2', meta,
 
 @pytest.fixture
 def connect(make_engine):
-    @asyncio.coroutine
-    def go(**kwargs):
-        engine = yield from make_engine(**kwargs)
-        with (yield from engine) as conn:
+    async def go(**kwargs):
+        engine = await make_engine(**kwargs)
+        with (await engine) as conn:
             try:
-                yield from conn.execute(DropTable(tbl))
+                await conn.execute(DropTable(tbl))
             except psycopg2.ProgrammingError:
                 pass
             try:
-                yield from conn.execute(DropTable(tbl2))
+                await conn.execute(DropTable(tbl2))
             except psycopg2.ProgrammingError:
                 pass
-            yield from conn.execute("DROP TYPE IF EXISTS simple_enum CASCADE;")
-            yield from conn.execute("""CREATE TYPE simple_enum AS ENUM
+            await conn.execute("DROP TYPE IF EXISTS simple_enum CASCADE;")
+            await conn.execute("""CREATE TYPE simple_enum AS ENUM
                                        ('first', 'second');""")
             try:
-                yield from conn.execute(CreateTable(tbl))
+                await conn.execute(CreateTable(tbl))
                 ret_tbl = tbl
                 has_hstore = True
             except psycopg2.ProgrammingError:
-                yield from conn.execute(CreateTable(tbl2))
+                await conn.execute(CreateTable(tbl2))
                 ret_tbl = tbl2
                 has_hstore = False
         return engine, ret_tbl, has_hstore
@@ -92,66 +90,61 @@ def connect(make_engine):
     yield go
 
 
-@asyncio.coroutine
-def test_json(connect):
-    engine, tbl, has_hstore = yield from connect()
+async def test_json(connect):
+    engine, tbl, has_hstore = await connect()
     data = {'a': 1, 'b': 'name'}
-    with (yield from engine) as conn:
-        yield from conn.execute(
+    with (await engine) as conn:
+        await conn.execute(
             tbl.insert().values(json_val=data))
 
-        ret = yield from conn.execute(tbl.select())
-        item = yield from ret.fetchone()
+        ret = await conn.execute(tbl.select())
+        item = await ret.fetchone()
         assert data == item['json_val']
 
 
-@asyncio.coroutine
-def test_array(connect):
-    engine, tbl, has_hstore = yield from connect()
+async def test_array(connect):
+    engine, tbl, has_hstore = await connect()
     data = [1, 2, 3]
-    with (yield from engine) as conn:
-        yield from conn.execute(
+    with (await engine) as conn:
+        await conn.execute(
             tbl.insert().values(array_val=data))
 
-        ret = yield from conn.execute(tbl.select())
-        item = yield from ret.fetchone()
+        ret = await conn.execute(tbl.select())
+        item = await ret.fetchone()
         assert data == item['array_val']
 
 
-@asyncio.coroutine
-def test_hstore(connect):
-    engine, tbl, has_hstore = yield from connect()
+async def test_hstore(connect):
+    engine, tbl, has_hstore = await connect()
     if not has_hstore:
         raise pytest.skip("hstore is not supported")
     data = {'a': 'str', 'b': 'name'}
-    with (yield from engine) as conn:
-        yield from conn.execute(
+    with (await engine) as conn:
+        await conn.execute(
             tbl.insert().values(hstore_val=data))
 
-        ret = yield from conn.execute(tbl.select())
-        item = yield from ret.fetchone()
+        ret = await conn.execute(tbl.select())
+        item = await ret.fetchone()
         assert data == item['hstore_val']
 
 
-@asyncio.coroutine
-def test_enum(connect):
-    engine, tbl, has_hstore = yield from connect()
-    with (yield from engine) as conn:
-        yield from conn.execute(
+async def test_enum(connect):
+    engine, tbl, has_hstore = await connect()
+    with (await engine) as conn:
+        await conn.execute(
             tbl.insert().values(enum_val='second'))
 
-        ret = yield from conn.execute(tbl.select())
-        item = yield from ret.fetchone()
+        ret = await conn.execute(tbl.select())
+        item = await ret.fetchone()
         assert 'second' == item['enum_val']
 
 
-@asyncio.coroutine
-def test_pyenum(connect):
-    engine, tbl, has_hstore = yield from connect()
-    with (yield from engine) as conn:
-        yield from conn.execute(
+async def test_pyenum(connect):
+    engine, tbl, has_hstore = await connect()
+    with (await engine) as conn:
+        await conn.execute(
             tbl.insert().values(pyt_enum_val=SimpleEnum.first))
 
-        ret = yield from conn.execute(tbl.select())
-        item = yield from ret.fetchone()
+        ret = await conn.execute(tbl.select())
+        item = await ret.fetchone()
         assert SimpleEnum.first == item.pyt_enum_val

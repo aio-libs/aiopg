@@ -1,16 +1,7 @@
+from collections.abc import Coroutine
 import asyncio
-import sys
 import psycopg2
 
-PY_35 = sys.version_info >= (3, 5)
-PY_352 = sys.version_info >= (3, 5, 2)
-
-if PY_35:
-    from collections.abc import Coroutine
-
-    base = Coroutine
-else:
-    base = object
 
 try:
     ensure_future = asyncio.ensure_future
@@ -25,7 +16,7 @@ def create_future(loop):
         return asyncio.Future(loop=loop)
 
 
-class _ContextManager(base):
+class _ContextManager(Coroutine):
     __slots__ = ('_coro', '_obj')
 
     def __init__(self, coro):
@@ -61,98 +52,73 @@ class _ContextManager(base):
     def __next__(self):
         return self.send(None)
 
-    @asyncio.coroutine
-    def __iter__(self):
-        resp = yield from self._coro
+    def __await__(self):
+        resp = self._coro.__await__()
         return resp
 
-    if PY_35:
-        def __await__(self):
-            resp = yield from self._coro
-            return resp
+    async def __aenter__(self):
+        self._obj = await self._coro
+        return self._obj
 
-        @asyncio.coroutine
-        def __aenter__(self):
-            self._obj = yield from self._coro
-            return self._obj
-
-        @asyncio.coroutine
-        def __aexit__(self, exc_type, exc, tb):
-            self._obj.close()
-            self._obj = None
+    async def __aexit__(self, exc_type, exc, tb):
+        self._obj.close()
+        self._obj = None
 
 
 class _SAConnectionContextManager(_ContextManager):
-    if PY_35:  # pragma: no branch
-        if PY_352:
-            def __aiter__(self):
-                return self
+    def __aiter__(self):
+        return self
 
-            @asyncio.coroutine
-            def __anext__(self):
-                if self._obj is None:
-                    self._obj = yield from self._coro
+    async def __anext__(self):
+        if self._obj is None:
+            self._obj = await self._coro
 
-                try:
-                    return (yield from self._obj.__anext__())
-                except StopAsyncIteration:
-                    self._obj.close()
-                    self._obj = None
-                    raise
-
-        else:
-            @asyncio.coroutine
-            def __aiter__(self):
-                result = yield from self._coro
-                return result
+        try:
+            return (await self._obj.__anext__())
+        except StopAsyncIteration:
+            self._obj.close()
+            self._obj = None
+            raise
 
 
 class _PoolContextManager(_ContextManager):
-    if PY_35:
-        @asyncio.coroutine
-        def __aexit__(self, exc_type, exc, tb):
-            self._obj.close()
-            yield from self._obj.wait_closed()
-            self._obj = None
+    async def __aexit__(self, exc_type, exc, tb):
+        self._obj.close()
+        await self._obj.wait_closed()
+        self._obj = None
 
 
 class _TransactionPointContextManager(_ContextManager):
-    if PY_35:
 
-        @asyncio.coroutine
-        def __aexit__(self, exc_type, exc_val, exc_tb):
-            if exc_type is not None:
-                yield from self._obj.rollback_savepoint()
-            else:
-                yield from self._obj.release_savepoint()
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            await self._obj.rollback_savepoint()
+        else:
+            await self._obj.release_savepoint()
 
-            self._obj = None
+        self._obj = None
 
 
 class _TransactionBeginContextManager(_ContextManager):
-    if PY_35:
 
-        @asyncio.coroutine
-        def __aexit__(self, exc_type, exc_val, exc_tb):
-            if exc_type is not None:
-                yield from self._obj.rollback()
-            else:
-                yield from self._obj.commit()
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            await self._obj.rollback()
+        else:
+            await self._obj.commit()
 
-            self._obj = None
+        self._obj = None
 
 
 class _TransactionContextManager(_ContextManager):
-    if PY_35:
 
-        @asyncio.coroutine
-        def __aexit__(self, exc_type, exc, tb):
-            if exc_type:
-                yield from self._obj.rollback()
-            else:
-                if self._obj.is_active:
-                    yield from self._obj.commit()
-            self._obj = None
+    async def __aexit__(self, exc_type, exc, tb):
+        if exc_type:
+            await self._obj.rollback()
+        else:
+            if self._obj.is_active:
+                await self._obj.commit()
+        self._obj = None
 
 
 class _PoolAcquireContextManager(_ContextManager):
@@ -162,12 +128,10 @@ class _PoolAcquireContextManager(_ContextManager):
         super().__init__(coro)
         self._pool = pool
 
-    if PY_35:
-        @asyncio.coroutine
-        def __aexit__(self, exc_type, exc, tb):
-            yield from self._pool.release(self._obj)
-            self._pool = None
-            self._obj = None
+    async def __aexit__(self, exc_type, exc, tb):
+        await self._pool.release(self._obj)
+        self._pool = None
+        self._obj = None
 
 
 class _PoolConnectionContextManager:
@@ -176,8 +140,8 @@ class _PoolConnectionContextManager:
     This enables the following idiom for acquiring and releasing a
     connection around a block:
 
-        with (yield from pool) as conn:
-            cur = yield from conn.cursor()
+        async with pool as conn:
+            cur = await conn.cursor()
 
     while failing loudly when accidentally using:
 
@@ -202,20 +166,17 @@ class _PoolConnectionContextManager:
             self._pool = None
             self._conn = None
 
-    if PY_35:
-        @asyncio.coroutine
-        def __aenter__(self):
-            assert not self._conn
-            self._conn = yield from self._pool.acquire()
-            return self._conn
+    async def __aenter__(self):
+        assert not self._conn
+        self._conn = await self._pool.acquire()
+        return self._conn
 
-        @asyncio.coroutine
-        def __aexit__(self, exc_type, exc_val, exc_tb):
-            try:
-                yield from self._pool.release(self._conn)
-            finally:
-                self._pool = None
-                self._conn = None
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        try:
+            await self._pool.release(self._conn)
+        finally:
+            self._pool = None
+            self._conn = None
 
 
 class _PoolCursorContextManager:
@@ -224,8 +185,8 @@ class _PoolCursorContextManager:
     This enables the following idiom for acquiring and releasing a
     cursor around a block:
 
-        with (yield from pool.cursor()) as cur:
-            yield from cur.execute("SELECT 1")
+        async with pool.cursor() as cur:
+            await cur.execute("SELECT 1")
 
     while failing loudly when accidentally using:
 
@@ -259,12 +220,3 @@ class _PoolCursorContextManager:
                 self._pool = None
                 self._conn = None
                 self._cur = None
-
-
-if not PY_35:
-    try:
-        from asyncio import coroutines
-
-        coroutines._COROUTINE_TYPES += (_ContextManager,)
-    except BaseException:
-        pass

@@ -19,20 +19,19 @@ emails = sa.Table('emails', metadata,
                   sa.Column('private', sa.Boolean, nullable=False))
 
 
-@asyncio.coroutine
-def create_tables(engine):
-    with (yield from engine) as conn:
-        yield from conn.execute('DROP TABLE IF EXISTS emails')
-        yield from conn.execute('DROP TABLE IF EXISTS users')
-        yield from conn.execute('''CREATE TABLE users (
-                                            id serial PRIMARY KEY,
-                                            name varchar(255),
-                                            birthday timestamp)''')
-        yield from conn.execute('''CREATE TABLE emails (
-                                    id serial,
-                                    user_id int references users(id),
-                                    email varchar(253),
-                                    private bool)''')
+async def create_tables(engine):
+    async with engine as conn:
+        await conn.execute('DROP TABLE IF EXISTS emails')
+        await conn.execute('DROP TABLE IF EXISTS users')
+        await conn.execute('''CREATE TABLE users (
+                                  id serial PRIMARY KEY,
+                                  name varchar(255),
+                                  birthday timestamp)''')
+        await conn.execute('''CREATE TABLE emails (
+                                  id serial,
+                                  user_id int references users(id),
+                                  email varchar(253),
+                                  private bool)''')
 
 
 names = {'Andrew', 'Bob', 'John', 'Vitaly', 'Alex', 'Lina', 'Olga',
@@ -49,29 +48,27 @@ def gen_birthday():
     return datetime.datetime(year, month, day)
 
 
-@asyncio.coroutine
-def fill_data(engine):
-    with (yield from engine) as conn:
-        tr = yield from conn.begin()
+async def fill_data(engine):
+    async with engine as conn:
+        tr = await conn.begin()
 
         for name in random.sample(names, len(names)):
-            uid = yield from conn.scalar(
+            uid = await conn.scalar(
                 users.insert().values(name=name, birthday=gen_birthday()))
             emails_count = int(random.paretovariate(2))
             for num in random.sample(range(10000), emails_count):
                 is_private = random.uniform(0, 1) < 0.8
-                yield from conn.execute(emails.insert().values(
+                await conn.execute(emails.insert().values(
                     user_id=uid,
                     email='{}+{}@gmail.com'.format(name, num),
                     private=is_private))
-        yield from tr.commit()
+        await tr.commit()
 
 
-@asyncio.coroutine
-def count(engine):
-    with (yield from engine) as conn:
-        c1 = (yield from conn.scalar(users.count()))
-        c2 = (yield from conn.scalar(emails.count()))
+async def count(engine):
+    async with engine as conn:
+        c1 = await conn.scalar(users.count())
+        c2 = await conn.scalar(emails.count())
         print("Population consists of", c1, "people with",
               c2, "emails in total")
         join = sa.join(emails, users, users.c.id == emails.c.user_id)
@@ -82,50 +79,47 @@ def count(engine):
                  .having(sa.func.count(emails.c.private) > 0))
 
         print("Users with public emails:")
-        ret = yield from conn.execute(query)
+        ret = await conn.execute(query)
         for row in ret:
             print(row.name)
 
         print()
 
 
-@asyncio.coroutine
-def show_julia(engine):
-    with (yield from engine) as conn:
+async def show_julia(engine):
+    async with engine as conn:
         print("Lookup for Julia:")
         join = sa.join(emails, users, users.c.id == emails.c.user_id)
         query = (sa.select([users, emails], use_labels=True)
                  .select_from(join).where(users.c.name == 'Julia'))
-        res = yield from conn.execute(query)
+        res = await conn.execute(query)
         for row in res:
             print(row.users_name, row.users_birthday,
                   row.emails_email, row.emails_private)
         print()
 
 
-@asyncio.coroutine
-def ave_age(engine):
-    with (yield from engine) as conn:
+async def ave_age(engine):
+    async with engine as conn:
         query = (sa.select([sa.func.avg(sa.func.age(users.c.birthday))])
                  .select_from(users))
-        ave = (yield from conn.scalar(query))
+        ave = await conn.scalar(query)
         print("Average age of population is", ave,
               "or ~", int(ave.days / 365), "years")
         print()
 
 
-@asyncio.coroutine
-def go():
-    engine = yield from create_engine(user='aiopg',
+async def go():
+    engine = await create_engine(user='aiopg',
                                       database='aiopg',
                                       host='127.0.0.1',
                                       password='passwd')
 
-    yield from create_tables(engine)
-    yield from fill_data(engine)
-    yield from count(engine)
-    yield from show_julia(engine)
-    yield from ave_age(engine)
+    await create_tables(engine)
+    await fill_data(engine)
+    await count(engine)
+    await show_julia(engine)
+    await ave_age(engine)
 
 
 loop = asyncio.get_event_loop()

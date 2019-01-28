@@ -10,20 +10,19 @@ from aiopg.connection import TIMEOUT
 @pytest.fixture
 def connect(make_connection):
 
-    @asyncio.coroutine
-    def go(**kwargs):
-        conn = yield from make_connection(**kwargs)
-        cur = yield from conn.cursor()
-        yield from cur.execute("DROP TABLE IF EXISTS tbl")
-        yield from cur.execute("CREATE TABLE tbl (id int, name varchar(255))")
+    async def go(**kwargs):
+        conn = await make_connection(**kwargs)
+        cur = await conn.cursor()
+        await cur.execute("DROP TABLE IF EXISTS tbl")
+        await cur.execute("CREATE TABLE tbl (id int, name varchar(255))")
         for i in [(1, 'a'), (2, 'b'), (3, 'c')]:
-            yield from cur.execute("INSERT INTO tbl VALUES(%s, %s)", i)
-        yield from cur.execute("DROP TABLE IF EXISTS tbl2")
-        yield from cur.execute("""CREATE TABLE tbl2
+            await cur.execute("INSERT INTO tbl VALUES(%s, %s)", i)
+        await cur.execute("DROP TABLE IF EXISTS tbl2")
+        await cur.execute("""CREATE TABLE tbl2
                                   (id int, name varchar(255))
                                   WITH OIDS""")
-        yield from cur.execute("DROP FUNCTION IF EXISTS inc(val integer)")
-        yield from cur.execute("""CREATE FUNCTION inc(val integer)
+        await cur.execute("DROP FUNCTION IF EXISTS inc(val integer)")
+        await cur.execute("""CREATE FUNCTION inc(val integer)
                                   RETURNS integer AS $$
                                   BEGIN
                                   RETURN val + 1;
@@ -34,12 +33,11 @@ def connect(make_connection):
     return go
 
 
-@asyncio.coroutine
-def test_description(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
+async def test_description(connect):
+    conn = await connect()
+    cur = await conn.cursor()
     assert cur.description is None
-    yield from cur.execute('SELECT * from tbl;')
+    await cur.execute('SELECT * from tbl;')
 
     assert len(cur.description) == 2, \
         'cursor.description describes too many columns'
@@ -55,333 +53,301 @@ def test_description(connect):
 
     # Make sure self.description gets reset, cursor should be
     # set to None in case of none resulting queries like DDL
-    yield from cur.execute('DROP TABLE IF EXISTS foobar;')
+    await cur.execute('DROP TABLE IF EXISTS foobar;')
     assert cur.description is None
 
 
-@asyncio.coroutine
-def test_raw(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
+async def test_raw(connect):
+    conn = await connect()
+    cur = await conn.cursor()
     assert cur._impl is cur.raw
 
 
-@asyncio.coroutine
-def test_close(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
+async def test_close(connect):
+    conn = await connect()
+    cur = await conn.cursor()
     cur.close()
     assert cur.closed
     with pytest.raises(psycopg2.InterfaceError):
-        yield from cur.execute('SELECT 1')
+        await cur.execute('SELECT 1')
 
 
-@asyncio.coroutine
-def test_close_twice(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
+async def test_close_twice(connect):
+    conn = await connect()
+    cur = await conn.cursor()
     cur.close()
     cur.close()
     assert cur.closed
     with pytest.raises(psycopg2.InterfaceError):
-        yield from cur.execute('SELECT 1')
+        await cur.execute('SELECT 1')
     assert conn._waiter is None
 
 
-@asyncio.coroutine
-def test_connection(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
+async def test_connection(connect):
+    conn = await connect()
+    cur = await conn.cursor()
     assert cur.connection is conn
 
 
-@asyncio.coroutine
-def test_name(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
+async def test_name(connect):
+    conn = await connect()
+    cur = await conn.cursor()
     assert cur.name is None
 
 
-@asyncio.coroutine
-def test_scrollable(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
+async def test_scrollable(connect):
+    conn = await connect()
+    cur = await conn.cursor()
     assert cur.scrollable is None
     with pytest.raises(psycopg2.ProgrammingError):
         cur.scrollable = True
 
 
-@asyncio.coroutine
-def test_withhold(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
+async def test_withhold(connect):
+    conn = await connect()
+    cur = await conn.cursor()
     assert not cur.withhold
     with pytest.raises(psycopg2.ProgrammingError):
         cur.withhold = True
     assert not cur.withhold
 
 
-@asyncio.coroutine
-def test_execute(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
-    yield from cur.execute('SELECT 1')
-    ret = yield from cur.fetchone()
+async def test_execute(connect):
+    conn = await connect()
+    cur = await conn.cursor()
+    await cur.execute('SELECT 1')
+    ret = await cur.fetchone()
     assert (1,) == ret
 
 
-@asyncio.coroutine
-def test_executemany(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
+async def test_executemany(connect):
+    conn = await connect()
+    cur = await conn.cursor()
     with pytest.raises(psycopg2.ProgrammingError):
-        yield from cur.executemany('SELECT %s', ['1', '2'])
+        await cur.executemany('SELECT %s', ['1', '2'])
 
 
-@asyncio.coroutine
-def test_mogrify(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
-    ret = yield from cur.mogrify('SELECT %s', ['1'])
+async def test_mogrify(connect):
+    conn = await connect()
+    cur = await conn.cursor()
+    ret = await cur.mogrify('SELECT %s', ['1'])
     assert b"SELECT '1'" == ret
 
 
-@asyncio.coroutine
-def test_setinputsizes(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
-    yield from cur.setinputsizes(10)
+async def test_setinputsizes(connect):
+    conn = await connect()
+    cur = await conn.cursor()
+    await cur.setinputsizes(10)
 
 
-@asyncio.coroutine
-def test_fetchmany(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
-    yield from cur.execute('SELECT * from tbl;')
-    ret = yield from cur.fetchmany()
+async def test_fetchmany(connect):
+    conn = await connect()
+    cur = await conn.cursor()
+    await cur.execute('SELECT * from tbl;')
+    ret = await cur.fetchmany()
     assert [(1, 'a')] == ret
 
-    yield from cur.execute('SELECT * from tbl;')
-    ret = yield from cur.fetchmany(2)
+    await cur.execute('SELECT * from tbl;')
+    ret = await cur.fetchmany(2)
     assert [(1, 'a'), (2, 'b')] == ret
 
 
-@asyncio.coroutine
-def test_fetchall(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
-    yield from cur.execute('SELECT * from tbl;')
-    ret = yield from cur.fetchall()
+async def test_fetchall(connect):
+    conn = await connect()
+    cur = await conn.cursor()
+    await cur.execute('SELECT * from tbl;')
+    ret = await cur.fetchall()
     assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
 
 
-@asyncio.coroutine
-def test_scroll(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
-    yield from cur.execute('SELECT * from tbl;')
-    yield from cur.scroll(1)
-    ret = yield from cur.fetchone()
+async def test_scroll(connect):
+    conn = await connect()
+    cur = await conn.cursor()
+    await cur.execute('SELECT * from tbl;')
+    await cur.scroll(1)
+    ret = await cur.fetchone()
     assert (2, 'b') == ret
 
 
-@asyncio.coroutine
-def test_arraysize(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
+async def test_arraysize(connect):
+    conn = await connect()
+    cur = await conn.cursor()
     assert 1 == cur.arraysize
 
     cur.arraysize = 10
     assert 10 == cur.arraysize
 
 
-@asyncio.coroutine
-def test_itersize(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
+async def test_itersize(connect):
+    conn = await connect()
+    cur = await conn.cursor()
     assert 2000 == cur.itersize
 
     cur.itersize = 10
     assert 10 == cur.itersize
 
 
-@asyncio.coroutine
-def test_rows(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
-    yield from cur.execute('SELECT * from tbl')
+async def test_rows(connect):
+    conn = await connect()
+    cur = await conn.cursor()
+    await cur.execute('SELECT * from tbl')
     assert 3 == cur.rowcount
     assert 0 == cur.rownumber
-    yield from cur.fetchone()
+    await cur.fetchone()
     assert 1 == cur.rownumber
 
     assert 0 == cur.lastrowid
-    yield from cur.execute('INSERT INTO tbl2 VALUES (%s, %s)',
-                           (4, 'd'))
+    await cur.execute('INSERT INTO tbl2 VALUES (%s, %s)',
+                      (4, 'd'))
     assert 0 != cur.lastrowid
 
 
-@asyncio.coroutine
-def test_query(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
-    yield from cur.execute('SELECT 1')
+async def test_query(connect):
+    conn = await connect()
+    cur = await conn.cursor()
+    await cur.execute('SELECT 1')
     assert b'SELECT 1' == cur.query
 
 
-@asyncio.coroutine
-def test_statusmessage(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
-    yield from cur.execute('SELECT 1')
+async def test_statusmessage(connect):
+    conn = await connect()
+    cur = await conn.cursor()
+    await cur.execute('SELECT 1')
     assert 'SELECT 1' == cur.statusmessage
 
 
-@asyncio.coroutine
-def test_tzinfo_factory(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
+async def test_tzinfo_factory(connect):
+    conn = await connect()
+    cur = await conn.cursor()
     assert psycopg2.tz.FixedOffsetTimezone is cur.tzinfo_factory
 
     cur.tzinfo_factory = psycopg2.tz.LocalTimezone
     assert psycopg2.tz.LocalTimezone is cur.tzinfo_factory
 
 
-@asyncio.coroutine
-def test_nextset(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
+async def test_nextset(connect):
+    conn = await connect()
+    cur = await conn.cursor()
     with pytest.raises(psycopg2.NotSupportedError):
-        yield from cur.nextset()
+        await cur.nextset()
 
 
-@asyncio.coroutine
-def test_setoutputsize(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
-    yield from cur.setoutputsize(4, 1)
+async def test_setoutputsize(connect):
+    conn = await connect()
+    cur = await conn.cursor()
+    await cur.setoutputsize(4, 1)
 
 
-@asyncio.coroutine
-def test_copy_family(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
+async def test_copy_family(connect):
+    conn = await connect()
+    cur = await conn.cursor()
 
     with pytest.raises(psycopg2.ProgrammingError):
-        yield from cur.copy_from('file', 'table')
+        await cur.copy_from('file', 'table')
 
     with pytest.raises(psycopg2.ProgrammingError):
-        yield from cur.copy_to('file', 'table')
+        await cur.copy_to('file', 'table')
 
     with pytest.raises(psycopg2.ProgrammingError):
-        yield from cur.copy_expert('sql', 'table')
+        await cur.copy_expert('sql', 'table')
 
 
-@asyncio.coroutine
-def test_callproc(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
-    yield from cur.callproc('inc', [1])
-    ret = yield from cur.fetchone()
+async def test_callproc(connect):
+    conn = await connect()
+    cur = await conn.cursor()
+    await cur.callproc('inc', [1])
+    ret = await cur.fetchone()
     assert (2,) == ret
 
     cur.close()
     with pytest.raises(psycopg2.InterfaceError):
-        yield from cur.callproc('inc', [1])
+        await cur.callproc('inc', [1])
     assert conn._waiter is None
 
 
-@asyncio.coroutine
-def test_execute_timeout(connect):
+async def test_execute_timeout(connect):
     timeout = 0.1
-    conn = yield from connect()
-    cur = yield from conn.cursor(timeout=timeout)
+    conn = await connect()
+    cur = await conn.cursor(timeout=timeout)
     assert timeout == cur.timeout
 
     t1 = time.time()
     with pytest.raises(asyncio.TimeoutError):
-        yield from cur.execute("SELECT pg_sleep(1)")
+        await cur.execute("SELECT pg_sleep(1)")
     t2 = time.time()
     dt = t2 - t1
     assert 0.08 <= dt <= 0.15, dt
 
 
-@asyncio.coroutine
-def test_execute_override_timeout(connect):
+async def test_execute_override_timeout(connect):
     timeout = 0.1
-    conn = yield from connect()
-    cur = yield from conn.cursor()
+    conn = await connect()
+    cur = await conn.cursor()
     assert TIMEOUT == cur.timeout
 
     t1 = time.time()
     with pytest.raises(asyncio.TimeoutError):
-        yield from cur.execute("SELECT pg_sleep(1)", timeout=timeout)
+        await cur.execute("SELECT pg_sleep(1)", timeout=timeout)
     t2 = time.time()
     dt = t2 - t1
     assert 0.08 <= dt <= 0.15, dt
 
 
-@asyncio.coroutine
-def test_callproc_timeout(connect):
+async def test_callproc_timeout(connect):
     timeout = 0.1
-    conn = yield from connect()
-    cur = yield from conn.cursor(timeout=timeout)
+    conn = await connect()
+    cur = await conn.cursor(timeout=timeout)
     assert timeout == cur.timeout
 
     t1 = time.time()
     with pytest.raises(asyncio.TimeoutError):
-        yield from cur.callproc("pg_sleep", [1])
+        await cur.callproc("pg_sleep", [1])
     t2 = time.time()
     dt = t2 - t1
     assert 0.08 <= dt <= 0.15, dt
 
 
-@asyncio.coroutine
-def test_callproc_override_timeout(connect):
+async def test_callproc_override_timeout(connect):
     timeout = 0.1
-    conn = yield from connect()
-    cur = yield from conn.cursor()
+    conn = await connect()
+    cur = await conn.cursor()
     assert TIMEOUT == cur.timeout
 
     t1 = time.time()
     with pytest.raises(asyncio.TimeoutError):
-        yield from cur.callproc("pg_sleep", [1], timeout=timeout)
+        await cur.callproc("pg_sleep", [1], timeout=timeout)
     t2 = time.time()
     dt = t2 - t1
     assert 0.08 <= dt <= 0.15, dt
 
 
-@asyncio.coroutine
-def test_echo(connect):
-    conn = yield from connect(echo=True)
-    cur = yield from conn.cursor()
+async def test_echo(connect):
+    conn = await connect(echo=True)
+    cur = await conn.cursor()
     assert cur.echo
 
 
-@asyncio.coroutine
-def test_echo_false(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
+async def test_echo_false(connect):
+    conn = await connect()
+    cur = await conn.cursor()
     assert not cur.echo
 
 
-@asyncio.coroutine
-def test_iter(connect):
-    conn = yield from connect()
-    cur = yield from conn.cursor()
-    yield from cur.execute("SELECT * FROM tbl")
+async def test_iter(connect):
+    conn = await connect()
+    cur = await conn.cursor()
+    await cur.execute("SELECT * FROM tbl")
     data = [(1, 'a'), (2, 'b'), (3, 'c')]
     for item, tst in zip(cur, data):
         assert item == tst
 
 
-@asyncio.coroutine
-def test_echo_callproc(connect):
-    conn = yield from connect(echo=True)
-    cur = yield from conn.cursor()
+async def test_echo_callproc(connect):
+    conn = await connect(echo=True)
+    cur = await conn.cursor()
 
     # TODO: check log records
-    yield from cur.callproc('inc', [1])
-    ret = yield from cur.fetchone()
+    await cur.callproc('inc', [1])
+    ret = await cur.fetchone()
     assert (2,) == ret
     cur.close()
