@@ -33,7 +33,7 @@ internally.
 Literally it is an (almost) transparent wrapper for psycopg2
 connection and cursor, but with only exception.
 
-You should use ``yield from conn.f()`` instead of just call ``conn.f()`` for
+You should use ``await conn.f()`` instead of just call ``conn.f()`` for
 every method.
 
 Properties are unchanged, so ``conn.prop`` is correct as well as
@@ -71,22 +71,12 @@ please go to psycopg docs: http://initd.org/psycopg/docs/
 .. note::
 
    Throughout this documentation, examples utilize the `async/await` syntax
-   introduced by :pep:`492` that is only valid for Python 3.5+.
+   introduced by :pep:`492` that is only valid for Python 3.5.2+.
 
-   If you are using Python 3.4, please replace ``await`` with
-   ``yield from`` and ``async def`` with a ``@coroutine`` decorator.
    For example, this::
 
        async def coro(...):
            ret = await f()
-
-   shoud be replaced by::
-
-       @asyncio.coroutine
-       def coro(...):
-           ret = yield from f()
-
-   see also :ref:`aiopg-examples-old-style` examples.
 
 SQLAlchemy and aiopg
 --------------------
