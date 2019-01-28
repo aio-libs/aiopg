@@ -81,7 +81,7 @@ Engine
 
 .. data:: dialect
 
-   An instance of :term:`SQLAlchemy` dialect set up for :term:`psycopg2` usage.
+   An instance of :term:`SQLAlchemy` dialect set up for :term:`psycopg2-binary` usage.
 
    An :class:`sqlalchemy.engine.interfaces.Dialect` instance.
 
@@ -118,7 +118,7 @@ Engine
 
       .. seealso::
 
-         `psycopg2 connection.dsn
+         `psycopg2-binary connection.dsn
          <http://initd.org/psycopg/docs/connection.html#connection.dsn>`_
          attribute.
 

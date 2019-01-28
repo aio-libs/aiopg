@@ -90,7 +90,7 @@ Example::
       Creates a new cursor object using the connection.
 
       The only *cursor_factory* can be specified, all other
-      parameters are not supported by :term:`psycopg2` in
+      parameters are not supported by :term:`psycopg2-binary` in
       asynchronous mode yet.
 
       The *cursor_factory* argument can be used to create
@@ -103,7 +103,7 @@ Example::
       parameter is not `None`.
 
       *name*, *scrollable* and *withhold* parameters are not supported
-      by :term:`psycopg2` in asynchronous mode.
+      by :term:`psycopg2-binary` in asynchronous mode.
 
       :returns: :class:`Cursor` instance.
 
@@ -170,7 +170,7 @@ Example::
 
       .. note::
 
-         :term:`psycopg2` doesn't allow to change *autocommit* mode in
+         :term:`psycopg2-binary` doesn't allow to change *autocommit* mode in
          asynchronous mode.
 
    .. attribute:: encoding
@@ -179,7 +179,7 @@ Example::
 
       .. note::
 
-         :term:`psycopg2` doesn't allow to change encoding in
+         :term:`psycopg2-binary` doesn't allow to change encoding in
          asynchronous mode.
 
    .. attribute:: isolation_level
@@ -887,7 +887,7 @@ The basic usage is::
       connection and returns *context manager*.
 
       The only *cursor_factory* can be specified, all other
-      parameters are not supported by :term:`psycopg2` in
+      parameters are not supported by :term:`psycopg2-binary` in
       asynchronous mode yet.
 
       The *cursor_factory* argument can be used to create
@@ -900,7 +900,7 @@ The basic usage is::
       is not `None`.
 
       *name*, *scrollable* and *withhold* parameters are not supported
-      by :term:`psycopg2` in asynchronous mode.
+      by :term:`psycopg2-binary` in asynchronous mode.
 
       The usage is::
 
@@ -918,7 +918,7 @@ Exceptions
 Any call to library function, method or property can raise an exception.
 
 :mod:`aiopg` doesn't define any exception class itself, it reuses
-:ref:`DBAPI Exceptions <dbapi-exceptions>` from :mod:`psycopg2`
+:ref:`DBAPI Exceptions <dbapi-exceptions>` from :mod:`psycopg2-binary`
 
 
 .. _aiopg-core-transactions:
@@ -926,7 +926,7 @@ Any call to library function, method or property can raise an exception.
 Transactions
 ============
 
-While :term:`psycopg2` asynchronous connections have to be in *autocommit mode* it is still
+While :term:`psycopg2-binary` asynchronous connections have to be in *autocommit mode* it is still
 possible to use SQL transactions executing **BEGIN** and **COMMIT** statements manually
 as `Psycopg Asynchronous Support docs`_ .
 
@@ -954,7 +954,7 @@ For pushing data to server please wrap json dict into
    data = {'a': 1, 'b': 'str'}
    await cur.execute("INSERT INTO tbl (val) VALUES (%s)", [Json(data)])
 
-On receiving data from json column :term:`psycopg2` autoconvers result
+On receiving data from json column :term:`psycopg2-binary` autoconvers result
 into python :class:`dict` object::
 
    await cur.execute("SELECT val FROM tbl")
