@@ -3,8 +3,6 @@ import collections
 import contextlib
 import gc
 import logging
-import psycopg2
-import pytest
 import re
 import socket
 import sys
@@ -12,7 +10,8 @@ import time
 import uuid
 import warnings
 
-
+import psycopg2
+import pytest
 from docker import APIClient
 
 import aiopg
@@ -25,6 +24,7 @@ def unused_port():
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(('127.0.0.1', 0))
             return s.getsockname()[1]
+
     return f
 
 
@@ -84,12 +84,6 @@ def pytest_pyfunc_call(pyfuncitem):
             _loop.run_until_complete(task)
 
         return True
-
-
-def pytest_ignore_collect(path, config):
-    if 'pep492' in str(path):
-        if sys.version_info < (3, 5, 0):
-            return True
 
 
 @pytest.fixture(scope='session')
@@ -183,7 +177,6 @@ def pg_params(pg_server):
 
 @pytest.fixture
 def make_connection(loop, pg_params):
-
     conns = []
 
     async def go(*, no_loop=False, **kwargs):
