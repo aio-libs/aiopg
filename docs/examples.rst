@@ -9,11 +9,6 @@ Below is a list of examples from `aiopg/examples
 
 Every example is a correct tiny python program.
 
-.. _aiopg-examples-new-style:
-
-async/await style
-=================
-
 .. _aiopg-examples-simple:
 
 Low-level API
@@ -84,34 +79,3 @@ Isolation transaction in sqlalchemy
 -----------------------------------
 
 .. literalinclude:: ../examples/isolation_sa_transaction.py
-
-
-.. _aiopg-examples-old-style:
-
-yield from/@coroutine style
-============================
-
-.. _aiopg-examples-simple-old-style:
-
-Old style Low-level API
------------------------
-
-.. literalinclude:: ../examples/simple_old_style.py
-
-
-.. _aiopg-examples-notify-old-style:
-
-Usage of LISTEN/NOTIFY commands using old-style API
----------------------------------------------------
-
-.. literalinclude:: ../examples/notify_old_style.py
-
-Simple sqlalchemy usage commands using old-style API
-----------------------------------------------------
-
-.. literalinclude:: ../examples/simple_sa_oldstyle.py
-
-Complex sqlalchemy queries commands using old-style API
--------------------------------------------------------
-
-.. literalinclude:: ../examples/sa_oldstyle.py

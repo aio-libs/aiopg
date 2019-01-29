@@ -3,8 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+================
 Welcome to AIOPG
 ================
+
 
 **aiopg** is a library for accessing a :term:`PostgreSQL` database
 from the asyncio_ (PEP-3156/tulip) framework. It wraps
@@ -27,6 +29,11 @@ Current version is |release|.
 .. _GitHub: https://github.com/aio-libs/aiopg
 .. _asyncio: http://docs.python.org/3.4/library/asyncio.html
 
+.. note::
+          **aiopg** from version **1.0.0** only supports **python >= 3.5.2**.
+
+          Motivation and discussion can be found here https://github.com/aio-libs/aiopg/pull/517
+
 Features
 --------
 
@@ -40,13 +47,13 @@ Features
 Basics
 ------
 
-The library uses :mod:`psycopg2` connections in **asynchronous** mode
+The library uses :mod:`psycopg2-binary` connections in **asynchronous** mode
 internally.
 
-Literally it is an (almost) transparent wrapper for psycopg2
+Literally it is an (almost) transparent wrapper for psycopg2-binary
 connection and cursor, but with only exception.
 
-You should use ``yield from conn.f()`` instead of just call ``conn.f()`` for
+You should use ``await conn.f()`` instead of just call ``conn.f()`` for
 every method.
 
 Properties are unchanged, so ``conn.prop`` is correct as well as
@@ -75,7 +82,7 @@ See example::
 For documentation about connection and cursor methods/properties
 please go to psycopg docs: http://initd.org/psycopg/docs/
 
-.. note:: psycopg2 creates new connections with ``autocommit=True``
+.. note:: psycopg2-binary creates new connections with ``autocommit=True``
           option in asynchronous mode. Autocommitting cannot be disabled.
 
           See :ref:`aiopg-core-transactions` about transaction usage
@@ -84,22 +91,12 @@ please go to psycopg docs: http://initd.org/psycopg/docs/
 .. note::
 
    Throughout this documentation, examples utilize the `async/await` syntax
-   introduced by :pep:`492` that is only valid for Python 3.5+.
+   introduced by :pep:`492` that is only valid for Python 3.5.2+.
 
-   If you are using Python 3.4, please replace ``await`` with
-   ``yield from`` and ``async def`` with a ``@coroutine`` decorator.
    For example, this::
 
        async def coro(...):
            ret = await f()
-
-   shoud be replaced by::
-
-       @asyncio.coroutine
-       def coro(...):
-           ret = yield from f()
-
-   see also :ref:`aiopg-examples-old-style` examples.
 
 SQLAlchemy and aiopg
 --------------------
@@ -147,13 +144,9 @@ Installation
 
    pip3 install aiopg
 
-.. note:: :mod:`aiopg` requires :term:`psycopg2` library.
+.. note:: :mod:`aiopg` requires :term:`psycopg2-binary` library.
 
-   You can use standard one from your distro like::
-
-      $ sudo apt-get install python3-psycopg2
-
-   but if you like to use virtual environments
+   You can use global environment or you use like to use virtual environments
    (:term:`virtualenvwrapper`, :term:`virtualenv` or :term:`venv`) you
    probably have to install :term:`libpq` development package::
 
@@ -166,7 +159,7 @@ Also you probably want to use :mod:`aiopg.sa`.
 :mod:`aiopg.sa` module is **optional** and requires
 :term:`sqlalchemy`. You can install *sqlalchemy* by running::
 
-  pip3 install sqlalchemy
+  pip3 install aiopg[sa]
 
 Source code
 -----------
@@ -191,8 +184,8 @@ Feel free to post your questions and ideas here.
 Dependencies
 ------------
 
-- Python 3.3 and :mod:`asyncio` or Python 3.4+
-- psycopg2
+- Python 3.5.2+
+- psycopg2-binary
 - aiopg.sa requires :term:`sqlalchemy`.
 
 Authors and License
