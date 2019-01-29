@@ -3,16 +3,29 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-aiopg
-=================================
-
-.. _GitHub: https://github.com/aio-libs/aiopg
-.. _asyncio: http://docs.python.org/3.4/library/asyncio.html
-
+Welcome to AIOPG
+================
 
 **aiopg** is a library for accessing a :term:`PostgreSQL` database
 from the asyncio_ (PEP-3156/tulip) framework. It wraps
 asynchronous features of the Psycopg database driver.
+
+Current version is |release|.
+
+.. image:: https://travis-ci.com/aio-libs/aiopg.svg?branch=master
+   :target: https://travis-ci.com/aio-libs/aiopg
+   :alt: Travis CI status
+
+.. image:: https://codecov.io/github/aio-libs/aiopg/coverage.svg?branch=master
+   :target: https://codecov.io/github/aio-libs/aiopg
+   :alt: Code coverage status
+
+.. image:: https://badge.fury.io/py/aiopg.svg
+   :target: https://badge.fury.io/py/aiopg
+   :alt: Latest PyPI package version
+
+.. _GitHub: https://github.com/aio-libs/aiopg
+.. _asyncio: http://docs.python.org/3.4/library/asyncio.html
 
 Features
 --------

@@ -254,6 +254,17 @@ Connection
       :returns: :class:`ResultProxy` instance with results of SQL
                 query execution.
 
+      .. seealso::
+
+            * Simple examples sqlalchemy style :ref:`aiopg-examples-sa-simple`
+
+            * Examples sqlalchemy default field :ref:`aiopg-examples-sa-default-field`
+
+            * Examples sqlalchemy type field :ref:`aiopg-examples-sa-types-field`
+
+            * Examples sqlalchemy name field :ref:`aiopg-examples-sa-named-field`
+
+
    .. comethod:: scalar(query, *multiparams, **params)
 
       Executes a *SQL* *query* and returns a scalar value.
@@ -295,10 +306,13 @@ Connection
 
       .. seealso::
 
-         :meth:`.SAConnection.begin_nested` - use a SAVEPOINT
+         * Simple examples :ref:`aiopg-examples-sa-simple-transaction`
 
-         :meth:`.SAConnection.begin_twophase` - use a two phase (XA)
-                 transaction
+         * Examples with isolation level :ref:`aiopg-examples-sa-isolation-transaction`
+
+         * :meth:`.SAConnection.begin_nested` - use a SAVEPOINT
+
+         * :meth:`.SAConnection.begin_twophase` - use a two phase (XA) transaction
 
    .. comethod:: begin_nested()
       :coroutine:
@@ -315,7 +329,11 @@ Connection
 
       .. seealso::
 
-         :meth:`.SAConnection.begin`, :meth:`.SAConnection.begin_twophase`.
+         * Simple examples :ref:`aiopg-examples-sa-simple-transaction`
+
+         * :meth:`.SAConnection.begin`
+
+         * :meth:`.SAConnection.begin_twophase`.
 
    .. comethod:: begin_twophase(xid=None)
       :coroutine:

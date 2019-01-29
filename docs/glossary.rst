@@ -38,6 +38,14 @@ Glossary
 
       http://www.postgresql.org/
 
+   PostgreSQL Error Codes
+
+       All messages emitted by the PostgreSQL server are assigned
+       five-character error codes that follow the
+       SQL standard's conventions for “SQLSTATE” codes.
+
+       https://www.postgresql.org/docs/current/errcodes-appendix.html#ERRCODES-TABLE
+
    psycopg2
 
       A PostgreSQL database adapter for the Python programming
