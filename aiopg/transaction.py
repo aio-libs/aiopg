@@ -4,6 +4,7 @@ import warnings
 from abc import ABC, abstractmethod
 
 import psycopg2
+
 from aiopg.utils import _TransactionPointContextManager
 
 __all__ = ('IsolationLevel', 'Transaction')

@@ -1,16 +1,13 @@
-from aiopg import Cursor
-
 from unittest import mock
 
-import pytest
-sa = pytest.importorskip("aiopg.sa")  # noqa
-
-
-from sqlalchemy import MetaData, Table, Column, Integer, String
-from sqlalchemy.schema import DropTable, CreateTable
-
 import psycopg2
+import pytest
+from sqlalchemy import Column, Integer, MetaData, String, Table
+from sqlalchemy.schema import CreateTable, DropTable
 
+from aiopg import Cursor
+
+sa = pytest.importorskip("aiopg.sa")  # noqa
 
 meta = MetaData()
 tbl = Table('sa_tbl', meta,

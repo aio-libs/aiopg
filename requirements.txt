@@ -1,6 +1,7 @@
 coverage==4.5.1
 docker==3.5.1
 flake8==3.5.0
+isort==4.3.4
 -e .[sa]
 sphinx==1.8.1
 tox==3.5.2

@@ -29,10 +29,13 @@ Current version is |release|.
 .. _GitHub: https://github.com/aio-libs/aiopg
 .. _asyncio: http://docs.python.org/3.4/library/asyncio.html
 
-.. note::
-          **aiopg** from version **1.0.0** only supports **python >= 3.5.2**.
+.. warning::
+    **aiopg** from version **1.0.0** only supports **python >= 3.5.2**.
 
-          Motivation and discussion can be found here https://github.com/aio-libs/aiopg/pull/517
+    Motivation and discussion can be found here https://github.com/aio-libs/aiopg/pull/517
+
+    It is also important to pay attention to this. We the deleted obsolete non-asynchronous cursor iteration.
+    You can see this in the discussion https://github.com/aio-libs/aiopg/pull/534#issuecomment-458501461
 
 Features
 --------

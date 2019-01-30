@@ -1,11 +1,11 @@
 import asyncio
 from unittest import mock
-import pytest
 
+import pytest
 from psycopg2.extensions import TRANSACTION_STATUS_INTRANS
 
 import aiopg
-from aiopg.connection import Connection, TIMEOUT
+from aiopg.connection import TIMEOUT, Connection
 from aiopg.pool import Pool
 
 

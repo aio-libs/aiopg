@@ -1,11 +1,13 @@
 import asyncio
-from aiopg.connection import TIMEOUT
-from psycopg2.extensions import parse_dsn
 
 import pytest
+from psycopg2.extensions import parse_dsn
+from sqlalchemy import Column, Integer, MetaData, String, Table
+
+from aiopg.connection import TIMEOUT
+
 sa = pytest.importorskip("aiopg.sa")  # noqa
 
-from sqlalchemy import MetaData, Table, Column, Integer, String
 
 meta = MetaData()
 tbl = Table('sa_tbl3', meta,

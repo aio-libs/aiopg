@@ -1,19 +1,19 @@
 import asyncio
-import aiopg
 import gc
-import psycopg2
-import psycopg2.extras
-import psycopg2.extensions
-import pytest
 import socket
-import time
 import sys
-
-from aiopg.connection import Connection, TIMEOUT
-from aiopg.cursor import Cursor
-from aiopg.utils import ensure_future
+import time
 from unittest import mock
 
+import psycopg2
+import psycopg2.extensions
+import psycopg2.extras
+import pytest
+
+import aiopg
+from aiopg.connection import TIMEOUT, Connection
+from aiopg.cursor import Cursor
+from aiopg.utils import ensure_future
 
 PY_341 = sys.version_info >= (3, 4, 1)
 

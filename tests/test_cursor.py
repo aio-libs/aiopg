@@ -4,6 +4,7 @@ import time
 import psycopg2
 import psycopg2.tz
 import pytest
+
 from aiopg.connection import TIMEOUT
 
 
@@ -338,7 +339,7 @@ async def test_iter(connect):
     cur = await conn.cursor()
     await cur.execute("SELECT * FROM tbl")
     data = [(1, 'a'), (2, 'b'), (3, 'c')]
-    for item, tst in zip(cur, data):
+    for item, tst in zip([i async for i in cur], data):
         assert item == tst
 
 

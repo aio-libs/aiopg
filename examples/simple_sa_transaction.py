@@ -65,7 +65,6 @@ async def success_nested_transaction(conn):
         async with conn.begin_nested():
             await conn.execute(sa.insert(users).values(id=2, name='test2'))
 
-
     await check_count_users(conn, count=2)
 
     async with conn.begin():
@@ -73,7 +72,6 @@ async def success_nested_transaction(conn):
         await conn.execute(sa.delete(users).where(users.c.id == 2))
 
     await check_count_users(conn, count=0)
-
 
 
 async def fail_nested_transaction(conn):

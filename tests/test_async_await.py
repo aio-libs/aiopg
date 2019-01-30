@@ -1,6 +1,8 @@
 import asyncio
-import pytest
+
 import psycopg2
+import pytest
+
 import aiopg
 import aiopg.sa
 from aiopg.sa import SAConnection

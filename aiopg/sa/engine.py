@@ -3,10 +3,10 @@ import json
 
 import aiopg
 
+from ..connection import TIMEOUT
+from ..utils import _PoolAcquireContextManager, _PoolContextManager
 from .connection import SAConnection
 from .exc import InvalidRequestError
-from ..connection import TIMEOUT
-from ..utils import _PoolContextManager, _PoolAcquireContextManager
 
 try:
     from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2

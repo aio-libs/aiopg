@@ -1,7 +1,7 @@
-from collections.abc import Coroutine
 import asyncio
-import psycopg2
+from collections.abc import Coroutine
 
+import psycopg2
 
 try:
     ensure_future = asyncio.ensure_future

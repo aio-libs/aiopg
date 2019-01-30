@@ -1,7 +1,7 @@
 import asyncio
 
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import ARRAY, JSON, ENUM
+from sqlalchemy.dialects.postgresql import ARRAY, ENUM, JSON
 from sqlalchemy.sql.ddl import CreateTable
 
 from aiopg.sa import create_engine

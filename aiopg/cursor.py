@@ -1,10 +1,9 @@
 import asyncio
-import warnings
 
 import psycopg2
 
 from .log import logger
-from .transaction import Transaction, IsolationLevel
+from .transaction import IsolationLevel, Transaction
 from .utils import _TransactionBeginContextManager
 
 
@@ -365,17 +364,6 @@ class Cursor:
     def timeout(self):
         """Return default timeout for cursor operations."""
         return self._timeout
-
-    def __iter__(self):
-        warnings.warn("Iteration over cursor is deprecated",
-                      DeprecationWarning,
-                      stacklevel=2)
-        while True:
-            row = yield from self.fetchone().__await__()
-            if row is None:
-                return
-            else:
-                yield row
 
     def __aiter__(self):
         return self

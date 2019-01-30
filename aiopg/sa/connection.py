@@ -3,10 +3,14 @@ from sqlalchemy.sql.ddl import DDLElement
 from sqlalchemy.sql.dml import UpdateBase
 
 from . import exc
-from .result import ResultProxy
-from .transaction import (RootTransaction, Transaction,
-                          NestedTransaction, TwoPhaseTransaction)
 from ..utils import _SAConnectionContextManager, _TransactionContextManager
+from .result import ResultProxy
+from .transaction import (
+    NestedTransaction,
+    RootTransaction,
+    Transaction,
+    TwoPhaseTransaction,
+)
 
 
 class SAConnection:

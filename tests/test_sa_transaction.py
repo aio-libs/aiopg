@@ -1,9 +1,10 @@
 from unittest import mock
 
 import pytest
+from sqlalchemy import Column, Integer, MetaData, String, Table
+
 sa = pytest.importorskip("aiopg.sa")  # noqa
 
-from sqlalchemy import MetaData, Table, Column, Integer, String
 
 meta = MetaData()
 tbl = Table('sa_tbl2', meta,

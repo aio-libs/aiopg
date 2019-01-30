@@ -1,21 +1,19 @@
 import asyncio
 import contextlib
 import errno
+import platform
 import select
 import sys
 import traceback
 import warnings
 import weakref
-import platform
 
 import psycopg2
-from psycopg2.extensions import (
-    POLL_OK, POLL_READ, POLL_WRITE, POLL_ERROR)
 from psycopg2 import extras
+from psycopg2.extensions import POLL_ERROR, POLL_OK, POLL_READ, POLL_WRITE
 
 from .cursor import Cursor
 from .utils import _ContextManager, create_future
-
 
 __all__ = ('connect',)
 

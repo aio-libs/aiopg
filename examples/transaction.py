@@ -1,7 +1,7 @@
 import asyncio
 
 import aiopg
-from aiopg.transaction import Transaction, IsolationLevel
+from aiopg.transaction import IsolationLevel, Transaction
 
 dsn = 'dbname=aiopg user=aiopg password=passwd host=127.0.0.1'
 

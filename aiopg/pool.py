@@ -3,15 +3,18 @@ import collections
 import sys
 import warnings
 
-
 from psycopg2.extensions import TRANSACTION_STATUS_IDLE
 
-from .connection import connect, TIMEOUT
+from .connection import TIMEOUT, connect
 from .log import logger
-from .utils import (_PoolContextManager, _PoolConnectionContextManager,
-                    _PoolCursorContextManager, _PoolAcquireContextManager,
-                    ensure_future, create_future)
-
+from .utils import (
+    _PoolAcquireContextManager,
+    _PoolConnectionContextManager,
+    _PoolContextManager,
+    _PoolCursorContextManager,
+    create_future,
+    ensure_future,
+)
 
 PY_341 = sys.version_info >= (3, 4, 1)
 
