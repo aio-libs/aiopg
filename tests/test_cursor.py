@@ -10,7 +10,6 @@ from aiopg.connection import TIMEOUT
 
 @pytest.fixture
 def connect(make_connection):
-
     async def go(**kwargs):
         conn = await make_connection(**kwargs)
         cur = await conn.cursor()
@@ -338,9 +337,11 @@ async def test_iter(connect):
     conn = await connect()
     cur = await conn.cursor()
     await cur.execute("SELECT * FROM tbl")
-    data = [(1, 'a'), (2, 'b'), (3, 'c')]
-    for item, tst in zip([i async for i in cur], data):
-        assert item == tst
+
+    data = set([(1, 'a'), (2, 'b'), (3, 'c')])
+
+    async for row in cur:
+        assert row in data
 
 
 async def test_echo_callproc(connect):
