@@ -20,11 +20,6 @@ before_install:
   # Load cached docker images
   - if [[ -d $HOME/docker ]]; then ls $HOME/docker/*.tar.gz | xargs -I {file} sh -c "zcat {file} | docker load"; fi
 
-matrix:
-  include:
-    allow_failures:
-      - python: "nightly"
-
 jobs:
   include:
   - <<: *py3_7-base
@@ -48,6 +43,10 @@ env:
   matrix:
   - PYTHONASYNCIODEBUG=x
   - PYTHONASYNCIODEBUG=
+
+matrix:
+  allow_failures:
+    - python: "nightly"
 
 cache:
   directories:
