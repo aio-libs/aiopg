@@ -15,11 +15,6 @@ python:
     python: "3.7"
     dist: xenial
     sudo: required
-
-before_install:
-  # Load cached docker images
-  - if [[ -d $HOME/docker ]]; then ls $HOME/docker/*.tar.gz | xargs -I {file} sh -c "zcat {file} | docker load"; fi
-
 jobs:
   include:
   - <<: *py3_7-base
@@ -51,16 +46,9 @@ matrix:
 cache:
   directories:
   - $HOME/.cache/pip
-  - $HOME/docker
 
 before_cache:
   - rm -f $HOME/.cache/pip/log/debug.log
-
-  # Save tagged docker images
-  - >
-    mkdir -p $HOME/docker && docker images -a --filter='dangling=false' --format '{{.Repository}}:{{.Tag}} {{.ID}}'
-    | xargs -n 2 -t sh -c 'test -e $HOME/docker/$1.tar.gz || docker save $0 | gzip -2 > $HOME/docker/$1.tar.gz'
-
 
 after_script:
 - codecov
