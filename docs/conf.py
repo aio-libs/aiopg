@@ -77,7 +77,7 @@ master_doc = 'index'
 project = 'aiopg'
 date = datetime.date.today()
 
-copyright = '2014-{year}, Andrew Svetlov'.format(year=date.year)
+copyright = '2014-{year}, Andrew Svetlov, Alexey Firsov'.format(year=date.year)
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -242,7 +242,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     ('index', 'aiopg.tex', 'aiopg Documentation',
-     'Andrew Svetlov', 'manual'),
+     'Andrew Svetlov, Alexey Firsov', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -286,7 +286,8 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     ('index', 'aiopg', 'aiopg Documentation',
-     'Andrew Svetlov', 'aiopg', 'One line description of project.',
+     'Andrew Svetlov, Alexey Firsov',
+     'aiopg', 'One line description of project.',
      'Miscellaneous'),
 ]
 

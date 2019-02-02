@@ -1,4 +1,3 @@
-import asyncio
 import json
 
 import aiopg
@@ -49,9 +48,8 @@ def get_dialect(json_serializer=json.dumps, json_deserializer=lambda x: x):
 _dialect = get_dialect()
 
 
-def create_engine(dsn=None, *, minsize=1, maxsize=10, loop=None,
-                  dialect=_dialect, timeout=TIMEOUT, pool_recycle=-1,
-                  **kwargs):
+def create_engine(dsn=None, *, minsize=1, maxsize=10, dialect=_dialect,
+                  timeout=TIMEOUT, pool_recycle=-1, **kwargs):
     """A coroutine for Engine creation.
 
     Returns Engine instance with embedded connection pool.
@@ -60,19 +58,18 @@ def create_engine(dsn=None, *, minsize=1, maxsize=10, loop=None,
     """
 
     coro = _create_engine(dsn=dsn, minsize=minsize, maxsize=maxsize,
-                          loop=loop, dialect=dialect, timeout=timeout,
+                          dialect=dialect, timeout=timeout,
                           pool_recycle=pool_recycle, **kwargs)
     return _EngineContextManager(coro)
 
 
-async def _create_engine(dsn=None, *, minsize=1, maxsize=10, loop=None,
-                         dialect=_dialect, timeout=TIMEOUT, pool_recycle=-1,
-                         **kwargs):
-    if loop is None:
-        loop = asyncio.get_event_loop()
-    pool = await aiopg.create_pool(dsn, minsize=minsize, maxsize=maxsize,
-                                   loop=loop, timeout=timeout,
-                                   pool_recycle=pool_recycle, **kwargs)
+async def _create_engine(dsn=None, *, minsize=1, maxsize=10, dialect=_dialect,
+                         timeout=TIMEOUT, pool_recycle=-1, **kwargs):
+
+    pool = await aiopg.create_pool(
+        dsn, minsize=minsize, maxsize=maxsize,
+        timeout=timeout, pool_recycle=pool_recycle, **kwargs
+    )
     conn = await pool.acquire()
     try:
         real_dsn = conn.dsn

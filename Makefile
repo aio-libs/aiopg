@@ -29,11 +29,11 @@ vtest: flake
 	pytest tests
 
 cov cover coverage: flake
-	py.test --cov=aiopg --cov-report=html --cov-report=term tests
+	py.test -s --cov=aiopg --cov-report=html --cov-report=term tests
 	@echo "open file://`pwd`/htmlcov/index.html"
 
 cov-ci: flake
-	py.test -v --cov=aiopg --cov-report=term tests --pg_tag all
+	py.test -v -s --cov=aiopg --cov-report=term tests --pg_tag all
 
 clean-pip:
 	pip freeze | grep -v "^-e" | xargs pip uninstall -y

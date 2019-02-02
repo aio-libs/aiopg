@@ -13,7 +13,7 @@ from psycopg2 import extras
 from psycopg2.extensions import POLL_ERROR, POLL_OK, POLL_READ, POLL_WRITE
 
 from .cursor import Cursor
-from .utils import _ContextManager, create_future
+from .utils import _ContextManager, create_future, get_running_loop
 
 __all__ = ('connect',)
 
@@ -46,44 +46,25 @@ async def _enable_hstore(conn):
     return tuple(rv0), tuple(rv1)
 
 
-def connect(dsn=None, *, timeout=TIMEOUT, loop=None, enable_json=True,
+def connect(dsn=None, *, timeout=TIMEOUT, enable_json=True,
             enable_hstore=True, enable_uuid=True, echo=False, **kwargs):
     """A factory for connecting to PostgreSQL.
 
     The coroutine accepts all parameters that psycopg2.connect() does
-    plus optional keyword-only `loop` and `timeout` parameters.
+    plus optional keyword-only `timeout` parameters.
 
     Returns instantiated Connection object.
 
     """
-    coro = _connect(dsn=dsn, timeout=timeout, loop=loop,
-                    enable_json=enable_json, enable_hstore=enable_hstore,
-                    enable_uuid=enable_uuid, echo=echo, **kwargs)
+    coro = Connection(
+        dsn, timeout, bool(echo),
+        enable_hstore=enable_hstore,
+        enable_uuid=enable_uuid,
+        enable_json=enable_json,
+        **kwargs
+    )
+
     return _ContextManager(coro)
-
-
-async def _connect(dsn=None, *, timeout=TIMEOUT, loop=None, enable_json=True,
-                   enable_hstore=True, enable_uuid=True, echo=False, **kwargs):
-    if loop is None:
-        loop = asyncio.get_event_loop()
-
-    waiter = create_future(loop)
-    conn = Connection(dsn, loop, timeout, waiter, bool(echo), **kwargs)
-    try:
-        await conn._poll(waiter, timeout)
-    except Exception:
-        conn.close()
-        raise
-    if enable_json:
-        extras.register_default_json(conn._conn)
-    if enable_uuid:
-        extras.register_uuid(conn_or_curs=conn._conn)
-    if enable_hstore:
-        oids = await _enable_hstore(conn)
-        if oids is not None:
-            oid, array_oid = oids
-            extras.register_hstore(conn._conn, oid=oid, array_oid=array_oid)
-    return conn
 
 
 def _is_bad_descriptor_error(os_error):
@@ -103,25 +84,32 @@ class Connection:
 
     _source_traceback = None
 
-    def __init__(self, dsn, loop, timeout, waiter, echo, **kwargs):
-        self._loop = loop
+    def __init__(
+            self, dsn, timeout, echo,
+            *, enable_json=True, enable_hstore=True,
+            enable_uuid=True, **kwargs
+    ):
+        self._enable_json = enable_json
+        self._enable_hstore = enable_hstore
+        self._enable_uuid = enable_uuid
+        self._loop = get_running_loop(kwargs.pop('loop', None) is not None)
+        self._waiter = create_future(self._loop)
         self._conn = psycopg2.connect(dsn, async_=True, **kwargs)
         self._dsn = self._conn.dsn
         assert self._conn.isexecuting(), "Is conn an async at all???"
         self._fileno = self._conn.fileno()
         self._timeout = timeout
         self._last_usage = self._loop.time()
-        self._waiter = waiter
         self._writing = False
         self._cancelling = False
         self._cancellation_waiter = None
         self._echo = echo
         self._conn_cursor = None
-        self._notifies = asyncio.Queue(loop=loop)
+        self._notifies = asyncio.Queue(loop=self._loop)
         self._weakref = weakref.ref(self)
         self._loop.add_reader(self._fileno, self._ready, self._weakref)
 
-        if loop.get_debug():
+        if self._loop.get_debug():
             self._source_traceback = traceback.extract_stack(sys._getframe(1))
 
     @staticmethod
@@ -160,6 +148,7 @@ class Connection:
                     # chain exception otherwise
                     exc2.__cause__ = exc
                     exc = exc2
+
             if waiter is not None and not waiter.done():
                 waiter.set_exception(exc)
         else:
@@ -527,6 +516,31 @@ class Connection:
     def notifies(self):
         """Return notification queue."""
         return self._notifies
+
+    async def _connect(self):
+        try:
+            await self._poll(self._waiter, self._timeout)
+        except Exception:
+            self.close()
+            raise
+        if self._enable_json:
+            extras.register_default_json(self._conn)
+        if self._enable_uuid:
+            extras.register_uuid(conn_or_curs=self._conn)
+        if self._enable_hstore:
+            oids = await _enable_hstore(self)
+            if oids is not None:
+                oid, array_oid = oids
+                extras.register_hstore(
+                    self._conn,
+                    oid=oid,
+                    array_oid=array_oid
+                )
+
+        return self
+
+    def __await__(self):
+        return self._connect().__await__()
 
     async def __aenter__(self):
         return self

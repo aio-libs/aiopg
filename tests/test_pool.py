@@ -210,7 +210,7 @@ async def test_release_with_invalid_status(create_pool):
 async def test_default_event_loop(create_pool, loop):
     asyncio.set_event_loop(loop)
 
-    pool = await create_pool(no_loop=True)
+    pool = await create_pool()
     assert pool._loop is loop
 
 
@@ -430,8 +430,8 @@ async def test_close_with_acquired_connections(create_pool, loop):
         await asyncio.wait_for(pool.wait_closed(), 0.1, loop=loop)
 
 
-async def test___del__(loop, pg_params, warning):
-    pool = await aiopg.create_pool(loop=loop, **pg_params)
+async def test___del__(pg_params, warning):
+    pool = await aiopg.create_pool(**pg_params)
     with warning(ResourceWarning):
         del pool
 

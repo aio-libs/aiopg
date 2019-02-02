@@ -1,6 +1,5 @@
 import asyncio
 import collections
-import sys
 import warnings
 
 from psycopg2.extensions import TRANSACTION_STATUS_IDLE
@@ -14,46 +13,29 @@ from .utils import (
     _PoolCursorContextManager,
     create_future,
     ensure_future,
+    get_running_loop,
 )
-
-PY_341 = sys.version_info >= (3, 4, 1)
 
 
 def create_pool(dsn=None, *, minsize=1, maxsize=10,
-                loop=None, timeout=TIMEOUT, pool_recycle=-1,
+                timeout=TIMEOUT, pool_recycle=-1,
                 enable_json=True, enable_hstore=True, enable_uuid=True,
                 echo=False, on_connect=None,
                 **kwargs):
-    coro = _create_pool(dsn=dsn, minsize=minsize, maxsize=maxsize, loop=loop,
-                        timeout=timeout, pool_recycle=pool_recycle,
-                        enable_json=enable_json, enable_hstore=enable_hstore,
-                        enable_uuid=enable_uuid, echo=echo,
-                        on_connect=on_connect, **kwargs)
+    coro = Pool.from_pool_fill(
+        dsn, minsize, maxsize, timeout,
+        enable_json=enable_json, enable_hstore=enable_hstore,
+        enable_uuid=enable_uuid, echo=echo, on_connect=on_connect,
+        pool_recycle=pool_recycle, **kwargs
+    )
+
     return _PoolContextManager(coro)
-
-
-async def _create_pool(dsn=None, *, minsize=1, maxsize=10,
-                       loop=None, timeout=TIMEOUT, pool_recycle=-1,
-                       enable_json=True, enable_hstore=True, enable_uuid=True,
-                       echo=False, on_connect=None,
-                       **kwargs):
-    if loop is None:
-        loop = asyncio.get_event_loop()
-
-    pool = Pool(dsn, minsize, maxsize, loop, timeout,
-                enable_json=enable_json, enable_hstore=enable_hstore,
-                enable_uuid=enable_uuid, echo=echo, on_connect=on_connect,
-                pool_recycle=pool_recycle, **kwargs)
-    if minsize > 0:
-        async with pool._cond:
-            await pool._fill_free_pool(False)
-    return pool
 
 
 class Pool(asyncio.AbstractServer):
     """Connection pool"""
 
-    def __init__(self, dsn, minsize, maxsize, loop, timeout, *,
+    def __init__(self, dsn, minsize, maxsize, timeout, *,
                  enable_json, enable_hstore, enable_uuid, echo,
                  on_connect, pool_recycle, **kwargs):
         if minsize < 0:
@@ -62,7 +44,7 @@ class Pool(asyncio.AbstractServer):
             raise ValueError("maxsize should be not less than minsize")
         self._dsn = dsn
         self._minsize = minsize
-        self._loop = loop
+        self._loop = get_running_loop(kwargs.pop('loop', None) is not None)
         self._timeout = timeout
         self._recycle = pool_recycle
         self._enable_json = enable_json
@@ -73,7 +55,7 @@ class Pool(asyncio.AbstractServer):
         self._conn_kwargs = kwargs
         self._acquiring = 0
         self._free = collections.deque(maxlen=maxsize or None)
-        self._cond = asyncio.Condition(loop=loop)
+        self._cond = asyncio.Condition(loop=self._loop)
         self._used = set()
         self._terminated = set()
         self._closing = False
@@ -163,6 +145,15 @@ class Pool(asyncio.AbstractServer):
         coro = self._acquire()
         return _PoolAcquireContextManager(coro, self)
 
+    @classmethod
+    async def from_pool_fill(cls, *args, **kwargs):
+        self = cls(*args, **kwargs)
+        if self._minsize > 0:
+            async with self._cond:
+                await self._fill_free_pool(False)
+
+        return self
+
     async def _acquire(self):
         if self._closing:
             raise RuntimeError("Cannot acquire connection after closing pool")
@@ -198,7 +189,7 @@ class Pool(asyncio.AbstractServer):
             self._acquiring += 1
             try:
                 conn = await connect(
-                    self._dsn, loop=self._loop, timeout=self._timeout,
+                    self._dsn, timeout=self._timeout,
                     enable_json=self._enable_json,
                     enable_hstore=self._enable_hstore,
                     enable_uuid=self._enable_uuid,
@@ -216,7 +207,7 @@ class Pool(asyncio.AbstractServer):
             self._acquiring += 1
             try:
                 conn = await connect(
-                    self._dsn, loop=self._loop, timeout=self._timeout,
+                    self._dsn, timeout=self._timeout,
                     enable_json=self._enable_json,
                     enable_hstore=self._enable_hstore,
                     enable_uuid=self._enable_uuid,

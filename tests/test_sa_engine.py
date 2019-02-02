@@ -66,7 +66,7 @@ def test_freesize(engine):
 
 async def test_make_engine_with_default_loop(make_engine, loop):
     asyncio.set_event_loop(loop)
-    engine = await make_engine(use_loop=False)
+    engine = await make_engine()
     engine.close()
     await engine.wait_closed()
 

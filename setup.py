@@ -1,16 +1,10 @@
 import os
 import re
-import sys
-from setuptools import setup
 
+from setuptools import setup
 
 install_requires = ['psycopg2-binary>=2.7.0']
 extras_require = {'sa': ['sqlalchemy[postgresql_psycopg2binary]>=1.1']}
-
-PY_VER = sys.version_info
-
-if PY_VER < (3, 5, 2):
-    raise RuntimeError("aiopg doesn't support Python earlier than 3.5.2")
 
 
 def read(f):
@@ -47,19 +41,31 @@ classifiers = [
     'Framework :: AsyncIO',
 ]
 
-
-setup(name='aiopg',
-      version=read_version(),
-      description='Postgres integration with asyncio.',
-      long_description='\n\n'.join((read('README.rst'), read('CHANGES.txt'))),
-      classifiers=classifiers,
-      platforms=['POSIX'],
-      author='Andrew Svetlov',
-      author_email='andrew.svetlov@gmail.com',
-      url='https://aiopg.readthedocs.io',
-      download_url='https://pypi.python.org/pypi/aiopg',
-      license='BSD',
-      packages=['aiopg', 'aiopg.sa'],
-      install_requires=install_requires,
-      extras_require=extras_require,
-      include_package_data=True)
+setup(
+    name='aiopg',
+    version=read_version(),
+    description='Postgres integration with asyncio.',
+    long_description='\n\n'.join((read('README.rst'), read('CHANGES.txt'))),
+    classifiers=classifiers,
+    platforms=['POSIX'],
+    author='Andrew Svetlov',
+    python_requires='>=3.5.3',
+    project_urls={
+        'Chat: Gitter': 'https://gitter.im/aio-libs/Lobby',
+        'CI: Travis': 'https://travis-ci.com/aio-libs/aiopg',
+        'Coverage: codecov': 'https://codecov.io/gh/aio-libs/aiopg',
+        'Docs: RTD': 'https://aiopg.readthedocs.io',
+        'GitHub: issues': 'https://github.com/aio-libs/aiopg/issues',
+        'GitHub: repo': 'https://github.com/aio-libs/aiopg',
+    },
+    author_email='andrew.svetlov@gmail.com',
+    maintainer=', '.join(read('MAINTAINERS.txt').split()),
+    maintainer_email='virmir49@gmail.com',
+    url='https://aiopg.readthedocs.io',
+    download_url='https://pypi.python.org/pypi/aiopg',
+    license='BSD',
+    packages=['aiopg', 'aiopg.sa'],
+    install_requires=install_requires,
+    extras_require=extras_require,
+    include_package_data=True
+)

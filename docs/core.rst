@@ -819,6 +819,14 @@ The basic usage is::
       A read-only float representing default timeout for operations
       for connections from pool.
 
+   .. comethod:: from_pool_fill(*args, **kwargs)
+      :coroutine:
+      :classmethod:
+
+      The method is a :ref:`coroutine <coroutine>`.
+      Constructor to establish a connection after pool initialization,
+      which was given in :attr:`minsize`
+
    .. method:: clear()
 
       A :ref:`coroutine <coroutine>` that closes all *free* connections
