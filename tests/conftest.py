@@ -3,8 +3,6 @@ import collections
 import contextlib
 import gc
 import logging
-import psycopg2
-import pytest
 import re
 import socket
 import sys
@@ -12,11 +10,19 @@ import time
 import uuid
 import warnings
 
-
+import psycopg2
+import pytest
 from docker import APIClient
 
 import aiopg
 from aiopg import sa
+
+warnings.filterwarnings(
+    'error', '.*',
+    category=ResourceWarning,
+    module=r'aiopg(\.\w+)+',
+    append=False
+)
 
 
 @pytest.fixture(scope='session')
@@ -25,6 +31,7 @@ def unused_port():
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(('127.0.0.1', 0))
             return s.getsockname()[1]
+
     return f
 
 
@@ -183,11 +190,10 @@ def pg_params(pg_server):
 
 @pytest.fixture
 def make_connection(loop, pg_params):
-
     conns = []
 
     async def go(*, no_loop=False, **kwargs):
-        nonlocal conn
+        nonlocal conns
         params = pg_params.copy()
         params.update(kwargs)
         useloop = None if no_loop else loop
@@ -221,21 +227,30 @@ def create_pool(loop, pg_params):
 
     if pool is not None:
         pool.terminate()
+        loop.run_until_complete(pool.wait_closed())
 
 
 @pytest.fixture
 def make_engine(loop, pg_params):
-    engine = None
+    engine = engine_use_loop = None
 
     async def go(*, use_loop=True, **kwargs):
+        nonlocal engine, engine_use_loop
         pg_params.update(kwargs)
         if use_loop:
-            engine = await sa.create_engine(loop=loop, **pg_params)
+            engine_use_loop = engine_use_loop or (
+                await sa.create_engine(loop=loop, **pg_params)
+            )
+            return engine_use_loop
         else:
-            engine = await sa.create_engine(**pg_params)
-        return engine
+            engine = engine or (await sa.create_engine(**pg_params))
+            return engine
 
     yield go
+
+    if engine_use_loop is not None:
+        engine_use_loop.close()
+        loop.run_until_complete(engine_use_loop.wait_closed())
 
     if engine is not None:
         engine.close()
@@ -243,20 +258,21 @@ def make_engine(loop, pg_params):
 
 
 @pytest.fixture
-def make_sa_connection(make_engine):
-    conn = None
+def make_sa_connection(make_engine, loop):
+    conns = []
     engine = None
 
     async def go(*, use_loop=True, **kwargs):
-        nonlocal conn, engine
-        engine = await make_engine(use_loop=use_loop, **kwargs)
+        nonlocal conns, engine
+        engine = engine or (await make_engine(use_loop=use_loop, **kwargs))
         conn = await engine.acquire()
+        conns.append(conn)
         return conn
 
     yield go
 
-    if conn is not None:
-        engine.release(conn)
+    for conn in conns:
+        loop.run_until_complete(conn.close())
 
 
 class _AssertWarnsContext:

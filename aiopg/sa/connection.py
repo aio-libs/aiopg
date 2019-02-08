@@ -16,6 +16,7 @@ class SAConnection:
         self._savepoint_seq = 0
         self._engine = engine
         self._dialect = engine.dialect
+        self._cursor = None
 
     def execute(self, query, *multiparams, **params):
         """Executes a SQL query with optional parameters.
@@ -57,8 +58,15 @@ class SAConnection:
         coro = self._execute(query, *multiparams, **params)
         return _SAConnectionContextManager(coro)
 
+    async def _get_cursor(self):
+        if self._cursor and not self._cursor.closed:
+            return self._cursor
+
+        self._cursor = await self._connection.cursor()
+        return self._cursor
+
     async def _execute(self, query, *multiparams, **params):
-        cursor = await self._connection.cursor()
+        cursor = await self._get_cursor()
         dp = _distill_params(multiparams, params)
         if len(dp) > 1:
             raise exc.ArgumentError("aiopg doesn't support executemany")
@@ -104,6 +112,7 @@ class SAConnection:
                                             "and execution with parameters")
                 post_processed_params = [compiled.construct_params()]
                 result_map = None
+
             await cursor.execute(str(compiled), post_processed_params[0])
         else:
             raise exc.ArgumentError("sql statement should be str or "
@@ -331,6 +340,7 @@ class SAConnection:
             self._transaction = None
         # don't close underlying connection, it can be reused by pool
         # conn.close()
+
         self._engine.release(self)
         self._connection = None
         self._engine = None

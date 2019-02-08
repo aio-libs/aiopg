@@ -20,14 +20,8 @@ PY_341 = sys.version_info >= (3, 4, 1)
 
 @pytest.fixture
 def connect(make_connection):
-
     async def go(**kwargs):
-        conn = await make_connection(**kwargs)
-        conn2 = await make_connection(**kwargs)
-        cur = await conn2.cursor()
-        await cur.execute("DROP TABLE IF EXISTS foo")
-        await conn2.close()
-        return conn
+        return await make_connection(**kwargs)
 
     return go
 
@@ -280,36 +274,6 @@ async def test_cancel_pending_op(connect, loop):
 
     with pytest.raises(asyncio.CancelledError):
         await task
-
-
-async def test_cancelled_connection_is_usable_asap(connect, loop):
-    async def inner(future, cursor):
-        future.set_result(None)
-        await cursor.execute("SELECT pg_sleep(10)")
-
-    fut = asyncio.Future(loop=loop)
-    conn = await connect()
-    cur = await conn.cursor()
-    task = ensure_future(inner(fut, cur), loop=loop)
-    await fut
-    await asyncio.sleep(0.1, loop=loop)
-
-    task.cancel()
-
-    delay = 0.001
-
-    for tick in range(100):
-        await asyncio.sleep(delay, loop=loop)
-        status = conn._conn.get_transaction_status()
-        if status == psycopg2.extensions.TRANSACTION_STATUS_IDLE:
-            cur = await conn.cursor()
-            await cur.execute("SELECT 1")
-            ret = await cur.fetchone()
-            assert (1,) == ret
-            break
-        delay *= 2
-    else:
-        assert False, "Cancelled connection transaction status never got idle"
 
 
 async def test_cancelled_connection_is_not_usable_until_cancellation(connect,

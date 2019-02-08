@@ -1,11 +1,19 @@
 import re
 import sys
+import warnings
 from collections import namedtuple
 
 from .connection import connect, Connection, TIMEOUT as DEFAULT_TIMEOUT
 from .cursor import Cursor
 from .pool import create_pool, Pool
 from .transaction import IsolationLevel, Transaction
+
+warnings.filterwarnings(
+    'always', '.*',
+    category=ResourceWarning,
+    module=r'aiopg(\.\w+)+',
+    append=False
+)
 
 __all__ = ('connect', 'create_pool', 'Connection', 'Cursor', 'Pool',
            'version', 'version_info', 'DEFAULT_TIMEOUT', 'IsolationLevel',

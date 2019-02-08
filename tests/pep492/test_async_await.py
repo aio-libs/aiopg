@@ -1,6 +1,8 @@
 import asyncio
-import pytest
+
 import psycopg2
+import pytest
+
 import aiopg
 import aiopg.sa
 from aiopg.sa import SAConnection
@@ -12,7 +14,7 @@ async def test_cursor_await(make_connection):
     cursor = await conn.cursor()
     await cursor.execute('SELECT 42;')
     resp = await cursor.fetchone()
-    assert resp == (42, )
+    assert resp == (42,)
     cursor.close()
 
 
@@ -21,7 +23,7 @@ async def test_connect_context_manager(loop, pg_params):
         cursor = await conn.cursor()
         await cursor.execute('SELECT 42')
         resp = await cursor.fetchone()
-        assert resp == (42, )
+        assert resp == (42,)
         cursor.close()
     assert conn.closed
 
@@ -33,7 +35,7 @@ async def test_connection_context_manager(make_connection):
         cursor = await conn.cursor()
         await cursor.execute('SELECT 42;')
         resp = await cursor.fetchone()
-        assert resp == (42, )
+        assert resp == (42,)
         cursor.close()
     assert conn.closed
 
@@ -44,18 +46,10 @@ async def test_cursor_create_with_context_manager(make_connection):
     async with conn.cursor() as cursor:
         await cursor.execute('SELECT 42;')
         resp = await cursor.fetchone()
-        assert resp == (42, )
+        assert resp == (42,)
         assert not cursor.closed
 
     assert cursor.closed
-
-
-async def test_two_cursor_create_with_context_manager(make_connection):
-    conn = await make_connection()
-
-    async with conn.cursor() as cursor1, conn.cursor() as cursor2:
-        assert cursor1.closed
-        assert not cursor2.closed
 
 
 async def test_pool_context_manager_timeout(pg_params, loop):
@@ -75,7 +69,7 @@ async def test_pool_context_manager_timeout(pg_params, loop):
         with cursor_ctx as cursor:
             resp = await cursor.execute('SELECT 42;')
             resp = await cursor.fetchone()
-            assert resp == (42, )
+            assert resp == (42,)
 
     assert cursor.closed
     assert pool.closed
@@ -89,7 +83,7 @@ async def test_cursor_with_context_manager(make_connection):
     assert not cursor.closed
     async with cursor:
         resp = await cursor.fetchone()
-        assert resp == (42, )
+        assert resp == (42,)
     assert cursor.closed
 
 
@@ -112,7 +106,7 @@ async def test_pool_context_manager(pg_params, loop):
         async with conn.cursor() as cursor:
             await cursor.execute('SELECT 42;')
             resp = await cursor.fetchone()
-            assert resp == (42, )
+            assert resp == (42,)
         pool.release(conn)
     assert cursor.closed
     assert pool.closed
@@ -124,7 +118,7 @@ async def test_create_pool_context_manager(pg_params, loop):
             async with conn.cursor() as cursor:
                 await cursor.execute('SELECT 42;')
                 resp = await cursor.fetchone()
-                assert resp == (42, )
+                assert resp == (42,)
 
     assert cursor.closed
     assert conn.closed
@@ -140,7 +134,7 @@ async def test_cursor_aiter(make_connection):
         await cursor.execute('SELECT generate_series(1, 5);')
         async for v in cursor:
             result.append(v)
-        assert result == [(1,), (2, ), (3, ), (4, ), (5, )]
+        assert result == [(1,), (2,), (3,), (4,), (5,)]
         cursor.close()
     assert conn.closed
 
@@ -169,7 +163,7 @@ async def test_result_proxy_aiter(pg_params, loop):
             async with conn.execute(sql) as cursor:
                 async for v in cursor:
                     result.append(v)
-                assert result == [(1,), (2, ), (3, ), (4, ), (5, )]
+                assert result == [(1,), (2,), (3,), (4,), (5,)]
             assert cursor.closed
     assert conn.closed
 
@@ -184,7 +178,7 @@ async def test_transaction_context_manager(pg_params, loop):
                     async for v in cursor:
                         result.append(v)
                     assert tr.is_active
-                assert result == [(1,), (2, ), (3, ), (4, ), (5, )]
+                assert result == [(1,), (2,), (3,), (4,), (5,)]
                 assert cursor.closed
             assert not tr.is_active
 
@@ -243,7 +237,7 @@ async def test_transaction_context_manager_nested_commit(pg_params, loop):
                             result.append(v)
                         assert tr1.is_active
                         assert tr2.is_active
-                    assert result == [(1,), (2, ), (3, ), (4, ), (5, )]
+                    assert result == [(1,), (2,), (3,), (4,), (5,)]
                     assert cursor.closed
                 assert not tr2.is_active
 
@@ -267,5 +261,5 @@ async def test_sa_connection_execute(pg_params, loop):
         async with engine.acquire() as conn:
             async for value in conn.execute(sql):
                 result.append(value)
-            assert result == [(1,), (2, ), (3, ), (4, ), (5, )]
+            assert result == [(1,), (2,), (3,), (4,), (5,)]
     assert conn.closed

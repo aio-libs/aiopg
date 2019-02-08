@@ -1,24 +1,26 @@
 import asyncio
 import contextlib
 import errno
+import platform
 import select
 import sys
 import traceback
 import warnings
 import weakref
-import platform
 
 import psycopg2
-from psycopg2.extensions import (
-    POLL_OK, POLL_READ, POLL_WRITE, POLL_ERROR)
 from psycopg2 import extras
+from psycopg2.extensions import (
+    POLL_OK,
+    POLL_READ,
+    POLL_WRITE,
+    POLL_ERROR,
+)
 
 from .cursor import Cursor
 from .utils import _ContextManager, create_future
 
-
 __all__ = ('connect',)
-
 
 TIMEOUT = 60.0
 
@@ -118,7 +120,7 @@ class Connection:
         self._cancelling = False
         self._cancellation_waiter = None
         self._echo = echo
-        self._conn_cursor = None
+        self._cursor_instance = None
         self._notifies = asyncio.Queue(loop=loop)
         self._weakref = weakref.ref(self)
         self._loop.add_reader(self._fileno, self._ready, self._weakref)
@@ -198,7 +200,7 @@ class Connection:
         self._loop.call_exception_handler({
             'message': message,
             'connection': self,
-            })
+        })
         self.close()
         if self._waiter and not self._waiter.done():
             self._waiter.set_exception(psycopg2.OperationalError(message))
@@ -268,28 +270,22 @@ class Connection:
         NOTE: as of [TODO] any previously created created cursor from this
             connection will be closed
         """
-        self.close_cursor()
-
         self._last_usage = self._loop.time()
-        coro = self._cursor(name=name, cursor_factory=cursor_factory,
+        core = self._cursor(name=name, cursor_factory=cursor_factory,
                             scrollable=scrollable, withhold=withhold,
                             timeout=timeout)
-        return _ContextManager(coro)
-
-    def cursor_created(self, cursor):
-        if self._conn_cursor and not self._conn_cursor.closed:
-            raise Exception("You can only have one cursor per connection")
-
-        self._conn_cursor = cursor
-
-    def cursor_closed(self, cursor):
-        if cursor != self._conn_cursor:
-            raise Exception("You can only have one cursor per connection")
-
-        self._conn_cursor = None
+        return _ContextManager(core)
 
     async def _cursor(self, name=None, cursor_factory=None,
                       scrollable=None, withhold=False, timeout=None):
+
+        if not self.closed_cursor:
+            warnings.warn(('You can only have one cursor per connection. '
+                           'The cursor for connection will be closed forcibly'
+                           ' {!r}.').format(self), ResourceWarning)
+
+        self.free_cursor()
+
         if timeout is None:
             timeout = self._timeout
 
@@ -297,8 +293,8 @@ class Connection:
                                        cursor_factory=cursor_factory,
                                        scrollable=scrollable,
                                        withhold=withhold)
-        cursor = Cursor(self, impl, timeout, self._echo)
-        return cursor
+        self._cursor_instance = Cursor(self, impl, timeout, self._echo)
+        return self._cursor_instance
 
     async def _cursor_impl(self, name=None, cursor_factory=None,
                            scrollable=None, withhold=False):
@@ -320,22 +316,29 @@ class Connection:
                 self._writing = False
                 self._loop.remove_writer(self._fileno)
 
-        self.close_cursor()
         self._conn.close()
+        self.free_cursor()
 
         if self._waiter is not None and not self._waiter.done():
             self._waiter.set_exception(
                 psycopg2.OperationalError("Connection closed"))
+
+    @property
+    def closed_cursor(self):
+        if not self._cursor_instance:
+            return True
+
+        return self._cursor_instance.closed
+
+    def free_cursor(self):
+        if not self.closed_cursor:
+            self._cursor_instance.close()
 
     def close(self):
         self._close()
         ret = create_future(self._loop)
         ret.set_result(None)
         return ret
-
-    def close_cursor(self):
-        if self._conn_cursor:
-            self._conn_cursor.close()
 
     @property
     def closed(self):
@@ -508,6 +511,25 @@ class Connection:
     def echo(self):
         """Return echo mode status."""
         return self._echo
+
+    def __repr__(self):
+        msg = (
+            '<'
+            '{module_name}::{class_name} '
+            'isexecuting={isexecuting}, '
+            'closed={closed}, '
+            'echo={echo}, '
+            'cursor={cursor}'
+            '>'
+        )
+        return msg.format(
+            module_name=type(self).__module__,
+            class_name=type(self).__name__,
+            echo=self.echo,
+            isexecuting=self._isexecuting(),
+            closed=bool(self.closed),
+            cursor=repr(self._cursor_instance)
+        )
 
     def __del__(self):
         try:
