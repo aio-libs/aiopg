@@ -265,6 +265,13 @@ async def test_cancel_noop(connect):
 
 
 async def test_cancel_pending_op(connect, loop):
+
+    def exception_handler(loop_, context):
+        assert context['message'] == context['exception'].pgerror
+        assert context['future'].exception() is context['exception']
+        assert loop_ is loop
+
+    loop.set_exception_handler(exception_handler)
     fut = asyncio.Future(loop=loop)
 
     async def inner():
