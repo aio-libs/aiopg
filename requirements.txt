@@ -3,7 +3,7 @@ docker==3.7.0
 flake8==3.7.5
 -e .[sa]
 sphinx==1.8.4
-tox==3.5.2
+tox==3.7.0
 pytest==3.9.1
 pytest-cov==2.6.0
 pytest-sugar==0.9.1
