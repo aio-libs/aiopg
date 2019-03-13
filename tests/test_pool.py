@@ -197,14 +197,16 @@ async def test_release_with_invalid_status(create_pool):
     await cur.execute('BEGIN')
     cur.close()
 
-    with mock.patch("aiopg.pool.logger") as m_log:
+    with mock.patch("aiopg.pool.warnings") as m_log:
         pool.release(conn)
     assert 9 == pool.freesize
     assert not pool._used
     assert conn.closed
-    m_log.warning.assert_called_with(
-        "Invalid transaction status on released connection: %d",
-        TRANSACTION_STATUS_INTRANS)
+    m_log.warn.assert_called_with(
+        "Invalid transaction status on "
+        "released connection: {}".format(TRANSACTION_STATUS_INTRANS),
+        ResourceWarning
+    )
 
 
 async def test_default_event_loop(create_pool, loop):
@@ -232,14 +234,16 @@ async def test_release_with_invalid_status_wait_release(create_pool):
     await cur.execute('BEGIN')
     cur.close()
 
-    with mock.patch("aiopg.pool.logger") as m_log:
+    with mock.patch("aiopg.pool.warnings") as m_log:
         await pool.release(conn)
     assert 9 == pool.freesize
     assert not pool._used
     assert conn.closed
-    m_log.warning.assert_called_with(
-        "Invalid transaction status on released connection: %d",
-        TRANSACTION_STATUS_INTRANS)
+    m_log.warn.assert_called_with(
+        "Invalid transaction status on "
+        "released connection: {}".format(TRANSACTION_STATUS_INTRANS),
+        ResourceWarning
+    )
 
 
 async def test__fill_free(create_pool, loop):
@@ -496,14 +500,15 @@ async def test_connection_in_good_state_after_timeout_in_transaction(
     with (await pool) as conn:
         with pytest.raises(asyncio.TimeoutError):
             await sleep(conn)
+        conn.close()
 
     assert 0 == pool.freesize
     assert 0 == pool.size
     with (await pool) as conn:
-        cur = await conn.cursor()
-        await cur.execute('SELECT 1;')
-        val = await cur.fetchone()
-        assert (1,) == val
+        async with conn.cursor() as cur:
+            await cur.execute('SELECT 1;')
+            val = await cur.fetchone()
+            assert (1,) == val
 
 
 async def test_drop_connection_if_timedout(make_connection,
@@ -548,11 +553,11 @@ async def test_pool_on_connect(create_pool):
 
     async def cb(connection):
         nonlocal called
-        cur = await connection.cursor()
-        await cur.execute('SELECT 1')
-        data = await cur.fetchall()
-        assert [(1,)] == data
-        called = True
+        async with connection.cursor() as cur:
+            await cur.execute('SELECT 1')
+            data = await cur.fetchall()
+            assert [(1,)] == data
+            called = True
 
     pool = await create_pool(on_connect=cb)
 

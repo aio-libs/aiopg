@@ -5,7 +5,6 @@ import warnings
 from psycopg2.extensions import TRANSACTION_STATUS_IDLE
 
 from .connection import TIMEOUT, connect
-from .log import logger
 from .utils import (
     _PoolAcquireContextManager,
     _PoolConnectionContextManager,
@@ -237,15 +236,17 @@ class Pool(asyncio.AbstractServer):
         if not conn.closed:
             tran_status = conn._conn.get_transaction_status()
             if tran_status != TRANSACTION_STATUS_IDLE:
-                logger.warning(
-                    "Invalid transaction status on released connection: %d",
-                    tran_status)
+                warnings.warn(
+                    ("Invalid transaction status on "
+                     "released connection: {}").format(tran_status),
+                    ResourceWarning
+                )
                 conn.close()
                 return fut
             if self._closing:
                 conn.close()
             else:
-                conn.close_cursor()  # there may be weak-refs to these cursors
+                conn.free_cursor()
                 self._free.append(conn)
             fut = ensure_future(self._wakeup(), loop=self._loop)
         return fut

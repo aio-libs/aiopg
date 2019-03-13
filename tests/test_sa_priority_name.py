@@ -28,7 +28,7 @@ def connect(make_sa_connection, loop):
 
 async def test_priority_name(connect):
     await connect.execute(tbl.insert().values(id='test_id', name='test_name'))
-    row = await (await connect.execute(tbl.select())).fetchone()
+    row = await (await connect.execute(tbl.select())).first()
     assert row.name == 'test_name'
     assert row.id == 'test_id'
 
@@ -39,7 +39,7 @@ async def test_priority_name_label(connect):
         [tbl.c.name.label('test_label_name'), tbl.c.id]
     )
     query = query.select_from(tbl)
-    row = await (await connect.execute(query)).fetchone()
+    row = await (await connect.execute(query)).first()
     assert row.test_label_name == 'test_name'
     assert row.id == 'test_id'
 
@@ -50,7 +50,7 @@ async def test_priority_name_and_label(connect):
         [tbl.c.name.label('test_label_name'), tbl.c.name, tbl.c.id]
     )
     query = query.select_from(tbl)
-    row = await (await connect.execute(query)).fetchone()
+    row = await (await connect.execute(query)).first()
     assert row.test_label_name == 'test_name'
     assert row.name == 'test_name'
     assert row.id == 'test_id'
@@ -60,7 +60,7 @@ async def test_priority_name_all_get(connect):
     await connect.execute(tbl.insert().values(id='test_id', name='test_name'))
     query = sa.select([tbl.c.name])
     query = query.select_from(tbl)
-    row = await (await connect.execute(query)).fetchone()
+    row = await (await connect.execute(query)).first()
     assert row.name == 'test_name'
     assert row['name'] == 'test_name'
     assert row[0] == 'test_name'

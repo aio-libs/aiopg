@@ -7,6 +7,7 @@ import sys
 import traceback
 import warnings
 import weakref
+from collections.abc import Mapping
 
 import psycopg2
 from psycopg2 import extras
@@ -17,33 +18,11 @@ from .utils import _ContextManager, create_future, get_running_loop
 
 __all__ = ('connect',)
 
-
 TIMEOUT = 60.0
 
 # Windows specific error code, not in errno for some reason, and doesnt map
 # to OSError.errno EBADF
 WSAENOTSOCK = 10038
-
-
-async def _enable_hstore(conn):
-    cur = await conn.cursor()
-    await cur.execute("""\
-        SELECT t.oid, typarray
-        FROM pg_type t JOIN pg_namespace ns
-            ON typnamespace = ns.oid
-        WHERE typname = 'hstore';
-        """)
-    rv0, rv1 = [], []
-    async for oids in cur:
-        if isinstance(oids, dict):
-            rv0.append(oids['oid'])
-            rv1.append(oids['typarray'])
-        else:
-            rv0.append(oids[0])
-            rv1.append(oids[1])
-
-    cur.close()
-    return tuple(rv0), tuple(rv1)
 
 
 def connect(dsn=None, *, timeout=TIMEOUT, enable_json=True,
@@ -94,7 +73,10 @@ class Connection:
         self._enable_uuid = enable_uuid
         self._loop = get_running_loop(kwargs.pop('loop', None) is not None)
         self._waiter = create_future(self._loop)
-        self._conn = psycopg2.connect(dsn, async_=True, **kwargs)
+
+        kwargs['async_'] = kwargs.pop('async', True)
+        self._conn = psycopg2.connect(dsn, **kwargs)
+
         self._dsn = self._conn.dsn
         assert self._conn.isexecuting(), "Is conn an async at all???"
         self._fileno = self._conn.fileno()
@@ -104,7 +86,7 @@ class Connection:
         self._cancelling = False
         self._cancellation_waiter = None
         self._echo = echo
-        self._conn_cursor = None
+        self._cursor_instance = None
         self._notifies = asyncio.Queue(loop=self._loop)
         self._weakref = weakref.ref(self)
         self._loop.add_reader(self._fileno, self._ready, self._weakref)
@@ -148,7 +130,6 @@ class Connection:
                     # chain exception otherwise
                     exc2.__cause__ = exc
                     exc = exc2
-
             if waiter is not None and not waiter.done():
                 waiter.set_exception(exc)
         else:
@@ -185,7 +166,7 @@ class Connection:
         self._loop.call_exception_handler({
             'message': message,
             'connection': self,
-            })
+        })
         self.close()
         if self._waiter and not self._waiter.done():
             self._waiter.set_exception(psycopg2.OperationalError(message))
@@ -227,7 +208,12 @@ class Connection:
         except (asyncio.CancelledError, asyncio.TimeoutError) as exc:
             await asyncio.shield(cancel(), loop=self._loop)
             raise exc
-        except psycopg2.extensions.QueryCanceledError:
+        except psycopg2.extensions.QueryCanceledError as exc:
+            self._loop.call_exception_handler({
+                'message': exc.pgerror,
+                'exception': exc,
+                'future': self._waiter,
+            })
             raise asyncio.CancelledError
         finally:
             if self._cancelling:
@@ -255,28 +241,22 @@ class Connection:
         NOTE: as of [TODO] any previously created created cursor from this
             connection will be closed
         """
-        self.close_cursor()
-
         self._last_usage = self._loop.time()
         coro = self._cursor(name=name, cursor_factory=cursor_factory,
                             scrollable=scrollable, withhold=withhold,
                             timeout=timeout)
         return _ContextManager(coro)
 
-    def cursor_created(self, cursor):
-        if self._conn_cursor and not self._conn_cursor.closed:
-            raise Exception("You can only have one cursor per connection")
-
-        self._conn_cursor = cursor
-
-    def cursor_closed(self, cursor):
-        if cursor != self._conn_cursor:
-            raise Exception("You can only have one cursor per connection")
-
-        self._conn_cursor = None
-
     async def _cursor(self, name=None, cursor_factory=None,
                       scrollable=None, withhold=False, timeout=None):
+
+        if not self.closed_cursor:
+            warnings.warn(('You can only have one cursor per connection. '
+                           'The cursor for connection will be closed forcibly'
+                           ' {!r}.').format(self), ResourceWarning)
+
+        self.free_cursor()
+
         if timeout is None:
             timeout = self._timeout
 
@@ -284,8 +264,8 @@ class Connection:
                                        cursor_factory=cursor_factory,
                                        scrollable=scrollable,
                                        withhold=withhold)
-        cursor = Cursor(self, impl, timeout, self._echo)
-        return cursor
+        self._cursor_instance = Cursor(self, impl, timeout, self._echo)
+        return self._cursor_instance
 
     async def _cursor_impl(self, name=None, cursor_factory=None,
                            scrollable=None, withhold=False):
@@ -307,22 +287,30 @@ class Connection:
                 self._writing = False
                 self._loop.remove_writer(self._fileno)
 
-        self.close_cursor()
         self._conn.close()
+        self.free_cursor()
 
         if self._waiter is not None and not self._waiter.done():
             self._waiter.set_exception(
                 psycopg2.OperationalError("Connection closed"))
+
+    @property
+    def closed_cursor(self):
+        if not self._cursor_instance:
+            return True
+
+        return self._cursor_instance.closed
+
+    def free_cursor(self):
+        if not self.closed_cursor:
+            self._cursor_instance.close()
+            self._cursor_instance = None
 
     def close(self):
         self._close()
         ret = create_future(self._loop)
         ret.set_result(None)
         return ret
-
-    def close_cursor(self):
-        if self._conn_cursor:
-            self._conn_cursor.close()
 
     @property
     def closed(self):
@@ -496,6 +484,25 @@ class Connection:
         """Return echo mode status."""
         return self._echo
 
+    def __repr__(self):
+        msg = (
+            '<'
+            '{module_name}::{class_name} '
+            'isexecuting={isexecuting}, '
+            'closed={closed}, '
+            'echo={echo}, '
+            'cursor={cursor}'
+            '>'
+        )
+        return msg.format(
+            module_name=type(self).__module__,
+            class_name=type(self).__name__,
+            echo=self.echo,
+            isexecuting=self._isexecuting(),
+            closed=bool(self.closed),
+            cursor=repr(self._cursor_instance)
+        )
+
     def __del__(self):
         try:
             _conn = self._conn
@@ -517,6 +524,28 @@ class Connection:
         """Return notification queue."""
         return self._notifies
 
+    async def _get_oids(self):
+        cur = await self.cursor()
+        rv0, rv1 = [], []
+        try:
+            await cur.execute(
+                "SELECT t.oid, typarray "
+                "FROM pg_type t JOIN pg_namespace ns ON typnamespace = ns.oid "
+                "WHERE typname = 'hstore';"
+            )
+
+            async for oids in cur:
+                if isinstance(oids, Mapping):
+                    rv0.append(oids['oid'])
+                    rv1.append(oids['typarray'])
+                else:
+                    rv0.append(oids[0])
+                    rv1.append(oids[1])
+        finally:
+            cur.close()
+
+        return tuple(rv0), tuple(rv1)
+
     async def _connect(self):
         try:
             await self._poll(self._waiter, self._timeout)
@@ -528,7 +557,7 @@ class Connection:
         if self._enable_uuid:
             extras.register_uuid(conn_or_curs=self._conn)
         if self._enable_hstore:
-            oids = await _enable_hstore(self)
+            oids = await self._get_oids()
             if oids is not None:
                 oid, array_oid = oids
                 extras.register_hstore(
