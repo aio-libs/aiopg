@@ -1,5 +1,6 @@
 import psycopg2
 import pytest
+
 from aiopg import IsolationLevel, Transaction
 from aiopg.transaction import IsolationCompiler
 
@@ -8,7 +9,7 @@ from aiopg.transaction import IsolationCompiler
 def engine(make_engine, loop):
     async def start():
         engine = await make_engine()
-        with (await engine) as cur:
+        async with engine.acquire() as cur:
             await cur.execute("DROP TABLE IF EXISTS tbl")
             await cur.execute("CREATE TABLE tbl (id int, "
                               "name varchar(255))")
@@ -27,7 +28,7 @@ def engine(make_engine, loop):
 ])
 async def test_transaction_oldstyle(engine, isolation_level, readonly,
                                     deferrable):
-    with (await engine) as cur:
+    async with engine.acquire() as cur:
         tr = Transaction(cur, isolation_level,
                          readonly=readonly, deferrable=deferrable)
         await tr.begin()
@@ -44,7 +45,11 @@ async def test_transaction_oldstyle(engine, isolation_level, readonly,
 async def two_begin(cur):
     tr = Transaction(cur, IsolationLevel.read_committed)
     await tr.begin()
-    await tr.begin()
+    try:
+        await tr.begin()
+    except psycopg2.ProgrammingError as e:
+        await tr.rollback()
+        raise e
 
 
 async def two_commit(cur):
@@ -74,8 +79,11 @@ async def e_release_savepoint(cur):
 async def two_rollback_savepoint(cur):
     tr = Transaction(cur, IsolationLevel.read_committed)
     await tr.begin()
-    await tr.release_savepoint()
-    await tr.commit()
+    try:
+        await tr.release_savepoint()
+    except psycopg2.ProgrammingError as e:
+        await tr.commit()
+        raise e
 
 
 async def e_savepoint(cur):
@@ -87,8 +95,12 @@ async def e_commit_savepoint(cur):
     tr = Transaction(cur, IsolationLevel.read_committed)
     await tr.begin()
     await tr.savepoint()
-    await tr.savepoint()
-    await tr.commit()
+    try:
+        await tr.savepoint()
+    except psycopg2.ProgrammingError as e:
+        await tr.rollback_savepoint()
+        await tr.commit()
+        raise e
 
 
 @pytest.mark.parametrize('fn', [
@@ -98,7 +110,7 @@ async def e_commit_savepoint(cur):
 ])
 async def test_transaction_fail_oldstyle(engine, fn):
     with pytest.raises(psycopg2.ProgrammingError):
-        with (await engine) as cur:
+        async with engine.acquire() as cur:
             await fn(cur)
 
 
@@ -119,11 +131,12 @@ def test_transaction_isolation_implemented():
 
 
 async def test_transaction_finalization_warning(engine, monkeypatch):
-    with (await engine) as cur:
+    async with engine.acquire() as cur:
         tr = Transaction(cur, IsolationLevel.read_committed)
 
         def valid(x, _):
             assert x in [
+                'Invalid transaction status on released connection: 2',
                 'You have not closed transaction {!r}'.format(tr),
                 'You have not closed savepoint {!r}'.format(tr)
             ]
@@ -134,18 +147,18 @@ async def test_transaction_finalization_warning(engine, monkeypatch):
 
 
 async def test_transaction_readonly_insert_oldstyle(engine):
-    with (await engine) as cur:
+    async with engine.acquire() as cur:
         tr = Transaction(cur, IsolationLevel.serializable,
                          readonly=True)
 
         await tr.begin()
         with pytest.raises(psycopg2.InternalError):
             await cur.execute("insert into tbl values(1, 'data')")
-            await tr.rollback()
+        await tr.rollback()
 
 
 async def test_transaction_readonly_oldstyle(engine):
-    with (await engine) as cur:
+    async with engine.acquire() as cur:
         tr = Transaction(cur, IsolationLevel.serializable, readonly=True)
 
         await tr.begin()
@@ -158,7 +171,7 @@ async def test_transaction_readonly_oldstyle(engine):
 
 
 async def test_transaction_point_oldstyle(engine):
-    with (await engine) as cur:
+    async with engine.acquire() as cur:
         tr = Transaction(cur, IsolationLevel.read_committed)
         await tr.begin()
 

@@ -6,7 +6,7 @@ import pytest
 sa = pytest.importorskip("aiopg.sa")  # noqa
 
 
-from sqlalchemy import MetaData, Table, Column, Integer, String
+from sqlalchemy import MetaData, Table, Column, Integer, String, select, func
 from sqlalchemy.schema import DropTable, CreateTable
 
 import psycopg2
@@ -122,7 +122,8 @@ async def test_execute_sa_insert_positional_params(connect):
 
 async def test_scalar(connect):
     conn = await connect()
-    res = await conn.scalar(tbl.count())
+    tbl.count
+    res = await conn.scalar(select([func.count()]).select_from(tbl))
     assert 1, res
 
 

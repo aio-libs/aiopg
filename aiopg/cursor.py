@@ -16,8 +16,6 @@ class Cursor:
         self._echo = echo
         self._transaction = Transaction(self, IsolationLevel.repeatable_read)
 
-        conn.cursor_created(self)
-
     @property
     def echo(self):
         """Return echo mode status."""
@@ -52,7 +50,6 @@ class Cursor:
         """Close the cursor now."""
         if not self.closed:
             self._impl.close()
-            self._conn.cursor_closed(self)
 
     @property
     def closed(self):
@@ -393,3 +390,18 @@ class Cursor:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         self.close()
         return
+
+    def __repr__(self):
+        msg = (
+            '<'
+            '{module_name}::{class_name} '
+            'name={name}, '
+            'closed={closed}'
+            '>'
+        )
+        return msg.format(
+            module_name=type(self).__module__,
+            class_name=type(self).__name__,
+            name=self.name,
+            closed=self.closed
+        )
