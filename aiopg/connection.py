@@ -240,7 +240,12 @@ class Connection:
         except (asyncio.CancelledError, asyncio.TimeoutError) as exc:
             await asyncio.shield(cancel(), loop=self._loop)
             raise exc
-        except psycopg2.extensions.QueryCanceledError:
+        except psycopg2.extensions.QueryCanceledError as exc:
+            self._loop.call_exception_handler({
+                'message': exc.pgerror,
+                'exception': exc,
+                'future': self._waiter,
+            })
             raise asyncio.CancelledError
         finally:
             if self._cancelling:
