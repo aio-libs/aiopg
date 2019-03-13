@@ -69,7 +69,7 @@ Also we provide SQL transactions support. Please take a look on
 Engine
 ------
 
-.. cofunction:: create_engine(dsn=None, *, minsize=1, maxsize=10, loop=None, \
+.. cofunction:: create_engine(dsn=None, *, minsize=1, maxsize=10, \
                               dialect=dialect, timeout=60, **kwargs)
    :coroutine:
    :async-with:

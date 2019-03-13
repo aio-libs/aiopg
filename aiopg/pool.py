@@ -146,6 +146,9 @@ class Pool(asyncio.AbstractServer):
 
     @classmethod
     async def from_pool_fill(cls, *args, **kwargs):
+        """constructor for filling the free pool with connections,
+        the number is controlled by the minsize parameter
+        """
         self = cls(*args, **kwargs)
         if self._minsize > 0:
             async with self._cond:
@@ -253,21 +256,11 @@ class Pool(asyncio.AbstractServer):
 
     async def cursor(self, name=None, cursor_factory=None,
                      scrollable=None, withhold=False, *, timeout=None):
-        """XXX"""
         conn = await self.acquire()
         cur = await conn.cursor(name=name, cursor_factory=cursor_factory,
                                 scrollable=scrollable, withhold=withhold,
                                 timeout=timeout)
         return _PoolCursorContextManager(self, conn, cur)
-
-    def __enter__(self):
-        raise RuntimeError(
-            '"await" should be used as context manager expression')
-
-    def __exit__(self, *args):
-        # This must exist because __enter__ exists, even though that
-        # always raises; that's how the with-statement works.
-        pass  # pragma: nocover
 
     def __await__(self):
         # This is not a coroutine.  It is meant to enable the idiom:

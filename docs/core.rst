@@ -28,7 +28,7 @@ Example::
       ret = await cur.fetchall()
 
 
-.. cofunction:: connect(dsn=None, *, loop=None, timeout=60.0, \
+.. cofunction:: connect(dsn=None, *, timeout=60.0, \
                         enable_json=True, enable_hstore=True, \
                         enable_uuid=True, \
                         echo=False, \
@@ -39,9 +39,7 @@ Example::
    Make a connection to :term:`PostgreSQL` server.
 
    The function accepts all parameters that :func:`psycopg2.connect`
-   does plus optional keyword-only *loop* and *timeout* parameters.
-
-   :param loop: asyncio event loop instance or ``None`` for default one.
+   does plus optional keyword-only *timeout* parameter.
 
    :param float timeout: default timeout (in seconds) for connection operations.
 
@@ -720,17 +718,14 @@ The basic usage is::
 .. cofunction:: create_pool(dsn=None, *, minsize=1, maxsize=10,\
                             enable_json=True, enable_hstore=True, \
                             enable_uuid=True, echo=False, on_connect=None, \
-                            loop=None, timeout=60.0, **kwargs)
+                            timeout=60.0, **kwargs)
    :coroutine:
    :async-with:
 
    Create a pool of connections to :term:`PostgreSQL` database.
 
    The function accepts all parameters that :func:`psycopg2.connect`
-   does plus optional keyword-only parameters *loop*, *minsize*, *maxsize*.
-
-   :param loop: is an optional *event loop* instance,
-    :func:`asyncio.get_event_loop` is used if *loop* is not specified.
+   does plus optional keyword-only parameters *minsize*, *maxsize*.
 
    :param int minsize: minimum size of the *pool*, ``1`` by default.
 
@@ -824,8 +819,8 @@ The basic usage is::
       :classmethod:
 
       The method is a :ref:`coroutine <coroutine>`.
-      Constructor to establish a connection after pool initialization,
-      which was given in :attr:`minsize`
+      Constructor for filling the free pool with connections,
+      the number is controlled by the :attr:`minsize` parameter
 
    .. method:: clear()
 
