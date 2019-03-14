@@ -15,7 +15,6 @@ python:
   python: "3.7"
   dist: xenial
   sudo: required
-
 jobs:
   include:
   - <<: *py3_7-base
@@ -44,6 +43,8 @@ cache:
   directories:
   - $HOME/.cache/pip
 
+before_cache:
+- rm -f $HOME/.cache/pip/log/debug.log
 
 after_script:
 - codecov
