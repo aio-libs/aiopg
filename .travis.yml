@@ -32,6 +32,10 @@ script:
 - make cov-ci
 - python setup.py check -rms
 
+matrix:
+  allow_failures:
+  - python: "nightly"
+
 env:
   global:
   - PYTHON=python
