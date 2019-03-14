@@ -93,12 +93,6 @@ def pytest_pyfunc_call(pyfuncitem):
         return True
 
 
-def pytest_ignore_collect(path, config):
-    if 'pep492' in str(path):
-        if sys.version_info < (3, 5, 0):
-            return True
-
-
 @pytest.fixture(scope='session')
 def session_id():
     '''Unique session identifier, random string.'''
@@ -216,9 +210,6 @@ def create_pool(pg_params, loop):
 
     async def go(**kwargs):
         nonlocal pool
-        if pool:
-            return pool
-
         params = pg_params.copy()
         params.update(kwargs)
         pool = await aiopg.create_pool(**params)
