@@ -57,7 +57,7 @@ extensions = ['sphinx.ext.viewcode',
 
 intersphinx_mapping = {
     'python': ('http://docs.python.org/3', None),
-    'sqlalchemy': ('http://docs.sqlalchemy.org/en/rel_0_9/', None),
+    'sqlalchemy': ('http://docs.sqlalchemy.org/en/latest', None),
     'psycopg2-binary': ('http://initd.org/psycopg/docs/', None),
 }
 

@@ -7,6 +7,7 @@ from .connection import connect, Connection, TIMEOUT as DEFAULT_TIMEOUT
 from .cursor import Cursor
 from .pool import create_pool, Pool
 from .transaction import IsolationLevel, Transaction
+from .utils import get_running_loop
 
 warnings.filterwarnings(
     'always', '.*',
@@ -15,9 +16,9 @@ warnings.filterwarnings(
     append=False
 )
 
-__all__ = ('connect', 'create_pool', 'Connection', 'Cursor', 'Pool',
-           'version', 'version_info', 'DEFAULT_TIMEOUT', 'IsolationLevel',
-           'Transaction')
+__all__ = ('connect', 'create_pool', 'get_running_loop',
+           'Connection', 'Cursor', 'Pool', 'version', 'version_info',
+           'DEFAULT_TIMEOUT', 'IsolationLevel', 'Transaction')
 
 __version__ = '0.16.0'
 
@@ -54,4 +55,4 @@ version_info = _parse_version(__version__)
 
 # make pyflakes happy
 (connect, create_pool, Connection, Cursor, Pool, DEFAULT_TIMEOUT,
- IsolationLevel, Transaction)
+ IsolationLevel, Transaction, get_running_loop)

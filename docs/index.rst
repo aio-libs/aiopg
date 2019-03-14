@@ -30,13 +30,13 @@ Current version is |release|.
 .. _asyncio: http://docs.python.org/3.4/library/asyncio.html
 
 .. warning::
-    1. **aiopg** from version **1.0.0** only supports **python >= 3.5.2**.
-    Motivation and discussion can be found here https://github.com/aio-libs/aiopg/pull/517
+    1. Only supports ``python >= 3.5.2``
 
-    2. It is also important to pay attention to this. We the deleted obsolete non-asynchronous cursor iteration.
-    You can see this in the discussion https://github.com/aio-libs/aiopg/pull/534#issuecomment-458501461
+    2. Only support syntax ``async/await``
 
-    3. One connection, one cursor or forced close, detailed description by link :ref:`aiopg-core-cursor`
+    3. :ref:`aiopg-one-cursor`
+
+    4. :ref:`aiopg-run-loop`
 
 
 Features
@@ -144,18 +144,22 @@ Installation
 
    You can use global environment or you use like to use virtual environments
    (:term:`virtualenvwrapper`, :term:`virtualenv` or :term:`venv`) you
-   probably have to install :term:`libpq` development package::
+   probably have to install :term:`libpq` development package
 
-      $ sudo apt-get install libpq-dev
+   .. code-block:: shell
+
+        $ sudo apt-get install libpq-dev
 
 Also you probably want to use :mod:`aiopg.sa`.
 
 .. _aiozmq-install-sqlalchemy:
 
 :mod:`aiopg.sa` module is **optional** and requires
-:term:`sqlalchemy`. You can install *sqlalchemy* by running::
+:term:`sqlalchemy`. You can install *sqlalchemy* by running
 
-  pip3 install aiopg[sa]
+.. code-block:: shell
+
+    $ pip3 install aiopg[sa]
 
 Source code
 -----------
@@ -202,7 +206,7 @@ Contents:
    examples
    contributing
    glossary
-   team
+   misc
 
 Indices and tables
 ==================

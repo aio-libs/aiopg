@@ -128,6 +128,16 @@ Example::
 
       The readonly property that returns ``True`` if connections is closed.
 
+   .. method:: free_cursor()
+
+      Call method :meth:`Cursor.closed`
+      for current instance :class:`Connection`
+
+   .. attribute:: closed_cursor
+
+      Return attribute :attr:`Cursor.closed`
+      for current instance :class:`Connection`.
+
    .. attribute:: echo
 
       Return *echo mode* status. Log all executed queries to logger

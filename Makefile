@@ -1,7 +1,7 @@
 # Some simple testing tasks (sorry, UNIX only).
 
 doc:
-	cd docs && make html
+	cd docs && rm -rf _build/html && make html
 	@echo "open file://`pwd`/docs/_build/html/index.html"
 
 isort:

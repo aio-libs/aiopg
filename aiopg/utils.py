@@ -27,7 +27,7 @@ def get_running_loop(is_warn: bool = False) -> asyncio.AbstractEventLoop:
 
     if is_warn:
         warnings.warn(
-            'aiopg always uses "asyncio.get_running_loop", '
+            'aiopg always uses "aiopg.get_running_loop", '
             'look the documentation.',
             DeprecationWarning,
             stacklevel=3
@@ -35,7 +35,7 @@ def get_running_loop(is_warn: bool = False) -> asyncio.AbstractEventLoop:
 
         if loop.get_debug():
             logger.warning(
-                'aiopg always uses "asyncio.get_running_loop", '
+                'aiopg always uses "aiopg.get_running_loop", '
                 'look the documentation.',
                 exc_info=True
             )

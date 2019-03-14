@@ -1,7 +1,7 @@
 import os
 import re
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 install_requires = ['psycopg2-binary>=2.7.0']
 extras_require = {'sa': ['sqlalchemy[postgresql_psycopg2binary]>=1.1']}
@@ -10,6 +10,9 @@ extras_require = {'sa': ['sqlalchemy[postgresql_psycopg2binary]>=1.1']}
 def read(f):
     return open(os.path.join(os.path.dirname(__file__), f)).read().strip()
 
+def get_maintainers(path='MAINTAINERS.txt'):
+    with open(os.path.join(os.path.dirname(__file__), path)) as f:
+        return ', '.join(x.strip().strip('*').strip() for x in f.readlines())
 
 def read_version():
     regexp = re.compile(r"^__version__\W*=\W*'([\d.abrc]+)'")
@@ -27,7 +30,7 @@ classifiers = [
     'License :: OSI Approved :: BSD License',
     'Intended Audience :: Developers',
     'Programming Language :: Python :: 3',
-    'Programming Language :: Python :: 3.4',
+    'Programming Language :: Python :: 3 :: Only',
     'Programming Language :: Python :: 3.5',
     'Programming Language :: Python :: 3.6',
     'Programming Language :: Python :: 3.7',
@@ -35,7 +38,7 @@ classifiers = [
     'Operating System :: MacOS :: MacOS X',
     'Operating System :: Microsoft :: Windows',
     'Environment :: Web Environment',
-    'Development Status :: 4 - Beta',
+    'Development Status :: 5 - Production/Stable',
     'Topic :: Database',
     'Topic :: Database :: Front-Ends',
     'Framework :: AsyncIO',
@@ -47,7 +50,7 @@ setup(
     description='Postgres integration with asyncio.',
     long_description='\n\n'.join((read('README.rst'), read('CHANGES.txt'))),
     classifiers=classifiers,
-    platforms=['POSIX'],
+    platforms=['macOS', 'POSIX', 'Windows'],
     author='Andrew Svetlov',
     python_requires='>=3.5.3',
     project_urls={
@@ -59,12 +62,12 @@ setup(
         'GitHub: repo': 'https://github.com/aio-libs/aiopg',
     },
     author_email='andrew.svetlov@gmail.com',
-    maintainer=', '.join(read('MAINTAINERS.txt').split()),
+    maintainer=get_maintainers(),
     maintainer_email='virmir49@gmail.com',
     url='https://aiopg.readthedocs.io',
     download_url='https://pypi.python.org/pypi/aiopg',
     license='BSD',
-    packages=['aiopg', 'aiopg.sa'],
+    packages=find_packages(),
     install_requires=install_requires,
     extras_require=extras_require,
     include_package_data=True

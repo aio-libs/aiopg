@@ -17,7 +17,9 @@ strings too annoying.
 
 Fortunately we can use excellent :ref:`core_toplevel` as **SQL query builder**.
 
-Example::
+Example
+
+.. code-block:: py3
 
     import asyncio
     from aiopg.sa import create_engine
@@ -198,6 +200,7 @@ Engine
       .. warning:: The method is not a :ref:`coroutine <coroutine>`.
 
 
+.. _aiopg-sa-connection:
 
 Connection
 ----------
