@@ -31,6 +31,7 @@ def unused_port():
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(('127.0.0.1', 0))
             return s.getsockname()[1]
+
     return f
 
 
@@ -189,7 +190,6 @@ def pg_params(pg_server):
 
 @pytest.fixture
 def make_connection(loop, pg_params):
-
     conns = []
 
     async def go(**kwargs):
@@ -211,11 +211,14 @@ def make_connection(loop, pg_params):
 
 
 @pytest.fixture
-def create_pool(pg_params):
+def create_pool(pg_params, loop):
     pool = None
 
     async def go(**kwargs):
         nonlocal pool
+        if pool:
+            return pool
+
         params = pg_params.copy()
         params.update(kwargs)
         pool = await aiopg.create_pool(**params)
@@ -225,6 +228,7 @@ def create_pool(pg_params):
 
     if pool is not None:
         pool.terminate()
+        loop.run_until_complete(pool.wait_closed())
 
 
 @pytest.fixture

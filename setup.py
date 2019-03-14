@@ -10,9 +10,11 @@ extras_require = {'sa': ['sqlalchemy[postgresql_psycopg2binary]>=1.1']}
 def read(f):
     return open(os.path.join(os.path.dirname(__file__), f)).read().strip()
 
+
 def get_maintainers(path='MAINTAINERS.txt'):
     with open(os.path.join(os.path.dirname(__file__), path)) as f:
         return ', '.join(x.strip().strip('*').strip() for x in f.readlines())
+
 
 def read_version():
     regexp = re.compile(r"^__version__\W*=\W*'([\d.abrc]+)'")
@@ -24,6 +26,10 @@ def read_version():
                 return match.group(1)
         else:
             raise RuntimeError('Cannot find version in aiopg/__init__.py')
+
+
+def read_changelog(path='CHANGES.txt'):
+    return 'Changelog\n---------\n\n{}'.format(read(path))
 
 
 classifiers = [
@@ -48,7 +54,7 @@ setup(
     name='aiopg',
     version=read_version(),
     description='Postgres integration with asyncio.',
-    long_description='\n\n'.join((read('README.rst'), read('CHANGES.txt'))),
+    long_description='\n\n'.join((read('README.rst'), read_changelog())),
     classifiers=classifiers,
     platforms=['macOS', 'POSIX', 'Windows'],
     author='Andrew Svetlov',

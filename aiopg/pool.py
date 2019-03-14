@@ -278,6 +278,15 @@ class Pool(asyncio.AbstractServer):
         conn = yield from self._acquire().__await__()
         return _PoolConnectionContextManager(self, conn)
 
+    def __enter__(self):
+        raise RuntimeError(
+            '"await" should be used as context manager expression')
+
+    def __exit__(self, *args):
+        # This must exist because __enter__ exists, even though that
+        # always raises; that's how the with-statement works.
+        pass  # pragma: nocover
+
     async def __aenter__(self):
         return self
 

@@ -73,9 +73,6 @@ Example of SQLAlchemy optional integration
    loop = asyncio.get_event_loop()
    loop.run_until_complete(go())
 
-For ``yield from`` based code, see the ``./examples`` folder, files with
-``old_style`` part in their names.
-
 .. _PostgreSQL: http://www.postgresql.org/
 .. _asyncio: http://docs.python.org/3.4/library/asyncio.html
 
@@ -83,5 +80,6 @@ Please use::
 
    $ make test
 
-for executing the project's unittests.  See CONTRIBUTING.rst for details
+for executing the project's unittests.
+See https://aiopg.readthedocs.io/en/stable/contributing.html for details
 on how to set up your environment to run the tests.

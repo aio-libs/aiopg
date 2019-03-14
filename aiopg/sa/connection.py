@@ -133,11 +133,7 @@ class SAConnection:
     @property
     def closed(self):
         """The readonly property that returns True if connections is closed."""
-        return self._connection is None or self._connection.closed
-
-    @property
-    def info(self):
-        return self._connection.info
+        return self.connection is None or self.connection.closed
 
     @property
     def connection(self):
@@ -200,14 +196,14 @@ class SAConnection:
         if deferrable:
             stmt += ' DEFERRABLE'
 
-        cur = await self._connection.cursor()
+        cur = await self._get_cursor()
         try:
             await cur.execute(stmt)
         finally:
             cur.close()
 
     async def _commit_impl(self):
-        cur = await self._connection.cursor()
+        cur = await self._get_cursor()
         try:
             await cur.execute('COMMIT')
         finally:
@@ -215,7 +211,7 @@ class SAConnection:
             self._transaction = None
 
     async def _rollback_impl(self):
-        cur = await self._connection.cursor()
+        cur = await self._get_cursor()
         try:
             await cur.execute('ROLLBACK')
         finally:
@@ -249,7 +245,7 @@ class SAConnection:
         self._savepoint_seq += 1
         name = 'aiopg_sa_savepoint_%s' % self._savepoint_seq
 
-        cur = await self._connection.cursor()
+        cur = await self._get_cursor()
         try:
             await cur.execute('SAVEPOINT ' + name)
             return name
@@ -257,7 +253,7 @@ class SAConnection:
             cur.close()
 
     async def _rollback_to_savepoint_impl(self, name, parent):
-        cur = await self._connection.cursor()
+        cur = await self._get_cursor()
         try:
             await cur.execute('ROLLBACK TO SAVEPOINT ' + name)
         finally:
@@ -265,7 +261,7 @@ class SAConnection:
         self._transaction = parent
 
     async def _release_savepoint_impl(self, name, parent):
-        cur = await self._connection.cursor()
+        cur = await self._get_cursor()
         try:
             await cur.execute('RELEASE SAVEPOINT ' + name)
         finally:
@@ -336,7 +332,7 @@ class SAConnection:
         After .close() is called, the SAConnection is permanently in a
         closed state, and will allow no further operations.
         """
-        if self._connection is None:
+        if self.connection is None:
             return
 
         if self._transaction is not None:

@@ -71,8 +71,7 @@ async def test_release_closed(create_pool):
 async def test_bad_context_manager_usage(create_pool):
     pool = await create_pool()
     with pytest.raises(RuntimeError):
-        with pool:
-            pass
+        with pool: pass  # noqa
 
 
 async def test_context_manager(create_pool):
@@ -246,7 +245,7 @@ async def test_release_with_invalid_status_wait_release(create_pool):
     )
 
 
-async def test__fill_free(create_pool, loop):
+async def test_fill_free(create_pool, loop):
     pool = await create_pool(minsize=1)
     with (await pool):
         assert 0 == pool.freesize
@@ -513,7 +512,6 @@ async def test_connection_in_good_state_after_timeout_in_transaction(
 
 async def test_drop_connection_if_timedout(make_connection,
                                            create_pool, loop):
-
     async def _kill_connections():
         # Drop all connections on server
         conn = await make_connection()

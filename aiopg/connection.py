@@ -299,7 +299,7 @@ class Connection:
         if not self._cursor_instance:
             return True
 
-        return self._cursor_instance.closed
+        return bool(self._cursor_instance.closed)
 
     def free_cursor(self):
         if not self.closed_cursor:
