@@ -248,7 +248,7 @@ class _ConnectionContextManager:
 
     def __exit__(self, *args):
         try:
-            self._conn._close_week_cursor()
+            self._conn._close_weak_list_cursor()
             self._engine.release(self._conn)
         finally:
             self._conn = None

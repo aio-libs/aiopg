@@ -18,7 +18,7 @@ class SAConnection:
         self._savepoint_seq = 0
         self._engine = engine
         self._dialect = engine.dialect
-        self._week_cursor = weakref.WeakSet()
+        self._weak_list_cursor = weakref.WeakSet()
 
     def execute(self, query, *multiparams, **params):
         """Executes a SQL query with optional parameters.
@@ -62,7 +62,7 @@ class SAConnection:
 
     async def _execute(self, query, *multiparams, **params):
         cursor = await self._connection.cursor()
-        self._week_cursor.add(cursor)
+        self._weak_list_cursor.add(cursor)
 
         dp = _distill_params(multiparams, params)
         if len(dp) > 1:
@@ -315,10 +315,10 @@ class SAConnection:
         """Return True if a transaction is in progress."""
         return self._transaction is not None and self._transaction.is_active
 
-    def _close_week_cursor(self):
-        for cursor in self._week_cursor:
+    def _close_weak_list_cursor(self):
+        for cursor in self._weak_list_cursor:
             cursor.close()
-        self._week_cursor.clear()
+        self._weak_list_cursor.clear()
 
     async def close(self):
         """Close this SAConnection.
@@ -342,7 +342,7 @@ class SAConnection:
             self._transaction = None
         # don't close underlying connection, it can be reused by pool
         # conn.close()
-        self._close_week_cursor()
+        self._close_weak_list_cursor()
         self._engine.release(self)
         self._connection = None
         self._engine = None
