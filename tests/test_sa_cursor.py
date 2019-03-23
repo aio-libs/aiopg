@@ -1,7 +1,7 @@
-import warnings
-
 import pytest
 import sqlalchemy as sa
+
+from aiopg.sa.engine import get_dialect
 
 meta = sa.MetaData()
 tbl = sa.Table(
@@ -41,54 +41,38 @@ async def test_insert(connect):
     assert 5 == len(await (await connect.execute(tbl.select())).fetchall())
 
 
-async def test_insert_make_engine(make_engine, connect):
-    engine = await make_engine()
+async def test_dialect_returning(make_engine, connect):
+    dialect = get_dialect()
+    dialect.implicit_returning = False
+
+    engine = await make_engine(dialect=dialect)
     async with engine.acquire() as conn:
-        assert conn._cursor is None
+        res = await conn.execute(tbl.insert().values(id='1', name='test'))
+        assert res.closed
 
-        await conn.execute(tbl.insert().values(id='test-4', name='test_name'))
-        assert conn._cursor.closed is True
+        res = await conn.execute(
+            tbl.insert().values(id='2', name='test').returning(tbl.c.id)
+        )
 
-        resp = await conn.execute(tbl.select())
-        assert resp.cursor.closed is False
-        assert conn._cursor.closed is False
+        assert not res.closed
 
-        await conn.execute(tbl.insert().values(id='test-5', name='test_name'))
-        assert conn._cursor.closed is True
+        assert await res.scalar() == '2'
 
-        resp = await conn.execute(tbl.select())
-        assert resp.cursor.closed is False
-
-    assert conn._cursor.closed is True
-
-    assert conn.closed == 0
-
-    assert 5 == len(await (await connect.execute(tbl.select())).fetchall())
+        assert res.closed
 
 
-async def test_two_cursor_create_context_manager(make_connection):
-    conn = await make_connection()
+async def test_two_cursor_create_context_manager(make_engine, connect):
+    engine = await make_engine(maxsize=1)
 
-    error_ms = (
-        'You can only have one cursor per connection. '
-        'The cursor for connection will be closed forcibly'
-        ' {!r}.'
-    )
+    async with engine.acquire() as conn:
+        r1 = await conn.execute(tbl.insert().values(id='1', name='test'))
 
-    with warnings.catch_warnings(record=True) as wars:
-        warnings.simplefilter("always")
-        async with conn.cursor() as cur:
-            error_ms = error_ms.format(conn)
-            assert cur.closed is False
+        r2 = await conn.execute(tbl.select())
+        await r2.fetchone()
+        assert not r2.closed
 
-            async with conn.cursor() as cur2:
-                assert cur.closed is True
-                assert cur2.closed is False
+        r3 = await conn.execute(tbl.insert().values(id='3', name='test'))
 
-            assert len(wars) == 1
-            war = wars.pop()
-            assert issubclass(war.category, ResourceWarning)
-            assert str(war.message) == error_ms
-            assert cur2.closed is True
-
-    assert cur.closed is True
+    assert r1.closed
+    assert r2.closed
+    assert r3.closed

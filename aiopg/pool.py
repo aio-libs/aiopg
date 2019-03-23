@@ -255,7 +255,6 @@ class Pool(asyncio.AbstractServer):
             if self._closing:
                 conn.close()
             else:
-                conn.free_cursor()
                 self._free.append(conn)
             fut = ensure_future(self._wakeup(), loop=self._loop)
         return fut

@@ -120,7 +120,6 @@ class Connection:
         self._cancelling = False
         self._cancellation_waiter = None
         self._echo = echo
-        self._cursor_instance = None
         self._notifies = asyncio.Queue(loop=loop)
         self._weakref = weakref.ref(self)
         self._loop.add_reader(self._fileno, self._ready, self._weakref)
@@ -284,13 +283,6 @@ class Connection:
     async def _cursor(self, name=None, cursor_factory=None,
                       scrollable=None, withhold=False, timeout=None):
 
-        if not self.closed_cursor:
-            warnings.warn(('You can only have one cursor per connection. '
-                           'The cursor for connection will be closed forcibly'
-                           ' {!r}.').format(self), ResourceWarning)
-
-        self.free_cursor()
-
         if timeout is None:
             timeout = self._timeout
 
@@ -298,8 +290,8 @@ class Connection:
                                        cursor_factory=cursor_factory,
                                        scrollable=scrollable,
                                        withhold=withhold)
-        self._cursor_instance = Cursor(self, impl, timeout, self._echo)
-        return self._cursor_instance
+
+        return Cursor(self, impl, timeout, self._echo)
 
     async def _cursor_impl(self, name=None, cursor_factory=None,
                            scrollable=None, withhold=False):
@@ -322,22 +314,10 @@ class Connection:
                 self._loop.remove_writer(self._fileno)
 
         self._conn.close()
-        self.free_cursor()
 
         if self._waiter is not None and not self._waiter.done():
             self._waiter.set_exception(
                 psycopg2.OperationalError("Connection closed"))
-
-    @property
-    def closed_cursor(self):
-        if not self._cursor_instance:
-            return True
-
-        return self._cursor_instance.closed
-
-    def free_cursor(self):
-        if not self.closed_cursor:
-            self._cursor_instance.close()
 
     def close(self):
         self._close()
@@ -524,7 +504,6 @@ class Connection:
             'isexecuting={isexecuting}, '
             'closed={closed}, '
             'echo={echo}, '
-            'cursor={cursor}'
             '>'
         )
         return msg.format(
@@ -532,8 +511,7 @@ class Connection:
             class_name=type(self).__name__,
             echo=self.echo,
             isexecuting=self._isexecuting(),
-            closed=bool(self.closed),
-            cursor=repr(self._cursor_instance)
+            closed=bool(self.closed)
         )
 
     def __del__(self):

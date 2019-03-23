@@ -233,7 +233,6 @@ class ResultProxy:
 
     def __init__(self, connection, cursor, dialect, result_map=None):
         self._dialect = dialect
-        self._closed = False
         self._result_map = result_map
         self._cursor = cursor
         self._connection = connection
@@ -305,7 +304,10 @@ class ResultProxy:
 
     @property
     def closed(self):
-        return self._closed
+        if self.cursor:
+            return self.cursor.closed
+
+        return True
 
     def close(self):
         """Close this ResultProxy.
@@ -325,8 +327,7 @@ class ResultProxy:
         * cursor.description is None.
         """
 
-        if not self._closed:
-            self._closed = True
+        if not self.closed:
             self._cursor.close()
             # allow consistent errors
             self._cursor = None

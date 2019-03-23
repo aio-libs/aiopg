@@ -2,7 +2,6 @@ import asyncio
 import json
 
 import aiopg
-
 from .connection import SAConnection
 from .exc import InvalidRequestError
 from ..connection import TIMEOUT
@@ -212,7 +211,15 @@ class Engine:
 
 
 _EngineContextManager = _PoolContextManager
-_EngineAcquireContextManager = _PoolAcquireContextManager
+
+
+class _EngineAcquireContextManager(_PoolAcquireContextManager):
+    __slots__ = ('_coro', '_obj', '_pool')
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await self._obj.close()
+        self._pool = None
+        self._obj = None
 
 
 class _ConnectionContextManager:
@@ -233,15 +240,16 @@ class _ConnectionContextManager:
     __slots__ = ('_engine', '_conn')
 
     def __init__(self, engine, conn):
-        self._engine = engine
         self._conn = conn
+        self._engine = engine
 
     def __enter__(self):
         return self._conn
 
     def __exit__(self, *args):
         try:
+            self._conn._close_week_cursor()
             self._engine.release(self._conn)
         finally:
-            self._engine = None
             self._conn = None
+            self._engine = None
