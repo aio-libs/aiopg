@@ -548,7 +548,8 @@ async def test_close_running_cursor(create_pool):
             await cur.execute('SELECT pg_sleep(10)')
 
 
-async def test_pool_on_connect(create_pool):
+@pytest.mark.parametrize('pool_minsize', [0, 1])
+async def test_pool_on_connect(create_pool, pool_minsize):
     cb_called_times = 0
 
     async def cb(connection):
@@ -560,6 +561,7 @@ async def test_pool_on_connect(create_pool):
             cb_called_times += 1
 
     pool = await create_pool(
+        minsize=pool_minsize,
         maxsize=1,
         on_connect=cb
     )
