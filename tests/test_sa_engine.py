@@ -1,4 +1,5 @@
 import asyncio
+import psycopg2
 from aiopg.connection import TIMEOUT
 from psycopg2.extensions import parse_dsn
 
@@ -78,10 +79,10 @@ def test_not_context_manager(engine):
 async def test_release_transacted(engine):
     conn = await engine.acquire()
     tr = await conn.begin()
-    with pytest.raises(sa.InvalidRequestError):
+    with pytest.warns(ResourceWarning, match='Invalid transaction status'):
         engine.release(conn)
     del tr
-    await conn.close()
+    assert conn.closed
 
 
 def test_timeout(engine):
@@ -145,3 +146,22 @@ async def test_terminate_with_acquired_connections(make_engine):
     await engine.wait_closed()
 
     assert conn.closed
+
+
+async def test_release_broken_connection(make_engine):
+    engine = await make_engine()
+    # FIXME: it is better to see psycopg2.OperationalError("server closed
+    #  the connection unexpectedly ...") here instead of this InterfaceError
+    with pytest.raises(psycopg2.InterfaceError,
+                       match='connection already closed'):
+        async with engine.acquire() as conn:
+            async with conn.begin():
+                await conn.execute('select 1;')
+                psycopg2.connect(engine.dsn).cursor().execute("""
+                SELECT pg_terminate_backend(pg_stat_activity.pid)
+                FROM pg_stat_activity
+                WHERE pg_stat_activity.datname = 'postgres'
+                  AND pid <> pg_backend_pid();
+                """)
+                await conn.execute('select 1;')  # should fail
+    assert engine.size == 0  # connection successfully released

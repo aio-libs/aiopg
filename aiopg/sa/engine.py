@@ -4,7 +4,6 @@ import json
 import aiopg
 
 from .connection import SAConnection
-from .exc import InvalidRequestError
 from ..connection import TIMEOUT
 from ..utils import _PoolContextManager, _PoolAcquireContextManager
 
@@ -171,9 +170,6 @@ class Engine:
 
     def release(self, conn):
         """Revert back connection to pool."""
-        if conn.in_transaction:
-            raise InvalidRequestError("Cannot release a connection with "
-                                      "not finished transaction")
         raw = conn.connection
         fut = self._pool.release(raw)
         return fut
