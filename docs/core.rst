@@ -289,7 +289,7 @@ Example::
 
    .. attribute:: notifies
 
-      An :class:`asyncio.Queue` instance for received notifications.
+      An instance of an :class:`asyncio.Queue` subclass for received notifications.
 
       .. seealso:: :ref:`aiopg-core-notifications`
 
@@ -982,6 +982,12 @@ from Python code simply executing a NOTIFY_ command in an
 Receiving part should establish listening on notification channel by
 `LISTEN`_ call and wait notification events from
 :attr:`Connection.notifies` queue.
+
+.. note::
+
+  calling `await connection.notifies.get()` may raise a psycopg2 exception
+  if the underlying connection gets disconnected while you're waiting for
+  notifications.
 
 There is usage example:
 

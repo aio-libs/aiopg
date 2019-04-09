@@ -30,7 +30,12 @@ import psycopg2.extensions
 import psycopg2.extras
 
 from .log import logger
-from .utils import _ContextManager, create_completed_future, get_running_loop
+from .utils import (
+    ClosableQueue,
+    _ContextManager,
+    create_completed_future,
+    get_running_loop,
+)
 
 TIMEOUT = 60.0
 
@@ -762,6 +767,7 @@ class Connection:
         self._writing = False
         self._echo = echo
         self._notifies = asyncio.Queue()  # type: ignore
+        self._notifies_proxy = ClosableQueue(self._notifies)
         self._weakref = weakref.ref(self)
         self._loop.add_reader(
             self._fileno, self._ready, self._weakref  # type: ignore
@@ -806,6 +812,7 @@ class Connection:
                     # chain exception otherwise
                     exc2.__cause__ = exc
                     exc = exc2
+            self.notifies.close(exc)
             if waiter is not None and not waiter.done():
                 waiter.set_exception(exc)
         else:
@@ -1182,9 +1189,9 @@ class Connection:
             self._loop.call_exception_handler(context)
 
     @property
-    def notifies(self) -> asyncio.Queue:  # type: ignore
-        """Return notification queue."""
-        return self._notifies
+    def notifies(self) -> ClosableQueue:
+        """Return notification queue (an asyncio.Queue -like object)."""
+        return self._notifies_proxy
 
     async def _get_oids(self) -> Tuple[Any, Any]:
         cursor = await self.cursor()
