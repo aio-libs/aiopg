@@ -145,3 +145,8 @@ async def test_terminate_with_acquired_connections(make_engine):
     await engine.wait_closed()
 
     assert conn.closed
+
+
+async def test_clear(engine):
+    await engine.clear()
+    assert 0 == engine.freesize

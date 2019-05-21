@@ -144,6 +144,12 @@ Engine
       A read-only float representing default timeout for operations
       for connections from pool.
 
+   .. comethod:: clear()
+
+      A :ref:`coroutine <coroutine>` that closes all *free* connections
+      in the pool. At next connection acquiring at least :attr:`minsize` of
+      them will be recreated.
+
    .. method:: close()
 
       Close engine.

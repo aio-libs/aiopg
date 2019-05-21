@@ -139,6 +139,10 @@ class Engine:
     def closed(self):
         return self._pool.closed
 
+    async def clear(self):
+        """Close all free connections in the engine pool."""
+        await self._pool.clear()
+
     def close(self):
         """Close engine.
 
