@@ -2,7 +2,7 @@ coverage==4.5.3
 docker==4.0.1
 flake8==3.7.7
 -e .[sa]
-sphinx==1.8.1
+sphinx==2.1.0
 tox==3.5.2
 pytest==3.9.1
 pytest-cov==2.6.0
