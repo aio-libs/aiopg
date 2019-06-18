@@ -248,7 +248,7 @@ Connection
 
       Result value for ``SELECT`` statements may be iterated immediately::
 
-           async for row conn.execute(tbl.select()):
+           async for row in conn.execute(tbl.select()):
                print(row.id, row.name, row.surname)
 
       :returns: :class:`ResultProxy` instance with results of SQL
