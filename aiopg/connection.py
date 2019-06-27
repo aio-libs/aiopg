@@ -28,6 +28,9 @@ TIMEOUT = 60.0
 # to OSError.errno EBADF
 WSAENOTSOCK = 10038
 
+# Connection status from psycopg2 (psycopg2/psycopg/connection.h)
+CONN_STATUS_CONNECTING = 20
+
 
 async def _enable_hstore(conn):
     cur = await conn.cursor()
@@ -182,10 +185,20 @@ class Connection:
                 if self._writing:
                     self._loop.remove_writer(self._fileno)
                     self._writing = False
+                elif self._conn.status == CONN_STATUS_CONNECTING:
+                    self._loop.remove_reader(self._fileno)
+                    self._fileno = self._conn.fileno()
+                    self._loop.add_reader(self._fileno, self._ready,
+                                          self._weakref)
             elif state == POLL_WRITE:
                 if not self._writing:
                     self._loop.add_writer(self._fileno, self._ready, weak_self)
                     self._writing = True
+                elif self._conn.status == CONN_STATUS_CONNECTING:
+                    self._loop.remove_reader(self._fileno)
+                    self._fileno = self._conn.fileno()
+                    self._loop.add_reader(self._fileno, self._ready,
+                                          self._weakref)
             elif state == POLL_ERROR:
                 self._fatal_error("Fatal error on aiopg connection: "
                                   "POLL_ERROR from underlying .poll() call")

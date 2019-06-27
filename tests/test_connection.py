@@ -34,6 +34,30 @@ async def test_connect(connect):
     assert not conn.echo
 
 
+class TestMultipleHostsWithUnavailable:
+
+    @pytest.fixture
+    def pg_params(self, pg_params, pg_server, unused_port):
+        pg_params = pg_params.copy()
+        host = pg_params['host']
+        port = pg_params['port']
+
+        extra_host = "127.0.0.1"
+        extra_port = unused_port()
+
+        pg_params['host'] = f'{extra_host},{host}'
+        pg_params['port'] = f'{extra_port},{port}'
+        return pg_params
+
+    async def test_connect(self, connect):
+        # We should skip unavailable replica
+        conn = await connect()
+        assert isinstance(conn, Connection)
+        assert not conn._writing
+        assert conn._conn is conn.raw
+        assert not conn.echo
+
+
 async def test_simple_select(connect):
     conn = await connect()
     cur = await conn.cursor()
