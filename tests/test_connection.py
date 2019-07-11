@@ -45,8 +45,8 @@ class TestMultipleHostsWithUnavailable:
         extra_host = "127.0.0.1"
         extra_port = unused_port()
 
-        pg_params['host'] = f'{extra_host},{host}'
-        pg_params['port'] = f'{extra_port},{port}'
+        pg_params['host'] = '{extra_host},{host}'.format(extra_host=extra_host, host=host)
+        pg_params['port'] = '{extra_port},{port}'.format(extra_port=extra_port, port=port)
         return pg_params
 
     async def test_connect(self, connect):
@@ -77,8 +77,8 @@ class TestMultipleHostsWithStuckConnection:
         extra_host = "127.0.0.1"
         extra_port = stuck_server_port
 
-        pg_params['host'] = f'{extra_host},{host}'
-        pg_params['port'] = f'{extra_port},{port}'
+        pg_params['host'] = '{extra_host},{host}'.format(extra_host=extra_host, host=host)
+        pg_params['port'] = '{extra_port},{port}'.format(extra_port=extra_port, port=port)
         pg_params['connect_timeout'] = 1
         pg_params['timeout'] = 3
 
