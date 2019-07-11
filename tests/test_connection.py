@@ -34,6 +34,67 @@ async def test_connect(connect):
     assert not conn.echo
 
 
+class TestMultipleHostsWithUnavailable:
+
+    @pytest.fixture
+    def pg_params(self, pg_params, pg_server, unused_port):
+        pg_params = pg_params.copy()
+        host = pg_params['host']
+        port = pg_params['port']
+
+        extra_host = "127.0.0.1"
+        extra_port = unused_port()
+
+        pg_params['host'] = f'{extra_host},{host}'
+        pg_params['port'] = f'{extra_port},{port}'
+        return pg_params
+
+    async def test_connect(self, connect):
+        # We should skip unavailable replica
+        conn = await connect()
+        assert isinstance(conn, Connection)
+        assert not conn._writing
+        assert conn._conn is conn.raw
+        assert not conn.echo
+
+
+class TestMultipleHostsWithStuckConnection:
+    @pytest.yield_fixture
+    def stuck_server_port(self, unused_port):
+        # creates server which is not responding on SYN
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        port = unused_port()
+        s.bind(('127.0.0.1', port))
+        yield port
+        s.close()
+
+    @pytest.fixture
+    def pg_params(self, pg_params, pg_server, stuck_server_port):
+        pg_params = pg_params.copy()
+        host = pg_params['host']
+        port = pg_params['port']
+
+        extra_host = "127.0.0.1"
+        extra_port = stuck_server_port
+
+        pg_params['host'] = f'{extra_host},{host}'
+        pg_params['port'] = f'{extra_port},{port}'
+        pg_params['connect_timeout'] = 1
+        pg_params['timeout'] = 3
+
+        return pg_params
+
+    @pytest.mark.skipif(sys.platform != "linux",
+                        reason='unstuck works only on linux')
+    async def test_connect(self, connect):
+        # We should skip unavailable replica
+        conn = await connect()
+        assert isinstance(conn, Connection)
+        assert not conn._writing
+        assert conn._conn is conn.raw
+        assert not conn.echo
+
+
 async def test_simple_select(connect):
     conn = await connect()
     cur = await conn.cursor()

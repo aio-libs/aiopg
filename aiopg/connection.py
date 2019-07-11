@@ -3,10 +3,12 @@ import contextlib
 import errno
 import platform
 import select
+import socket
 import sys
 import traceback
 import warnings
 import weakref
+import ctypes
 
 import psycopg2
 from psycopg2 import extras
@@ -27,6 +29,17 @@ TIMEOUT = 60.0
 # Windows specific error code, not in errno for some reason, and doesnt map
 # to OSError.errno EBADF
 WSAENOTSOCK = 10038
+
+# Connection status from psycopg2 (psycopg2/psycopg/connection.h)
+CONN_STATUS_CONNECTING = 20
+
+# In socket.socket we should know type and family to shutdown socket by fd
+# This function is used for shutdown libpq connection
+# where family and type is unknown
+libc = ctypes.CDLL(None)
+socket_shutdown = libc.shutdown
+socket_shutdown.restypes = ctypes.c_int
+socket_shutdown.argtypes = ctypes.c_int, ctypes.c_int
 
 
 async def _enable_hstore(conn):
@@ -111,6 +124,11 @@ class Connection:
         self._loop = loop
         self._conn = psycopg2.connect(dsn, async_=True, **kwargs)
         self._dsn = self._conn.dsn
+        self._dns_params = self._conn.get_dsn_parameters()
+        self._conn_timeout = self._dns_params.get('connect_timeout')
+        if self._conn_timeout:
+            self._conn_timeout = float(self._conn_timeout)
+
         assert self._conn.isexecuting(), "Is conn an async at all???"
         self._fileno = self._conn.fileno()
         self._timeout = timeout
@@ -124,9 +142,25 @@ class Connection:
         self._notifies = asyncio.Queue(loop=loop)
         self._weakref = weakref.ref(self)
         self._loop.add_reader(self._fileno, self._ready, self._weakref)
+        self._conn_timeout_handler = None
+        if self._conn_timeout:
+            self._conn_timeout_handler = self._loop.call_later(
+                self._conn_timeout, self._shutdown, self._weakref)
 
         if loop.get_debug():
             self._source_traceback = traceback.extract_stack(sys._getframe(1))
+
+    @staticmethod
+    def _shutdown(weak_self):
+        # Make sure that we won't get stuck in a blocking read or write
+        # inside poll, then give libpq a chance to try another host.
+        # If there is an error, we'll get it from poll.
+        self = weak_self()
+
+        if self._conn.status == CONN_STATUS_CONNECTING:
+            socket_shutdown(ctypes.c_int(self._fileno),
+                            ctypes.c_int(socket.SHUT_RDWR))
+            self._ready(self._weakref)
 
     @staticmethod
     def _ready(weak_self):
@@ -172,6 +206,28 @@ class Connection:
                 if waiter is not None and not waiter.done():
                     waiter.set_exception(
                         psycopg2.OperationalError("Connection closed"))
+
+            if self._conn.status == CONN_STATUS_CONNECTING \
+                    and state != POLL_ERROR:
+                # libpq could close and open new connection to the next host
+                old_fileno = self._fileno
+                self._fileno = self._conn.fileno()
+
+                if self._conn_timeout_handler:
+                    self._conn_timeout_handler.cancel()
+                    self._conn_timeout_handler = self._loop.call_later(
+                        self._conn_timeout, self._shutdown, self._weakref)
+
+                with contextlib.suppress(OSError):
+                    # if we are using select selector
+                    self._loop.remove_reader(old_fileno)
+                    if self._writing:
+                        self._loop.remove_writer(old_fileno)
+
+                self._loop.add_reader(self._fileno, self._ready, weak_self)
+                if self._writing:
+                    self._loop.add_writer(self._fileno, self._ready, weak_self)
+
             if state == POLL_OK:
                 if self._writing:
                     self._loop.remove_writer(self._fileno)
