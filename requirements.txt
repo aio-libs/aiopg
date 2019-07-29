@@ -1,6 +1,6 @@
 coverage==4.5.3
 docker==4.0.2
-flake8==3.5.0
+flake8==3.7.8
 -e .[sa]
 sphinx==1.8.1
 tox==3.5.2
