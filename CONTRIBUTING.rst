@@ -26,7 +26,7 @@ For `venv` (for example; put the directory wherever you want):
     $ python3 -m venv ../venv_directory
     $ source ../venv_directory/bin/activate
 
-Just as when doing a normal install, you need the :term:`libpq` library
+Just as when doing a normal install, you need the :term:`libpq` library:
 
 .. code-block:: shell
 
