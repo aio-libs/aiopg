@@ -1,7 +1,10 @@
 # Some simple testing tasks (sorry, UNIX only).
 
-doc:
-	cd docs && rm -rf _build/html && make html
+clean-docs:
+    cd docs && rm -rf _build/html
+
+doc: clean-docs
+	cd docs && make html
 	@echo "open file://`pwd`/docs/_build/html/index.html"
 
 isort:
@@ -52,4 +55,4 @@ clean:
 	rm -rf docs/_build
 	rm -rf .tox
 
-.PHONY: all isort flake test vtest cov clean clean-pip
+.PHONY: all isort flake test vtest cov clean clean-pip clean-docs

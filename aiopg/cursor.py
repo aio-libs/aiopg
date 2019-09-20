@@ -154,7 +154,7 @@ class Cursor:
         else:
             return self._transaction.point()
 
-    async def mogrify(self, operation, parameters=None):
+    def mogrify(self, operation, parameters=None):
         """Return a query string after arguments binding.
 
         The string returned is exactly the one that would be sent to
