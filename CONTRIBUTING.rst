@@ -13,7 +13,7 @@ First clone the git repo:
 
 After that you need to create and activate a virtual environment.  I
 recommend using :term:`virtualenvwrapper` but just :term:`virtualenv` or
-:term:`venv` will also work. For :term:`virtualenvwrapper`
+:term:`venv` will also work. For :term:`virtualenvwrapper`:
 
 .. code-block:: shell
 
