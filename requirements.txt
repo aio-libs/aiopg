@@ -1,5 +1,5 @@
 coverage==4.5.1
-docker==3.5.1
+docker==4.0.2
 flake8==3.5.0
 -e .[sa]
 sphinx==2.2.0
