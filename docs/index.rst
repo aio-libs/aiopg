@@ -30,13 +30,15 @@ Current version is |release|.
 .. _asyncio: http://docs.python.org/3.4/library/asyncio.html
 
 .. warning::
-    1. Only supports ``python >= 3.5.2``
+    1. Removing await the before :meth:`Cursor.mogrify` function
 
-    2. Only support syntax ``async/await``
+    2. Only supports ``python >= 3.5.2``
 
-    3. :ref:`aiopg-one-cursor`
+    3. Only support syntax ``async/await``
 
-    4. :ref:`aiopg-run-loop`
+    4. :ref:`aiopg-one-cursor`
+
+    5. :ref:`aiopg-run-loop`
 
 
 Features

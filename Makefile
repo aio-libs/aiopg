@@ -1,7 +1,7 @@
 # Some simple testing tasks (sorry, UNIX only).
 
 clean-docs:
-    cd docs && rm -rf _build/html
+	cd docs && rm -rf _build/html
 
 doc: clean-docs
 	cd docs && make html

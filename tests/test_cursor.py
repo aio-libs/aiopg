@@ -122,8 +122,8 @@ async def test_executemany(cursor):
         await cursor.executemany('SELECT %s', ['1', '2'])
 
 
-async def test_mogrify(cursor):
-    ret = await cursor.mogrify('SELECT %s', ['1'])
+def test_mogrify(cursor):
+    ret = cursor.mogrify('SELECT %s', ['1'])
     assert b"SELECT '1'" == ret
 
 

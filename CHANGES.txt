@@ -1,3 +1,7 @@
+1.0.0 (2019-09-20)
+* Removal of an asynchronous call in favor of issues # 550
+* Big editing of documentation and minor bugs #534
+
 0.16.0 (2019-01-25)
 ^^^^^^^^^^^^^^^^^^^
 
