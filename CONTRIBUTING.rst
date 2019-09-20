@@ -63,7 +63,7 @@ the *aiopg* unit tests.
 
 
 When you are working on solving an issue you will probably want to run
-some specific test, not the whole suite
+some specific test, not the whole suite:
 
 .. code-block:: shell
 
