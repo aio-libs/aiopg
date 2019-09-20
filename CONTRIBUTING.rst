@@ -19,7 +19,7 @@ recommend using :term:`virtualenvwrapper` but just :term:`virtualenv` or
 
     $ mkvirtualenv aiopg -p `which python3`
 
-For `venv` (for example; put the directory wherever you want)
+For `venv` (for example; put the directory wherever you want):
 
 .. code-block:: shell
 
