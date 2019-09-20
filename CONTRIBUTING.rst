@@ -79,7 +79,7 @@ execution process
     import ipdb; ipdb.set_trace()
 
 The library is reasonably well covered by tests.  There is a make
-target for generating the coverage report
+target for generating the coverage report:
 
 .. code-block:: shell
 
