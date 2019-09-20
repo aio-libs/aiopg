@@ -39,7 +39,7 @@ It was decided to select one connection, one :ref:`aiopg-core-cursor`.
 For the interface :ref:`aiopg-core-connection` interface
 over :term:`psycopg2-binary`,
 we added the :meth:`aiopg.Connection.free_cursor`
-method to clean the course if it is open.
+method to clean the cursor if it is open.
 
 The :attr:`aiopg.Connection.free_cursor` method is called in several places:
 
