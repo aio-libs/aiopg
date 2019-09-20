@@ -8,5 +8,5 @@ python:
   install:
   - requirements: requirements.txt
   - method: pip
-  path: .
+    path: .
   system_packages: true
