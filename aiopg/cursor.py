@@ -39,7 +39,7 @@ class Cursor:
         6.  null_ok: always None as not easy to retrieve from the libpq.
 
         This attribute will be None for operations that do not
-        anreturn rows or if the cursor has not had  operation invoked
+        return rows or if the cursor has not had an operation invoked
         via the execute() method yet.
 
         """
