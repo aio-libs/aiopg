@@ -34,7 +34,7 @@ Just as when doing a normal install, you need the :term:`libpq` library
 
 **UPD**
 
-The latest `aiopg` test suite uses docker container for running
+The latest ``aiopg`` test suite uses docker container for running
 Postgres server. See
 https://docs.docker.com/engine/installation/linux/ubuntulinux/ for
 instructions for Docker installing.
