@@ -52,7 +52,7 @@ the test suite and other development tasks)
 
 That's all.
 
-To run all of the *aiopg* tests do
+To run all of the *aiopg* tests do:
 
 .. code-block:: shell
 
