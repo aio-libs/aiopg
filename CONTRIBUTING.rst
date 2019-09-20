@@ -72,7 +72,7 @@ some specific test, not the whole suite:
 For debug sessions I prefer to use :term:`ipdb`, which is installed
 as part of the development tools. Insert the following line into your
 code in the place where you want to start interactively debugging the
-execution process
+execution process:
 
 .. code-block:: py3
 
