@@ -4,7 +4,7 @@ Instruction for contributors
 Developer environment
 ---------------------
 
-First clone the git repo
+First clone the git repo:
 
 .. code-block:: shell
 
