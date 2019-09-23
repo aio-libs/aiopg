@@ -2,12 +2,11 @@ from enum import Enum
 
 import psycopg2
 import pytest
-sa = pytest.importorskip("aiopg.sa")  # noqa
-
-from sqlalchemy import MetaData, Table, Column, Integer, types
+from sqlalchemy import Column, Integer, MetaData, Table, types
+from sqlalchemy.dialects.postgresql import ARRAY, ENUM, HSTORE, JSON
 from sqlalchemy.schema import CreateTable, DropTable
-from sqlalchemy.dialects.postgresql import ARRAY, JSON, HSTORE, ENUM
 
+sa = pytest.importorskip("aiopg.sa")  # noqa
 
 meta = MetaData()
 

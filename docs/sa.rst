@@ -17,7 +17,9 @@ strings too annoying.
 
 Fortunately we can use excellent :ref:`core_toplevel` as **SQL query builder**.
 
-Example::
+Example
+
+.. code-block:: py3
 
     import asyncio
     from aiopg.sa import create_engine
@@ -69,7 +71,7 @@ Also we provide SQL transactions support. Please take a look on
 Engine
 ------
 
-.. cofunction:: create_engine(dsn=None, *, minsize=1, maxsize=10, loop=None, \
+.. cofunction:: create_engine(dsn=None, *, minsize=1, maxsize=10, \
                               dialect=dialect, timeout=60, **kwargs)
    :coroutine:
    :async-with:
@@ -81,7 +83,7 @@ Engine
 
 .. data:: dialect
 
-   An instance of :term:`SQLAlchemy` dialect set up for :term:`psycopg2` usage.
+   An instance of :term:`SQLAlchemy` dialect set up for :term:`psycopg2-binary` usage.
 
    An :class:`sqlalchemy.engine.interfaces.Dialect` instance.
 
@@ -118,7 +120,7 @@ Engine
 
       .. seealso::
 
-         `psycopg2 connection.dsn
+         `psycopg2-binary connection.dsn
          <http://initd.org/psycopg/docs/connection.html#connection.dsn>`_
          attribute.
 
@@ -198,6 +200,7 @@ Engine
       .. warning:: The method is not a :ref:`coroutine <coroutine>`.
 
 
+.. _aiopg-sa-connection:
 
 Connection
 ----------
@@ -254,6 +257,17 @@ Connection
       :returns: :class:`ResultProxy` instance with results of SQL
                 query execution.
 
+      .. seealso::
+
+            * Simple examples sqlalchemy style :ref:`aiopg-examples-sa-simple`
+
+            * Examples sqlalchemy default field :ref:`aiopg-examples-sa-default-field`
+
+            * Examples sqlalchemy type field :ref:`aiopg-examples-sa-types-field`
+
+            * Examples sqlalchemy name field :ref:`aiopg-examples-sa-named-field`
+
+
    .. comethod:: scalar(query, *multiparams, **params)
 
       Executes a *SQL* *query* and returns a scalar value.
@@ -295,10 +309,13 @@ Connection
 
       .. seealso::
 
-         :meth:`.SAConnection.begin_nested` - use a SAVEPOINT
+         * Simple examples :ref:`aiopg-examples-sa-simple-transaction`
 
-         :meth:`.SAConnection.begin_twophase` - use a two phase (XA)
-                 transaction
+         * Examples with isolation level :ref:`aiopg-examples-sa-isolation-transaction`
+
+         * :meth:`.SAConnection.begin_nested` - use a SAVEPOINT
+
+         * :meth:`.SAConnection.begin_twophase` - use a two phase (XA) transaction
 
    .. comethod:: begin_nested()
       :coroutine:
@@ -315,7 +332,11 @@ Connection
 
       .. seealso::
 
-         :meth:`.SAConnection.begin`, :meth:`.SAConnection.begin_twophase`.
+         * Simple examples :ref:`aiopg-examples-sa-simple-transaction`
+
+         * :meth:`.SAConnection.begin`
+
+         * :meth:`.SAConnection.begin_twophase`.
 
    .. comethod:: begin_twophase(xid=None)
       :coroutine:

@@ -1,19 +1,19 @@
 import asyncio
-import aiopg
 import gc
-import psycopg2
-import psycopg2.extras
-import psycopg2.extensions
-import pytest
 import socket
-import time
 import sys
-
-from aiopg.connection import Connection, TIMEOUT
-from aiopg.cursor import Cursor
-from aiopg.utils import ensure_future
+import time
 from unittest import mock
 
+import psycopg2
+import psycopg2.extensions
+import psycopg2.extras
+import pytest
+
+import aiopg
+from aiopg.connection import TIMEOUT, Connection
+from aiopg.cursor import Cursor
+from aiopg.utils import ensure_future
 
 PY_341 = sys.version_info >= (3, 4, 1)
 
@@ -66,7 +66,7 @@ async def test_simple_select_with_hstore(connect):
 async def test_default_event_loop(connect, loop):
     asyncio.set_event_loop(loop)
 
-    conn = await connect(no_loop=True)
+    conn = await connect()
     cur = await conn.cursor()
     assert isinstance(cur, Cursor)
     await cur.execute('SELECT 1')
@@ -259,7 +259,6 @@ async def test_cancel_noop(connect):
 
 
 async def test_cancel_pending_op(connect, loop):
-
     def exception_handler(loop_, context):
         assert context['message'] == context['exception'].pgerror
         assert context['future'].exception() is context['exception']
@@ -421,7 +420,7 @@ def test_ready_unknown_answer(connect, loop):
             {'connection': conn,
              'message': 'Fatal error on aiopg connection: '
                         'unknown answer 9999 from underlying .poll() call'}
-            )
+        )
         assert not conn._writing
         assert impl.close.called
         return waiter
@@ -451,7 +450,7 @@ async def test_connect_to_unsupported_port(unused_port, loop, pg_params):
     pg_params['port'] = port
 
     with pytest.raises(psycopg2.OperationalError):
-        await aiopg.connect(loop=loop, **pg_params)
+        await aiopg.connect(**pg_params)
 
 
 async def test_binary_protocol_error(connect):
@@ -523,7 +522,7 @@ async def test_echo(connect):
 async def test___del__(loop, pg_params, warning):
     exc_handler = mock.Mock()
     loop.set_exception_handler(exc_handler)
-    conn = await aiopg.connect(loop=loop, **pg_params)
+    conn = await aiopg.connect(**pg_params)
     with warning(ResourceWarning):
         del conn
         gc.collect()
@@ -563,10 +562,10 @@ async def test_close_cursor_on_timeout_error(connect):
     conn.close()
 
 
-async def test_issue_111_crash_on_connect_error(loop):
+async def test_issue_111_crash_on_connect_error():
     import aiopg.connection
     with pytest.raises(psycopg2.ProgrammingError):
-        await aiopg.connection.connect('baddsn:1', loop=loop)
+        await aiopg.connection.connect('baddsn:1')
 
 
 async def test_remove_reader_from_alive_fd(connect):

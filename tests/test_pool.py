@@ -1,11 +1,11 @@
 import asyncio
 from unittest import mock
-import pytest
 
+import pytest
 from psycopg2.extensions import TRANSACTION_STATUS_INTRANS
 
 import aiopg
-from aiopg.connection import Connection, TIMEOUT
+from aiopg.connection import TIMEOUT, Connection
 from aiopg.pool import Pool
 
 
@@ -71,8 +71,7 @@ async def test_release_closed(create_pool):
 async def test_bad_context_manager_usage(create_pool):
     pool = await create_pool()
     with pytest.raises(RuntimeError):
-        with pool:
-            pass
+        with pool: pass  # noqa
 
 
 async def test_context_manager(create_pool):
@@ -212,7 +211,7 @@ async def test_release_with_invalid_status(create_pool):
 async def test_default_event_loop(create_pool, loop):
     asyncio.set_event_loop(loop)
 
-    pool = await create_pool(no_loop=True)
+    pool = await create_pool()
     assert pool._loop is loop
 
 
@@ -246,7 +245,7 @@ async def test_release_with_invalid_status_wait_release(create_pool):
     )
 
 
-async def test__fill_free(create_pool, loop):
+async def test_fill_free(create_pool, loop):
     pool = await create_pool(minsize=1)
     with (await pool):
         assert 0 == pool.freesize
@@ -434,8 +433,8 @@ async def test_close_with_acquired_connections(create_pool, loop):
         await asyncio.wait_for(pool.wait_closed(), 0.1, loop=loop)
 
 
-async def test___del__(loop, pg_params, warning):
-    pool = await aiopg.create_pool(loop=loop, **pg_params)
+async def test___del__(pg_params, warning):
+    pool = await aiopg.create_pool(**pg_params)
     with warning(ResourceWarning):
         del pool
 
@@ -513,7 +512,6 @@ async def test_connection_in_good_state_after_timeout_in_transaction(
 
 async def test_drop_connection_if_timedout(make_connection,
                                            create_pool, loop):
-
     async def _kill_connections():
         # Drop all connections on server
         conn = await make_connection()

@@ -1,12 +1,46 @@
-from collections.abc import Coroutine
 import asyncio
+import sys
+import warnings
+from collections.abc import Coroutine
+
 import psycopg2
 
+from .log import logger
 
 try:
     ensure_future = asyncio.ensure_future
 except AttributeError:
     ensure_future = getattr(asyncio, 'async')
+
+if sys.version_info >= (3, 7, 0):
+    __get_running_loop = asyncio.get_running_loop
+else:
+    def __get_running_loop() -> asyncio.AbstractEventLoop:
+        loop = asyncio.get_event_loop()
+        if not loop.is_running():
+            raise RuntimeError('no running event loop')
+        return loop
+
+
+def get_running_loop(is_warn: bool = False) -> asyncio.AbstractEventLoop:
+    loop = __get_running_loop()
+
+    if is_warn:
+        warnings.warn(
+            'aiopg always uses "aiopg.get_running_loop", '
+            'look the documentation.',
+            DeprecationWarning,
+            stacklevel=3
+        )
+
+        if loop.get_debug():
+            logger.warning(
+                'aiopg always uses "aiopg.get_running_loop", '
+                'look the documentation.',
+                exc_info=True
+            )
+
+    return loop
 
 
 def create_future(loop):
@@ -89,7 +123,6 @@ class _PoolContextManager(_ContextManager):
 
 
 class _TransactionPointContextManager(_ContextManager):
-
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:
             await self._obj.rollback_savepoint()
@@ -100,7 +133,6 @@ class _TransactionPointContextManager(_ContextManager):
 
 
 class _TransactionBeginContextManager(_ContextManager):
-
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:
             await self._obj.rollback()
@@ -111,7 +143,6 @@ class _TransactionBeginContextManager(_ContextManager):
 
 
 class _TransactionContextManager(_ContextManager):
-
     async def __aexit__(self, exc_type, exc, tb):
         if exc_type:
             await self._obj.rollback()

@@ -1,9 +1,9 @@
 .. _glossary:
 
 
-********
+========
 Glossary
-********
+========
 
 .. if you add new entries, keep the alphabetical sorting!
 
@@ -38,13 +38,23 @@ Glossary
 
       http://www.postgresql.org/
 
-   psycopg2
+   PostgreSQL Error Codes
 
-      A PostgreSQL database adapter for the Python programming
-      language. psycopg2 was written with the aim of being very small
-      and fast, and stable as a rock.
+       All messages emitted by the PostgreSQL server are assigned
+       five-character error codes that follow the
+       SQL standard's conventions for “SQLSTATE” codes.
 
-      http://initd.org/psycopg/
+       https://www.postgresql.org/docs/current/errcodes-appendix.html#ERRCODES-TABLE
+
+   psycopg2-binary
+
+      Psycopg is the most popular PostgreSQL database adapter for
+      the Python programming language.
+      Its main features are the complete implementation of
+      the Python DB API 2.0 specification and the thread safety
+      (several threads can share the same connection).
+
+      https://pypi.org/project/psycopg2-binary/
 
    pyflakes
 

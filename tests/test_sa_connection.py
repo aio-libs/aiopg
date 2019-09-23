@@ -1,16 +1,11 @@
-from aiopg import Cursor
-
 from unittest import mock
 
-import pytest
-sa = pytest.importorskip("aiopg.sa")  # noqa
-
-
-from sqlalchemy import MetaData, Table, Column, Integer, String, select, func
-from sqlalchemy.schema import DropTable, CreateTable
-
 import psycopg2
+import pytest
+from sqlalchemy import Column, Integer, MetaData, String, Table, func, select
+from sqlalchemy.schema import CreateTable, DropTable
 
+from aiopg import Cursor, sa
 
 meta = MetaData()
 tbl = Table('sa_tbl', meta,
@@ -122,7 +117,6 @@ async def test_execute_sa_insert_positional_params(connect):
 
 async def test_scalar(connect):
     conn = await connect()
-    tbl.count
     res = await conn.scalar(select([func.count()]).select_from(tbl))
     assert 1, res
 

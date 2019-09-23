@@ -1,84 +1,85 @@
-CHANGES
--------
+1.0.0 (2019-09-20)
+* Removal of an asynchronous call in favor of issues # 550
+* Big editing of documentation and minor bugs #534
 
 0.16.0 (2019-01-25)
 ^^^^^^^^^^^^^^^^^^^
 
-* Fix select priority name (#525)
+* Fix select priority name `#525 <https://github.com/aio-libs/aiopg/issues/525>`_
 
-* Rename `psycopg2` to `psycopg2-binary` to fix deprecation warning (#507)
+* Rename `psycopg2` to `psycopg2-binary` to fix deprecation warning `#507 <https://github.com/aio-libs/aiopg/issues/507>`_
 
-* Fix #189 hstore when using ReadDictCursor (#512)
+* Fix `#189 <https://github.com/aio-libs/aiopg/issues/189>`_ hstore when using ReadDictCursor `#512 <https://github.com/aio-libs/aiopg/issues/512>`_
 
-* close cannot be used while an asynchronous query is underway (#452)
+* close cannot be used while an asynchronous query is underway `#452 <https://github.com/aio-libs/aiopg/issues/452>`_
 
-* sqlalchemy adapter trx begin allow transaction_mode (#498)
+* sqlalchemy adapter trx begin allow transaction_mode `#498 <https://github.com/aio-libs/aiopg/issues/498>`_
 
 
 0.15.0 (2018-08-14)
 ^^^^^^^^^^^^^^^^^^^
 
-* Support Python 3.7 (#437)
+* Support Python 3.7 `#437 <https://github.com/aio-libs/aiopg/issues/437>`_
 
 0.14.0 (2018-05-10)
 ^^^^^^^^^^^^^^^^^^^
 
-* Add ``get_dialect`` func to have ability to pass ``json_serializer`` #451
+* Add ``get_dialect`` func to have ability to pass ``json_serializer`` `#451 <https://github.com/aio-libs/aiopg/issues/451>`_
 
 0.13.2 (2018-01-03)
 ^^^^^^^^^^^^^^^^^^^
 
-* Fixed compatibility with SQLAlchemy 1.2.0 #412
+* Fixed compatibility with SQLAlchemy 1.2.0 `#412 <https://github.com/aio-libs/aiopg/issues/412>`_
 
-* Added support for transaction isolation levels #219
+* Added support for transaction isolation levels `#219 <https://github.com/aio-libs/aiopg/issues/219>`_
 
 
 0.13.1 (2017-09-10)
 ^^^^^^^^^^^^^^^^^^^
 
-* Added connection poll recycling logic #373
+* Added connection poll recycling logic `#373 <https://github.com/aio-libs/aiopg/issues/373>`_
 
 
 0.13.0 (2016-12-02)
 ^^^^^^^^^^^^^^^^^^^
 
-* Add `async with` support to `.begin_nested()` #208
+* Add `async with` support to `.begin_nested()` `#208 <https://github.com/aio-libs/aiopg/issues/208>`_
 
-* Fix connection.cancel() #212 #223
+* Fix connection.cancel() `#212 <https://github.com/aio-libs/aiopg/issues/212>`_ `#223 <https://github.com/aio-libs/aiopg/issues/223>`_
 
-* Raise informative error on unexpected connection closing #191
+* Raise informative error on unexpected connection closing `#191 <https://github.com/aio-libs/aiopg/issues/191>`_
 
-* Added support for python types columns issues #217
+* Added support for python types columns issues `#217 <https://github.com/aio-libs/aiopg/issues/217>`_
 
-* Added support for default values in SA table issues #206
+* Added support for default values in SA table issues `#206 <https://github.com/aio-libs/aiopg/issues/206>`_
 
 
 0.12.0 (2016-10-09)
 ^^^^^^^^^^^^^^^^^^^
 
-* Add an on_connect callback parameter to pool #141
+* Add an on_connect callback parameter to pool `#141 <https://github.com/aio-libs/aiopg/issues/141>`_
 
-* Fixed connection to work under both windows and posix based systems #142
+* Fixed connection to work under both windows and posix based systems `#142 <https://github.com/aio-libs/aiopg/issues/142>`_
 
 0.11.0 (2016-09-12)
 ^^^^^^^^^^^^^^^^^^^
 
-* Immediately remove callbacks from a closed file descriptor #139
+* Immediately remove callbacks from a closed file descriptor `#139 <https://github.com/aio-libs/aiopg/issues/139>`_
 
 * Drop Python 3.3 support
 
 0.10.0 (2016-07-16)
 ^^^^^^^^^^^^^^^^^^^
 
-* Refactor tests to use dockerized Postgres server #107
+* Refactor tests to use dockerized Postgres server `#107 <https://github.com/aio-libs/aiopg/issues/107>`_
 
-* Reduce default pool minsize to 1 #106
+* Reduce default pool minsize to 1 `#106 <https://github.com/aio-libs/aiopg/issues/106>`_
 
-* Explicitly enumerate packages in setup.py #85
+* Explicitly enumerate packages in setup.py `#85 <https://github.com/aio-libs/aiopg/issues/85>`_
 
-* Remove expired connections from pool on acquire #116
+* Remove expired connections from pool on acquire `#116 <https://github.com/aio-libs/aiopg/issues/116>`_
 
-* Don't crash when Connection is GC'ed #124
+* Don't crash when Connection is GC'ed `#124 <https://github.com/aio-libs/aiopg/issues/124>`_
 
 * Use loop.create_future() if available
 
@@ -86,34 +87,34 @@ CHANGES
 ^^^^^^^^^^^^^^^^^^
 
 * Make pool.release return asyncio.Future, so we can wait on it in
-  `__aexit__` #102
+  `__aexit__` `#102 <https://github.com/aio-libs/aiopg/issues/102>`_
 
-* Add support for uuid type #103
+* Add support for uuid type `#103 <https://github.com/aio-libs/aiopg/issues/103>`_
 
 0.9.1 (2016-01-17)
 ^^^^^^^^^^^^^^^^^^
 
-* Documentation update #101
+* Documentation update `#101 <https://github.com/aio-libs/aiopg/issues/101>`_
 
 0.9.0 (2016-01-14)
 ^^^^^^^^^^^^^^^^^^
 
-* Add async context managers for transactions #91
+* Add async context managers for transactions `#91 <https://github.com/aio-libs/aiopg/issues/91>`_
 
-* Support async iterator in ResultProxy #92
+* Support async iterator in ResultProxy `#92 <https://github.com/aio-libs/aiopg/issues/92>`_
 
-* Add async with for engine #90
+* Add async with for engine `#90 <https://github.com/aio-libs/aiopg/issues/90>`_
 
 0.8.0 (2015-12-31)
 ^^^^^^^^^^^^^^^^^^
 
-* Add PostgreSQL notification support #58
+* Add PostgreSQL notification support `#58 <https://github.com/aio-libs/aiopg/issues/58>`_
 
-* Support pools with unlimited size #59
+* Support pools with unlimited size `#59 <https://github.com/aio-libs/aiopg/issues/59>`_
 
-* Cancel current DB operation on asyncio timeout #66
+* Cancel current DB operation on asyncio timeout `#66 <https://github.com/aio-libs/aiopg/issues/66>`_
 
-* Add async with support for Pool, Connection, Cursor #88
+* Add async with support for Pool, Connection, Cursor `#88 <https://github.com/aio-libs/aiopg/issues/88>`_
 
 0.7.0 (2015-04-22)
 ^^^^^^^^^^^^^^^^^^

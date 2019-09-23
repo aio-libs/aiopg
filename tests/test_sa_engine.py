@@ -1,11 +1,13 @@
 import asyncio
-from aiopg.connection import TIMEOUT
-from psycopg2.extensions import parse_dsn
 
 import pytest
+from psycopg2.extensions import parse_dsn
+from sqlalchemy import Column, Integer, MetaData, String, Table
+
+from aiopg.connection import TIMEOUT
+
 sa = pytest.importorskip("aiopg.sa")  # noqa
 
-from sqlalchemy import MetaData, Table, Column, Integer, String
 
 meta = MetaData()
 tbl = Table('sa_tbl3', meta,
@@ -64,7 +66,7 @@ def test_freesize(engine):
 
 async def test_make_engine_with_default_loop(make_engine, loop):
     asyncio.set_event_loop(loop)
-    engine = await make_engine(use_loop=False)
+    engine = await make_engine()
     engine.close()
     await engine.wait_closed()
 

@@ -4,25 +4,33 @@ Instruction for contributors
 Developer environment
 ---------------------
 
-First clone the git repo::
+First clone the git repo:
 
-   $ git clone git@github.com:aio-libs/aiopg.git
-   $ cd aiopg
+.. code-block:: shell
+
+    $ git clone git@github.com:aio-libs/aiopg.git
+    $ cd aiopg
 
 After that you need to create and activate a virtual environment.  I
 recommend using :term:`virtualenvwrapper` but just :term:`virtualenv` or
-:term:`venv` will also work.  For ``virtualenvwrapper``::
+:term:`venv` will also work. For :term:`virtualenvwrapper`:
 
-   $ mkvirtualenv aiopg -p `which python3`
+.. code-block:: shell
 
-For ``venv`` (for example; put the directory wherever you want)::
+    $ mkvirtualenv aiopg -p `which python3`
 
-   $ python3 -m venv ../venv_directory
-   $ source ../venv_directory/bin/activate
+For `venv` (for example; put the directory wherever you want):
 
-Just as when doing a normal install, you need the :term:`libpq` library::
+.. code-block:: shell
 
-   $ sudo apt-get install libpq-dev
+    $ python3 -m venv ../venv_directory
+    $ source ../venv_directory/bin/activate
+
+Just as when doing a normal install, you need the :term:`libpq` library:
+
+.. code-block:: shell
+
+    $ sudo apt-get install libpq-dev
 
 **UPD**
 
@@ -35,37 +43,47 @@ No local Postgres server needed.
 
 In the virtual environment you need to install *aiopg* itself and some
 additional development tools (the development tools are needed for running
-the test suite and other development tasks)::
+the test suite and other development tasks)
 
-   $ pip install -Ue .
-   $ pip install -Ur requirements.txt
+.. code-block:: shell
+
+    $ pip install -Ue .
+    $ pip install -Ur requirements.txt
 
 That's all.
 
-To run all of the *aiopg* tests do::
+To run all of the *aiopg* tests do:
 
-   $ make test
+.. code-block:: shell
+
+    $ make test
 
 This command runs :term:`pep8` and :term:`pyflakes` first and then executes
 the *aiopg* unit tests.
 
 
 When you are working on solving an issue you will probably want to run
-some specific test, not the whole suite::
+some specific test, not the whole suite:
 
-   $ py.test -s -k test_initial_empty
+.. code-block:: shell
+
+    $ py.test -s -k test_initial_empty
 
 For debug sessions I prefer to use :term:`ipdb`, which is installed
-as part of the development tools.  Insert the following line into your
+as part of the development tools. Insert the following line into your
 code in the place where you want to start interactively debugging the
-execution process::
+execution process:
 
-   import ipdb; ipdb.set_trace()
+.. code-block:: py3
+
+    import ipdb; ipdb.set_trace()
 
 The library is reasonably well covered by tests.  There is a make
-target for generating the coverage report::
+target for generating the coverage report:
 
-   $ make cov
+.. code-block:: shell
+
+    $ make cov
 
 
 Contribution

@@ -28,7 +28,7 @@ Example::
       ret = await cur.fetchall()
 
 
-.. cofunction:: connect(dsn=None, *, loop=None, timeout=60.0, \
+.. cofunction:: connect(dsn=None, *, timeout=60.0, \
                         enable_json=True, enable_hstore=True, \
                         enable_uuid=True, \
                         echo=False, \
@@ -39,9 +39,7 @@ Example::
    Make a connection to :term:`PostgreSQL` server.
 
    The function accepts all parameters that :func:`psycopg2.connect`
-   does plus optional keyword-only *loop* and *timeout* parameters.
-
-   :param loop: asyncio event loop instance or ``None`` for default one.
+   does plus optional keyword-only *timeout* parameter.
 
    :param float timeout: default timeout (in seconds) for connection operations.
 
@@ -90,7 +88,7 @@ Example::
       Creates a new cursor object using the connection.
 
       The only *cursor_factory* can be specified, all other
-      parameters are not supported by :term:`psycopg2` in
+      parameters are not supported by :term:`psycopg2-binary` in
       asynchronous mode yet.
 
       The *cursor_factory* argument can be used to create
@@ -103,7 +101,7 @@ Example::
       parameter is not `None`.
 
       *name*, *scrollable* and *withhold* parameters are not supported
-      by :term:`psycopg2` in asynchronous mode.
+      by :term:`psycopg2-binary` in asynchronous mode.
 
       :returns: :class:`Cursor` instance.
 
@@ -129,6 +127,16 @@ Example::
    .. attribute:: closed
 
       The readonly property that returns ``True`` if connections is closed.
+
+   .. method:: free_cursor()
+
+      Call method :meth:`Cursor.closed`
+      for current instance :class:`Connection`
+
+   .. attribute:: closed_cursor
+
+      Return attribute :attr:`Cursor.closed`
+      for current instance :class:`Connection`.
 
    .. attribute:: echo
 
@@ -170,7 +178,7 @@ Example::
 
       .. note::
 
-         :term:`psycopg2` doesn't allow to change *autocommit* mode in
+         :term:`psycopg2-binary` doesn't allow to change *autocommit* mode in
          asynchronous mode.
 
    .. attribute:: encoding
@@ -179,7 +187,7 @@ Example::
 
       .. note::
 
-         :term:`psycopg2` doesn't allow to change encoding in
+         :term:`psycopg2-binary` doesn't allow to change encoding in
          asynchronous mode.
 
    .. attribute:: isolation_level
@@ -437,7 +445,7 @@ Cursor
 
       The returned string is always a bytes string::
 
-         >>> await cur.mogrify("INSERT INTO test (num, data) VALUES (%s, %s)", (42, 'bar'))
+         >>> cur.mogrify("INSERT INTO test (num, data) VALUES (%s, %s)", (42, 'bar'))
          "INSERT INTO test (num, data) VALUES (42, E'bar')"
 
    .. method:: setinputsizes(sizes)
@@ -720,17 +728,14 @@ The basic usage is::
 .. cofunction:: create_pool(dsn=None, *, minsize=1, maxsize=10,\
                             enable_json=True, enable_hstore=True, \
                             enable_uuid=True, echo=False, on_connect=None, \
-                            loop=None, timeout=60.0, **kwargs)
+                            timeout=60.0, **kwargs)
    :coroutine:
    :async-with:
 
    Create a pool of connections to :term:`PostgreSQL` database.
 
    The function accepts all parameters that :func:`psycopg2.connect`
-   does plus optional keyword-only parameters *loop*, *minsize*, *maxsize*.
-
-   :param loop: is an optional *event loop* instance,
-    :func:`asyncio.get_event_loop` is used if *loop* is not specified.
+   does plus optional keyword-only parameters *minsize*, *maxsize*.
 
    :param int minsize: minimum size of the *pool*, ``1`` by default.
 
@@ -819,6 +824,14 @@ The basic usage is::
       A read-only float representing default timeout for operations
       for connections from pool.
 
+   .. comethod:: from_pool_fill(*args, **kwargs)
+      :coroutine:
+      :classmethod:
+
+      The method is a :ref:`coroutine <coroutine>`.
+      Constructor for filling the free pool with connections,
+      the number is controlled by the :attr:`minsize` parameter
+
    .. method:: clear()
 
       A :ref:`coroutine <coroutine>` that closes all *free* connections
@@ -887,7 +900,7 @@ The basic usage is::
       connection and returns *context manager*.
 
       The only *cursor_factory* can be specified, all other
-      parameters are not supported by :term:`psycopg2` in
+      parameters are not supported by :term:`psycopg2-binary` in
       asynchronous mode yet.
 
       The *cursor_factory* argument can be used to create
@@ -900,7 +913,7 @@ The basic usage is::
       is not `None`.
 
       *name*, *scrollable* and *withhold* parameters are not supported
-      by :term:`psycopg2` in asynchronous mode.
+      by :term:`psycopg2-binary` in asynchronous mode.
 
       The usage is::
 
@@ -918,7 +931,7 @@ Exceptions
 Any call to library function, method or property can raise an exception.
 
 :mod:`aiopg` doesn't define any exception class itself, it reuses
-:ref:`DBAPI Exceptions <dbapi-exceptions>` from :mod:`psycopg2`
+:ref:`DBAPI Exceptions <dbapi-exceptions>` from :mod:`psycopg2-binary`
 
 
 .. _aiopg-core-transactions:
@@ -926,7 +939,7 @@ Any call to library function, method or property can raise an exception.
 Transactions
 ============
 
-While :term:`psycopg2` asynchronous connections have to be in *autocommit mode* it is still
+While :term:`psycopg2-binary` asynchronous connections have to be in *autocommit mode* it is still
 possible to use SQL transactions executing **BEGIN** and **COMMIT** statements manually
 as `Psycopg Asynchronous Support docs`_ .
 
@@ -954,7 +967,7 @@ For pushing data to server please wrap json dict into
    data = {'a': 1, 'b': 'str'}
    await cur.execute("INSERT INTO tbl (val) VALUES (%s)", [Json(data)])
 
-On receiving data from json column :term:`psycopg2` autoconvers result
+On receiving data from json column :term:`psycopg2-binary` autoconvers result
 into python :class:`dict` object::
 
    await cur.execute("SELECT val FROM tbl")

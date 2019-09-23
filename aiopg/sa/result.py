@@ -7,7 +7,6 @@ from . import exc
 
 
 class RowProxy(Mapping):
-
     __slots__ = ('_result_proxy', '_row', '_processors', '_keymap')
 
     def __init__(self, result_proxy, row, processors, keymap):
@@ -83,7 +82,7 @@ class ResultMetaData(object):
     """Handle cursor.description, applying additional info from an execution
     context."""
 
-    def __init__(self, result_proxy, metadata):
+    def __init__(self, result_proxy, cursor_description):
         self._processors = processors = []
 
         map_type, map_column_name = self.result_map(result_proxy._result_map)
@@ -109,7 +108,7 @@ class ResultMetaData(object):
         assert not dialect.description_encoding, \
             "psycopg in py3k should not use this"
 
-        for i, rec in enumerate(metadata):
+        for i, rec in enumerate(cursor_description):
             colname = rec[0]
             coltype = rec[1]
 
@@ -186,8 +185,7 @@ class ResultMetaData(object):
             # isn't a column/label name overlap.
             # this check isn't currently available if the row
             # was unpickled.
-            if (result is not None and
-                    result[1] is not None):
+            if result is not None and result[1] is not None:
                 for obj in result[1]:
                     if key._compare_name_for_result(obj):
                         break
@@ -233,19 +231,13 @@ class ResultProxy:
 
     def __init__(self, connection, cursor, dialect, result_map=None):
         self._dialect = dialect
-        self._closed = False
         self._result_map = result_map
         self._cursor = cursor
         self._connection = connection
         self._rowcount = cursor.rowcount
-
-        if cursor.description is not None:
-            self._metadata = ResultMetaData(self, cursor.description)
-            self._weak = weakref.ref(self, lambda wr: cursor.close())
-        else:
-            self._metadata = None
-            self.close()
-            self._weak = None
+        self._metadata = None
+        self._weak = None
+        self._init_metadata()
 
     @property
     def dialect(self):
@@ -294,6 +286,15 @@ class ResultProxy:
         """
         return self._rowcount
 
+    def _init_metadata(self):
+        cursor_description = self.cursor.description
+        if cursor_description is not None:
+            self._metadata = ResultMetaData(self, cursor_description)
+            self._weak = weakref.ref(self, lambda wr: self.cursor.close())
+        else:
+            self.close()
+            self._weak = None
+
     @property
     def returns_rows(self):
         """True if this ResultProxy returns rows.
@@ -305,7 +306,10 @@ class ResultProxy:
 
     @property
     def closed(self):
-        return self._closed
+        if self._cursor is None:
+            return True
+
+        return bool(self._cursor.closed)
 
     def close(self):
         """Close this ResultProxy.
@@ -325,9 +329,8 @@ class ResultProxy:
         * cursor.description is None.
         """
 
-        if not self._closed:
-            self._closed = True
-            self._cursor.close()
+        if not self.closed:
+            self.cursor.close()
             # allow consistent errors
             self._cursor = None
             self._weak = None
@@ -361,7 +364,7 @@ class ResultProxy:
     async def fetchall(self):
         """Fetch all rows, just like DB-API cursor.fetchall()."""
         try:
-            rows = await self._cursor.fetchall()
+            rows = await self.cursor.fetchall()
         except AttributeError:
             self._non_result()
         else:
@@ -376,7 +379,7 @@ class ResultProxy:
         Else the cursor is automatically closed and None is returned.
         """
         try:
-            row = await self._cursor.fetchone()
+            row = await self.cursor.fetchone()
         except AttributeError:
             self._non_result()
         else:
@@ -395,9 +398,9 @@ class ResultProxy:
         """
         try:
             if size is None:
-                rows = await self._cursor.fetchmany()
+                rows = await self.cursor.fetchmany()
             else:
-                rows = await self._cursor.fetchmany(size)
+                rows = await self.cursor.fetchmany(size)
         except AttributeError:
             self._non_result()
         else:

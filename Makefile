@@ -1,15 +1,29 @@
 # Some simple testing tasks (sorry, UNIX only).
 
-doc:
+clean-docs:
+	cd docs && rm -rf _build/html
+
+doc: clean-docs
 	cd docs && make html
 	@echo "open file://`pwd`/docs/_build/html/index.html"
 
-pep:
-	pep8 aiopg examples tests
+isort:
+	isort -rc aiopg
+	isort -rc tests
+	isort -rc examples
 
-flake:
-	extra=$$(python -c "import sys;sys.stdout.write('--exclude tests/pep492 --builtins=StopAsyncIteration') if sys.version_info[:3] < (3, 5, 0) else sys.stdout.write('examples')"); \
-	flake8 aiopg tests $$extra
+flake: .flake
+
+.flake: $(shell find aiopg -type f) \
+	    $(shell find tests -type f) \
+	    $(shell find examples -type f)
+	flake8 aiopg tests examples
+	python setup.py check -rms
+	@if ! isort -c -rc aiopg tests examples; then \
+            echo "Import sort errors, run 'make isort' to fix them!!!"; \
+            isort --diff -rc aiopg tests examples; \
+            false; \
+	fi
 
 test: flake
 	pytest -q tests
@@ -22,7 +36,10 @@ cov cover coverage: flake
 	@echo "open file://`pwd`/htmlcov/index.html"
 
 cov-ci: flake
-	py.test -svvv -rs --cov --cov-report=term tests --pg_tag all
+	py.test -svvv -rs --cov=aiopg --cov-report=term tests --pg_tag all
+
+clean-pip:
+	pip freeze | grep -v "^-e" | xargs pip uninstall -y
 
 clean:
 	find . -name __pycache__ |xargs rm -rf
@@ -38,4 +55,4 @@ clean:
 	rm -rf docs/_build
 	rm -rf .tox
 
-.PHONY: all pep test vtest cov clean
+.PHONY: all isort flake test vtest cov clean clean-pip clean-docs

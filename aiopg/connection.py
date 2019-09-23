@@ -7,18 +7,14 @@ import sys
 import traceback
 import warnings
 import weakref
+from collections.abc import Mapping
 
 import psycopg2
 from psycopg2 import extras
-from psycopg2.extensions import (
-    POLL_OK,
-    POLL_READ,
-    POLL_WRITE,
-    POLL_ERROR,
-)
+from psycopg2.extensions import POLL_ERROR, POLL_OK, POLL_READ, POLL_WRITE
 
 from .cursor import Cursor
-from .utils import _ContextManager, create_future
+from .utils import _ContextManager, create_future, get_running_loop
 
 __all__ = ('connect',)
 
@@ -29,65 +25,25 @@ TIMEOUT = 60.0
 WSAENOTSOCK = 10038
 
 
-async def _enable_hstore(conn):
-    cur = await conn.cursor()
-    await cur.execute("""\
-        SELECT t.oid, typarray
-        FROM pg_type t JOIN pg_namespace ns
-            ON typnamespace = ns.oid
-        WHERE typname = 'hstore';
-        """)
-    rv0, rv1 = [], []
-    async for oids in cur:
-        if isinstance(oids, dict):
-            rv0.append(oids['oid'])
-            rv1.append(oids['typarray'])
-        else:
-            rv0.append(oids[0])
-            rv1.append(oids[1])
-
-    cur.close()
-    return tuple(rv0), tuple(rv1)
-
-
-def connect(dsn=None, *, timeout=TIMEOUT, loop=None, enable_json=True,
+def connect(dsn=None, *, timeout=TIMEOUT, enable_json=True,
             enable_hstore=True, enable_uuid=True, echo=False, **kwargs):
     """A factory for connecting to PostgreSQL.
 
     The coroutine accepts all parameters that psycopg2.connect() does
-    plus optional keyword-only `loop` and `timeout` parameters.
+    plus optional keyword-only `timeout` parameters.
 
     Returns instantiated Connection object.
 
     """
-    coro = _connect(dsn=dsn, timeout=timeout, loop=loop,
-                    enable_json=enable_json, enable_hstore=enable_hstore,
-                    enable_uuid=enable_uuid, echo=echo, **kwargs)
+    coro = Connection(
+        dsn, timeout, bool(echo),
+        enable_hstore=enable_hstore,
+        enable_uuid=enable_uuid,
+        enable_json=enable_json,
+        **kwargs
+    )
+
     return _ContextManager(coro)
-
-
-async def _connect(dsn=None, *, timeout=TIMEOUT, loop=None, enable_json=True,
-                   enable_hstore=True, enable_uuid=True, echo=False, **kwargs):
-    if loop is None:
-        loop = asyncio.get_event_loop()
-
-    waiter = create_future(loop)
-    conn = Connection(dsn, loop, timeout, waiter, bool(echo), **kwargs)
-    try:
-        await conn._poll(waiter, timeout)
-    except Exception:
-        conn.close()
-        raise
-    if enable_json:
-        extras.register_default_json(conn._conn)
-    if enable_uuid:
-        extras.register_uuid(conn_or_curs=conn._conn)
-    if enable_hstore:
-        oids = await _enable_hstore(conn)
-        if oids is not None:
-            oid, array_oid = oids
-            extras.register_hstore(conn._conn, oid=oid, array_oid=array_oid)
-    return conn
 
 
 def _is_bad_descriptor_error(os_error):
@@ -107,25 +63,35 @@ class Connection:
 
     _source_traceback = None
 
-    def __init__(self, dsn, loop, timeout, waiter, echo, **kwargs):
-        self._loop = loop
-        self._conn = psycopg2.connect(dsn, async_=True, **kwargs)
+    def __init__(
+            self, dsn, timeout, echo,
+            *, enable_json=True, enable_hstore=True,
+            enable_uuid=True, **kwargs
+    ):
+        self._enable_json = enable_json
+        self._enable_hstore = enable_hstore
+        self._enable_uuid = enable_uuid
+        self._loop = get_running_loop(kwargs.pop('loop', None) is not None)
+        self._waiter = create_future(self._loop)
+
+        kwargs['async_'] = kwargs.pop('async', True)
+        self._conn = psycopg2.connect(dsn, **kwargs)
+
         self._dsn = self._conn.dsn
         assert self._conn.isexecuting(), "Is conn an async at all???"
         self._fileno = self._conn.fileno()
         self._timeout = timeout
         self._last_usage = self._loop.time()
-        self._waiter = waiter
         self._writing = False
         self._cancelling = False
         self._cancellation_waiter = None
         self._echo = echo
         self._cursor_instance = None
-        self._notifies = asyncio.Queue(loop=loop)
+        self._notifies = asyncio.Queue(loop=self._loop)
         self._weakref = weakref.ref(self)
         self._loop.add_reader(self._fileno, self._ready, self._weakref)
 
-        if loop.get_debug():
+        if self._loop.get_debug():
             self._source_traceback = traceback.extract_stack(sys._getframe(1))
 
     @staticmethod
@@ -276,10 +242,10 @@ class Connection:
             connection will be closed
         """
         self._last_usage = self._loop.time()
-        core = self._cursor(name=name, cursor_factory=cursor_factory,
+        coro = self._cursor(name=name, cursor_factory=cursor_factory,
                             scrollable=scrollable, withhold=withhold,
                             timeout=timeout)
-        return _ContextManager(core)
+        return _ContextManager(coro)
 
     async def _cursor(self, name=None, cursor_factory=None,
                       scrollable=None, withhold=False, timeout=None):
@@ -333,11 +299,12 @@ class Connection:
         if not self._cursor_instance:
             return True
 
-        return self._cursor_instance.closed
+        return bool(self._cursor_instance.closed)
 
     def free_cursor(self):
         if not self.closed_cursor:
             self._cursor_instance.close()
+            self._cursor_instance = None
 
     def close(self):
         self._close()
@@ -556,6 +523,53 @@ class Connection:
     def notifies(self):
         """Return notification queue."""
         return self._notifies
+
+    async def _get_oids(self):
+        cur = await self.cursor()
+        rv0, rv1 = [], []
+        try:
+            await cur.execute(
+                "SELECT t.oid, typarray "
+                "FROM pg_type t JOIN pg_namespace ns ON typnamespace = ns.oid "
+                "WHERE typname = 'hstore';"
+            )
+
+            async for oids in cur:
+                if isinstance(oids, Mapping):
+                    rv0.append(oids['oid'])
+                    rv1.append(oids['typarray'])
+                else:
+                    rv0.append(oids[0])
+                    rv1.append(oids[1])
+        finally:
+            cur.close()
+
+        return tuple(rv0), tuple(rv1)
+
+    async def _connect(self):
+        try:
+            await self._poll(self._waiter, self._timeout)
+        except Exception:
+            self.close()
+            raise
+        if self._enable_json:
+            extras.register_default_json(self._conn)
+        if self._enable_uuid:
+            extras.register_uuid(conn_or_curs=self._conn)
+        if self._enable_hstore:
+            oids = await self._get_oids()
+            if oids is not None:
+                oid, array_oid = oids
+                extras.register_hstore(
+                    self._conn,
+                    oid=oid,
+                    array_oid=array_oid
+                )
+
+        return self
+
+    def __await__(self):
+        return self._connect().__await__()
 
     async def __aenter__(self):
         return self

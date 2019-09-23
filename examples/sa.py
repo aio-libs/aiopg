@@ -1,9 +1,10 @@
 import asyncio
-from aiopg.sa import create_engine
-import sqlalchemy as sa
-import random
 import datetime
+import random
 
+import sqlalchemy as sa
+
+from aiopg.sa import create_engine
 
 metadata = sa.MetaData()
 

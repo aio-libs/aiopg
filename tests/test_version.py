@@ -14,8 +14,8 @@ def test_beta():
 
 
 def test_rc():
-    assert (0, 1, 2, 'candidate', 5) == _parse_version('0.1.2c5')
-    assert (0, 1, 2, 'candidate', 0) == _parse_version('0.1.2c')
+    assert (0, 1, 2, 'candidate', 5) == _parse_version('0.1.2rc5')
+    assert (0, 1, 2, 'candidate', 0) == _parse_version('0.1.2rc')
 
 
 def test_final():

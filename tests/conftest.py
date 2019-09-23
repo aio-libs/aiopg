@@ -93,12 +93,6 @@ def pytest_pyfunc_call(pyfuncitem):
         return True
 
 
-def pytest_ignore_collect(path, config):
-    if 'pep492' in str(path):
-        if sys.version_info < (3, 5, 0):
-            return True
-
-
 @pytest.fixture(scope='session')
 def session_id():
     '''Unique session identifier, random string.'''
@@ -192,13 +186,12 @@ def pg_params(pg_server):
 def make_connection(loop, pg_params):
     conns = []
 
-    async def go(*, no_loop=False, **kwargs):
-        nonlocal conns
+    async def go(**kwargs):
+        nonlocal conn
         params = pg_params.copy()
         params.update(kwargs)
-        useloop = None if no_loop else loop
-        conn = await aiopg.connect(loop=useloop, **params)
-        conn2 = await aiopg.connect(loop=useloop, **params)
+        conn = await aiopg.connect(**params)
+        conn2 = await aiopg.connect(**params)
         cur = await conn2.cursor()
         await cur.execute("DROP TABLE IF EXISTS foo")
         await conn2.close()
@@ -212,15 +205,14 @@ def make_connection(loop, pg_params):
 
 
 @pytest.fixture
-def create_pool(loop, pg_params):
+def create_pool(pg_params, loop):
     pool = None
 
-    async def go(*, no_loop=False, **kwargs):
+    async def go(**kwargs):
         nonlocal pool
         params = pg_params.copy()
         params.update(kwargs)
-        useloop = None if no_loop else loop
-        pool = await aiopg.create_pool(loop=useloop, **params)
+        pool = await aiopg.create_pool(**params)
         return pool
 
     yield go
@@ -232,25 +224,15 @@ def create_pool(loop, pg_params):
 
 @pytest.fixture
 def make_engine(loop, pg_params):
-    engine = engine_use_loop = None
+    engine = None
 
-    async def go(*, use_loop=True, **kwargs):
-        nonlocal engine, engine_use_loop
+    async def go(**kwargs):
+        nonlocal engine
         pg_params.update(kwargs)
-        if use_loop:
-            engine_use_loop = engine_use_loop or (
-                await sa.create_engine(loop=loop, **pg_params)
-            )
-            return engine_use_loop
-        else:
-            engine = engine or (await sa.create_engine(**pg_params))
-            return engine
+        engine = await sa.create_engine(**pg_params)
+        return engine
 
     yield go
-
-    if engine_use_loop is not None:
-        engine_use_loop.close()
-        loop.run_until_complete(engine_use_loop.wait_closed())
 
     if engine is not None:
         engine.close()
@@ -258,21 +240,20 @@ def make_engine(loop, pg_params):
 
 
 @pytest.fixture
-def make_sa_connection(make_engine, loop):
-    conns = []
+def make_sa_connection(make_engine):
+    conn = None
     engine = None
 
-    async def go(*, use_loop=True, **kwargs):
-        nonlocal conns, engine
-        engine = engine or (await make_engine(use_loop=use_loop, **kwargs))
+    async def go(**kwargs):
+        nonlocal conn, engine
+        engine = await make_engine(**kwargs)
         conn = await engine.acquire()
-        conns.append(conn)
         return conn
 
     yield go
 
-    for conn in conns:
-        loop.run_until_complete(conn.close())
+    if conn is not None:
+        engine.release(conn)
 
 
 class _AssertWarnsContext:
