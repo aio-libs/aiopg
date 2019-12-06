@@ -35,6 +35,15 @@ def test__paginate():
         assert data[index] == list(val)
 
 
+def test__paginate_even():
+    data = [
+        [1, 2, 3],
+        [4, 5, 6],
+    ]
+    for index, val in enumerate(_paginate((1, 2, 3, 4, 5, 6), page_size=3)):
+        assert data[index] == list(val)
+
+
 async def test_execute_batch(cursor):
     args = [(1,), (2,), (3,), (4,)]
     sql = 'insert into tbl_extras values(%s)'
