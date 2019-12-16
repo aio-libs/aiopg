@@ -1,4 +1,4 @@
-coverage==4.5.4
+coverage==5.0
 docker==4.1.0
 flake8==3.7.9
 isort==4.3.4
