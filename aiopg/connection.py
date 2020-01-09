@@ -87,7 +87,7 @@ class Connection:
         self._cancellation_waiter = None
         self._echo = echo
         self._cursor_instance = None
-        self._notifies = asyncio.Queue(loop=self._loop)
+        self._notifies = asyncio.Queue()
         self._weakref = weakref.ref(self)
         self._loop.add_reader(self._fileno, self._ready, self._weakref)
 
@@ -196,17 +196,16 @@ class Connection:
             if not self._conn.isexecuting():
                 return
             try:
-                await asyncio.wait_for(self._waiter, timeout,
-                                       loop=self._loop)
+                await asyncio.wait_for(self._waiter, timeout)
             except psycopg2.extensions.QueryCanceledError:
                 pass
             except asyncio.TimeoutError:
                 self._close()
 
         try:
-            await asyncio.wait_for(self._waiter, timeout, loop=self._loop)
+            await asyncio.wait_for(self._waiter, timeout)
         except (asyncio.CancelledError, asyncio.TimeoutError) as exc:
-            await asyncio.shield(cancel(), loop=self._loop)
+            await asyncio.shield(cancel())
             raise exc
         except psycopg2.extensions.QueryCanceledError as exc:
             self._loop.call_exception_handler({
@@ -372,7 +371,7 @@ class Connection:
             except psycopg2.extensions.QueryCanceledError:
                 pass
 
-        await asyncio.shield(cancel(), loop=self._loop)
+        await asyncio.shield(cancel())
 
     async def reset(self):
         raise psycopg2.ProgrammingError(
