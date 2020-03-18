@@ -23,7 +23,7 @@ jobs:
     env:
 
 install:
-- pip install -U setuptools
+- pip install -U setuptools cython
 - python setup.py install
 - pip install -Ur requirements.txt
 - pip install codecov
