@@ -135,6 +135,9 @@ def pg_server(unused_port, docker, session_id, pg_tag, request):
         name='aiopg-test-server-{}-{}'.format(pg_tag, session_id),
         ports=[5432],
         detach=True,
+        # This probably used to be the default,
+        # but now has to be specified explicitly.
+        environment={'POSTGRES_PASSWORD': 'mysecretpassword'},
     )
 
     # bound IPs do not work on OSX

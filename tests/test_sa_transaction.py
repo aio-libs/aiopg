@@ -1,9 +1,12 @@
+import asyncio
 from unittest import mock
 
 import pytest
 from sqlalchemy import Column, Integer, MetaData, String, Table, func, select
 
 from aiopg import sa
+from aiopg.sa.exc import InvalidRequestError
+from aiopg import cursor
 
 meta = MetaData()
 tbl = Table('sa_tbl2', meta,
@@ -411,3 +414,36 @@ async def test_transaction_mode(connect):
     res1 = await conn.scalar(select([func.count()]).select_from(tbl))
     assert 5 == res1
     await tr8.commit()
+
+
+async def test_transaction_error_on_begin(pg_params, monkeypatch):
+
+    execute_orig = cursor.Cursor.execute
+
+    class InternalTestException(Exception):
+        """A very special exception"""
+
+    async def execute_mockup(self, operation, *args, **kwargs):
+        if operation == 'BEGIN':
+            raise InternalTestException("Simulating error-at-tx-begin")
+        return await execute_orig(self, operation, *args, **kwargs)
+
+    monkeypatch.setattr(cursor.Cursor, 'execute', execute_mockup)
+
+    params = pg_params.copy()
+    params.update(minsize=2, maxsize=5, timeout=6)
+
+    engine = await sa.create_engine(**params)
+
+    async def one_go():
+        with pytest.raises(InvalidRequestError):
+            async with pool.acquire() as conn:
+                async with conn.begin() as tx:
+                    assert tx
+                    await conn.execute("SELECT 1")
+
+    async with engine as pool:
+        for idx in range(50):
+            # TODO: this doesn't properly time out when it fails
+            # (likely waiting forever for cancellation).
+            await asyncio.wait_for(one_go(), timeout=10)
