@@ -77,7 +77,6 @@ async def _create_engine(dsn=None, *, minsize=1, maxsize=10, dialect=_dialect,
     finally:
         await pool.release(conn)
 
-
 class Engine:
     """Connects a aiopg.Pool and
     sqlalchemy.engine.interfaces.Dialect together to provide a
@@ -168,10 +167,11 @@ class Engine:
 
     def release(self, conn):
         """Revert back connection to pool."""
+        raw = conn.connection
         if conn.in_transaction:
+            self._pool.invalidate(raw)
             raise InvalidRequestError("Cannot release a connection with "
                                       "not finished transaction")
-        raw = conn.connection
         fut = self._pool.release(raw)
         return fut
 

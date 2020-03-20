@@ -254,6 +254,15 @@ class Pool(asyncio.AbstractServer):
             fut = ensure_future(self._wakeup(), loop=self._loop)
         return fut
 
+    def invalidate(self, conn):
+        """Mark used connection as invalid (broken)."""
+        fut = create_future(self._loop)
+        fut.set_result(None)
+        self._used.remove(conn)
+        if not conn.closed:
+            conn.close()
+        return fut
+
     async def cursor(self, name=None, cursor_factory=None,
                      scrollable=None, withhold=False, *, timeout=None):
         conn = await self.acquire()
