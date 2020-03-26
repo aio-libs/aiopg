@@ -53,6 +53,5 @@ clean:
 	rm -f .coverage
 	rm -rf coverage
 	rm -rf docs/_build
-	rm -rf .tox
 
 .PHONY: all isort flake test vtest cov clean clean-pip clean-docs

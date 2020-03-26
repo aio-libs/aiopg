@@ -8,6 +8,5 @@ build
 .coverage.*
 htmlcov
 docs/_build
-.tox
 .cache
 .pytest_cache
