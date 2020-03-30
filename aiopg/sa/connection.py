@@ -189,7 +189,8 @@ class SAConnection:
 
     async def _begin_impl(self, isolation_level, readonly, deferrable):
         try:
-            return await self._begin_impl_attempt(isolation_level, readonly, deferrable)
+            return await self._begin_impl_attempt(
+                isolation_level, readonly, deferrable)
         except Exception:
             # Connection is in uncertain state, likely broken. Mark it as such.
             self._engine.invalidate(self)
