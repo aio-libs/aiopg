@@ -188,6 +188,14 @@ class SAConnection:
             return Transaction(self, self._transaction)
 
     async def _begin_impl(self, isolation_level, readonly, deferrable):
+        try:
+            return await self._begin_impl_attempt(isolation_level, readonly, deferrable)
+        except Exception:
+            # Connection is in uncertain state, likely broken. Mark it as such.
+            self._engine.invalidate(self)
+            raise
+
+    async def _begin_impl_attempt(self, isolation_level, readonly, deferrable):
         stmt = 'BEGIN'
         if isolation_level is not None:
             stmt += ' ISOLATION LEVEL ' + isolation_level
@@ -203,6 +211,14 @@ class SAConnection:
             cur.close()
 
     async def _commit_impl(self):
+        try:
+            return await self._commit_impl_attempt()
+        except Exception:
+            # Connection is in uncertain state, likely broken. Mark it as such.
+            self._engine.invalidate(self)
+            raise
+
+    async def _commit_impl_attempt(self):
         cur = await self._get_cursor()
         try:
             await cur.execute('COMMIT')
@@ -211,6 +227,14 @@ class SAConnection:
             self._transaction = None
 
     async def _rollback_impl(self):
+        try:
+            return await self._rollback_impl_attempt()
+        except Exception:
+            # Connection is in uncertain state, likely broken. Mark it as such.
+            self._engine.invalidate(self)
+            raise
+
+    async def _rollback_impl_attempt(self):
         cur = await self._get_cursor()
         try:
             await cur.execute('ROLLBACK')

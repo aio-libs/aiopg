@@ -166,13 +166,16 @@ class Engine:
         conn = SAConnection(raw, self)
         return conn
 
+    def invalidate(self, conn):
+        raw = conn.connection
+        return self._pool.invalidate(raw)
+
     def release(self, conn):
         """Revert back connection to pool."""
-        raw = conn.connection
         if conn.in_transaction:
-            self._pool.invalidate(raw)
             raise InvalidRequestError("Cannot release a connection with "
                                       "not finished transaction")
+        raw = conn.connection
         fut = self._pool.release(raw)
         return fut
 
