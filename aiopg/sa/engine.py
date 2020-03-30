@@ -77,6 +77,7 @@ async def _create_engine(dsn=None, *, minsize=1, maxsize=10, dialect=_dialect,
     finally:
         await pool.release(conn)
 
+
 class Engine:
     """Connects a aiopg.Pool and
     sqlalchemy.engine.interfaces.Dialect together to provide a

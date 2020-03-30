@@ -3,9 +3,10 @@ import sys
 import warnings
 from collections import namedtuple
 
-from .connection import connect, Connection, TIMEOUT as DEFAULT_TIMEOUT
+from .connection import TIMEOUT as DEFAULT_TIMEOUT
+from .connection import Connection, connect
 from .cursor import Cursor
-from .pool import create_pool, Pool
+from .pool import Pool, create_pool
 from .transaction import IsolationLevel, Transaction
 from .utils import get_running_loop
 

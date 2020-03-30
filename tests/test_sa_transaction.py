@@ -4,9 +4,8 @@ from unittest import mock
 import pytest
 from sqlalchemy import Column, Integer, MetaData, String, Table, func, select
 
-from aiopg import sa
+from aiopg import cursor, sa
 from aiopg.sa.exc import InvalidRequestError
-from aiopg import cursor
 
 meta = MetaData()
 tbl = Table('sa_tbl2', meta,
