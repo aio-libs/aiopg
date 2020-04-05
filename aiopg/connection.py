@@ -110,7 +110,10 @@ class Connection:
         except (psycopg2.Warning, psycopg2.Error) as exc:
             if self._fileno is not None:
                 try:
-                    select.select([self._fileno], [], [], 0)
+                    poll = select.poll()
+                    poll.register(self._fileno)
+                    poll.poll(0)
+                    poll.unregister(self._fileno)
                 except OSError as os_exc:
                     if _is_bad_descriptor_error(os_exc):
                         with contextlib.suppress(OSError):
