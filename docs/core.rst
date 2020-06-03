@@ -794,7 +794,7 @@ The basic usage is::
       async with pool.cursor() as cur:
           await cur.execute('SELECT 1')
 
-   See also :meth:`Pool.acquire` and :meth:`Pool.release` for acquring
+   See also :meth:`Pool.acquire` and :meth:`Pool.release` for acquiring
    *connection* without *with statement*.
 
    .. attribute:: echo
