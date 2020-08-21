@@ -32,7 +32,7 @@ Current version is |release|.
 .. warning::
     1. Removing await the before :meth:`Cursor.mogrify` function
 
-    2. Only supports ``python >= 3.5.2``
+    2. Only supports ``python >= 3.5.3``
 
     3. Only support syntax ``async/await``
 
