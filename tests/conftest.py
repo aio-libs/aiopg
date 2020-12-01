@@ -141,7 +141,9 @@ def pg_server(unused_port, docker, session_id, pg_tag, request):
     host = "127.0.0.1"
     host_port = unused_port()
     container_args['host_config'] = docker.create_host_config(
-        port_bindings={5432: (host, host_port)})
+        port_bindings={5432: (host, host_port)}
+    )
+    container_args['environment'] = {'POSTGRES_HOST_AUTH_METHOD': 'trust'}
 
     container = docker.create_container(**container_args)
 
