@@ -32,7 +32,7 @@ Current version is |release|.
 .. warning::
     1. Removing await the before :meth:`Cursor.mogrify` function
 
-    2. Only supports ``python >= 3.5.2``
+    2. Only supports ``python >= 3.6``
 
     3. Only support syntax ``async/await``
 
@@ -186,7 +186,7 @@ Feel free to post your questions and ideas here.
 Dependencies
 ------------
 
-- Python 3.5.2+
+- Python 3.6+
 - psycopg2-binary
 - aiopg.sa requires :term:`sqlalchemy`.
 
