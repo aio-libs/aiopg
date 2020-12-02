@@ -130,11 +130,15 @@ def pg_server(unused_port, docker, session_id, pg_tag, request):
     if not request.config.option.no_pull:
         docker.pull('postgres:{}'.format(pg_tag))
 
+    db_password = 'mysecretpassword'
     container_args = dict(
         image='postgres:{}'.format(pg_tag),
         name='aiopg-test-server-{}-{}'.format(pg_tag, session_id),
         ports=[5432],
         detach=True,
+        environment={
+            'POSTGRES_PASSWORD': db_password
+        }
     )
 
     # bound IPs do not work on OSX
@@ -151,7 +155,7 @@ def pg_server(unused_port, docker, session_id, pg_tag, request):
         docker.start(container=container['Id'])
         server_params = dict(database='postgres',
                              user='postgres',
-                             password='mysecretpassword',
+                             password=db_password,
                              host=host,
                              port=host_port)
         delay = 0.001
@@ -175,8 +179,7 @@ def pg_server(unused_port, docker, session_id, pg_tag, request):
 
         yield container
     finally:
-        docker.kill(container=container['Id'])
-        docker.remove_container(container['Id'])
+        docker.remove_container(container['Id'], force=True)
 
 
 @pytest.fixture

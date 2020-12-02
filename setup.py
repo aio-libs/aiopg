@@ -1,7 +1,10 @@
 import os
 import re
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, Extension
+from Cython.Build import cythonize
+
+CFLAGS = ['-O3']
 
 install_requires = ['psycopg2-binary>=2.7.0']
 extras_require = {'sa': ['sqlalchemy[postgresql_psycopg2binary]>=1.1']}
@@ -50,6 +53,14 @@ classifiers = [
     'Framework :: AsyncIO',
 ]
 
+EXTENSIONS = [
+    Extension(
+        "aiopg.sa.result",
+        sources=["aiopg/sa/result.pyx"],
+        extra_compile_args=CFLAGS
+    )
+]
+
 setup(
     name='aiopg',
     version=read_version(),
@@ -76,5 +87,6 @@ setup(
     packages=find_packages(),
     install_requires=install_requires,
     extras_require=extras_require,
-    include_package_data=True
+    include_package_data=True,
+    ext_modules=cythonize(EXTENSIONS)
 )
