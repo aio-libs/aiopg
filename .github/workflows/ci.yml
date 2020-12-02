@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+      - '[0-9].[0-9]+'
+    tags: [ 'v*' ]
+  pull_request:
+    branches:
+      - master
+      - '[0-9].[0-9]+'
+
+jobs:
+  test:
+    name: Test on Python ${{ matrix.python }}
+    strategy:
+      matrix:
+        python:
+          - 3.5
+          - 3.6
+          - 3.7
+          - 3.8
+          - 3.9
+      fail-fast: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Setup Python ${{ matrix.python }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python }}
+    - name: Install dependencies
+      run: |
+        pip install -e .
+        pip install -Ur requirements.txt
+        pip install codecov
+    - name: Run stuff
+      run: |
+        make cov-ci
+        python setup.py check -rms
+        codecov
