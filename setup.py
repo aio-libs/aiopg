@@ -37,7 +37,6 @@ classifiers = [
     'Intended Audience :: Developers',
     'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3 :: Only',
-    'Programming Language :: Python :: 3.5',
     'Programming Language :: Python :: 3.6',
     'Programming Language :: Python :: 3.7',
     'Operating System :: POSIX',
@@ -58,7 +57,7 @@ setup(
     classifiers=classifiers,
     platforms=['macOS', 'POSIX', 'Windows'],
     author='Andrew Svetlov',
-    python_requires='>=3.5.3',
+    python_requires='>=3.6',
     project_urls={
         'Chat: Gitter': 'https://gitter.im/aio-libs/Lobby',
         'CI: Travis': 'https://travis-ci.com/aio-libs/aiopg',
