@@ -1,7 +1,7 @@
 aiopg
 =====
-.. image:: https://travis-ci.com/aio-libs/aiopg.svg?branch=master
-   :target: https://travis-ci.com/aio-libs/aiopg
+.. image:: https://github.com/aio-libs/aiopg/workflows/CI/badge.svg
+   :target: https://github.com/aio-libs/aiopg/actions?query=workflow%3ACI
 .. image:: https://codecov.io/gh/aio-libs/aiopg/branch/master/graph/badge.svg
    :target: https://codecov.io/gh/aio-libs/aiopg
 .. image:: https://badges.gitter.im/Join%20Chat.svg
