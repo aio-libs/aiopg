@@ -19,8 +19,6 @@ jobs:
         python:
           - 3.6
           - 3.7
-          - 3.8
-          - 3.9
       fail-fast: false
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -36,7 +34,7 @@ jobs:
         pip install -e .
         pip install -Ur requirements.txt
         pip install codecov
-    - name: Run stuff
+    - name: Run tests
       run: |
         make cov-ci
         python setup.py check -rms
