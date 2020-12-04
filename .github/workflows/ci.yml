@@ -19,6 +19,8 @@ jobs:
         python:
           - 3.6
           - 3.7
+          - 3.8
+          - 3.9
       fail-fast: false
     runs-on: ubuntu-latest
     timeout-minutes: 15
