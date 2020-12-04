@@ -2,8 +2,8 @@ from sqlalchemy.sql import ClauseElement
 from sqlalchemy.sql.ddl import DDLElement
 from sqlalchemy.sql.dml import UpdateBase
 
-from . import exc
 from ..utils import _SAConnectionContextManager, _TransactionContextManager
+from . import exc
 from .result import ResultProxy
 from .transaction import (
     NestedTransaction,
