@@ -8,9 +8,9 @@ doc: clean-docs
 	@echo "open file://`pwd`/docs/_build/html/index.html"
 
 isort:
-	isort -rc aiopg
-	isort -rc tests
-	isort -rc examples
+	isort aiopg
+	isort tests
+	isort examples
 
 flake: .flake
 
@@ -19,9 +19,9 @@ flake: .flake
 	    $(shell find examples -type f)
 	flake8 aiopg tests examples
 	python setup.py check -rms
-	@if ! isort -c -rc aiopg tests examples; then \
+	@if ! isort -c aiopg tests examples; then \
             echo "Import sort errors, run 'make isort' to fix them!!!"; \
-            isort --diff -rc aiopg tests examples; \
+            isort --diff aiopg tests examples; \
             false; \
 	fi
 
