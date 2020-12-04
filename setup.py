@@ -3,8 +3,8 @@ import re
 
 from setuptools import setup, find_packages
 
-install_requires = ['psycopg2-binary>=2.7.0']
-extras_require = {'sa': ['sqlalchemy[postgresql_psycopg2binary]>=1.1']}
+install_requires = ['psycopg2-binary>=2.8.4']
+extras_require = {'sa': ['sqlalchemy[postgresql_psycopg2binary]>=1.3.14']}
 
 
 def read(f):
@@ -39,6 +39,8 @@ classifiers = [
     'Programming Language :: Python :: 3 :: Only',
     'Programming Language :: Python :: 3.6',
     'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
     'Operating System :: POSIX',
     'Operating System :: MacOS :: MacOS X',
     'Operating System :: Microsoft :: Windows',
