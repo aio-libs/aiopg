@@ -4,7 +4,7 @@ import re
 from setuptools import setup, find_packages
 
 install_requires = ['psycopg2-binary>=2.8.4']
-extras_require = {'sa': ['sqlalchemy[postgresql_psycopg2binary]>=1.3.14']}
+extras_require = {'sa': ['sqlalchemy[postgresql_psycopg2binary]>=1.1']}
 
 
 def read(f):
