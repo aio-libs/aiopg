@@ -1,4 +1,4 @@
-include LICENSE.txt
+include LICENSE
 include CHANGES.txt
 include README.rst
 include MAINTAINERS.txt
