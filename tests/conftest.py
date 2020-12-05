@@ -434,7 +434,8 @@ class TcpProxy:
         while self.connections:
             writer = self.connections.pop()
             writer.close()
-            await writer.wait_closed()
+            if hasattr(writer, "wait_closed"):
+                await writer.wait_closed()
 
     @staticmethod
     async def _pipe(
