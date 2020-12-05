@@ -761,7 +761,7 @@ The basic usage is::
 
    :param bool echo: executed log SQL queryes (disabled by default).
 
-   :param on_connect:  a *callback coroutine* executed at once for every
+   :param on_connect:  a *callback coroutine* executed once for every
      created connection. May be used for setting up connection level
      state like client encoding etc.
 

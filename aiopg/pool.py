@@ -167,8 +167,6 @@ class Pool(asyncio.AbstractServer):
                     assert not conn.closed, conn
                     assert conn not in self._used, (conn, self._used)
                     self._used.add(conn)
-                    if self._on_connect is not None:
-                        await self._on_connect(conn)
                     return conn
                 else:
                     await self._cond.wait()
@@ -197,6 +195,8 @@ class Pool(asyncio.AbstractServer):
                     enable_uuid=self._enable_uuid,
                     echo=self._echo,
                     **self._conn_kwargs)
+                if self._on_connect is not None:
+                    await self._on_connect(conn)
                 # raise exception if pool is closing
                 self._free.append(conn)
                 self._cond.notify()
@@ -215,6 +215,8 @@ class Pool(asyncio.AbstractServer):
                     enable_uuid=self._enable_uuid,
                     echo=self._echo,
                     **self._conn_kwargs)
+                if self._on_connect is not None:
+                    await self._on_connect(conn)
                 # raise exception if pool is closing
                 self._free.append(conn)
                 self._cond.notify()
