@@ -189,4 +189,5 @@ async def test_release_after_connection_disconnected_before_begin(
                 await tcp_proxy.disconnect()
                 async with conn.begin():
                     pytest.fail("Should not be here")
+
     assert engine.size == 0
