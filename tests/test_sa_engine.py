@@ -1,5 +1,6 @@
 import asyncio
 
+import psycopg2
 import pytest
 from psycopg2.extensions import parse_dsn
 from sqlalchemy import Column, Integer, MetaData, String, Table
@@ -80,10 +81,10 @@ def test_not_context_manager(engine):
 async def test_release_transacted(engine):
     conn = await engine.acquire()
     tr = await conn.begin()
-    with pytest.raises(sa.InvalidRequestError):
-        engine.release(conn)
+    with pytest.warns(ResourceWarning, match='Invalid transaction status'):
+        await engine.release(conn)
     del tr
-    await conn.close()
+    assert conn.closed
 
 
 def test_timeout(engine):
@@ -147,3 +148,24 @@ async def test_terminate_with_acquired_connections(make_engine):
     await engine.wait_closed()
 
     assert conn.closed
+
+
+async def test_release_disconnected_connection(
+    tcp_proxy, unused_port, pg_params, make_engine
+):
+    server_port = pg_params["port"]
+    proxy_port = unused_port()
+
+    tcp_proxy = await tcp_proxy(proxy_port, server_port)
+    engine = await make_engine(port=proxy_port)
+
+    with pytest.raises(
+        psycopg2.InterfaceError, match='connection already closed'
+    ):
+        with pytest.warns(ResourceWarning, match='Invalid transaction status'):
+            async with engine.acquire() as conn, conn.begin():
+                await conn.execute('SELECT 1;')
+                await tcp_proxy.disconnect()
+                await conn.execute('SELECT 1;')
+
+    assert engine.size == 0

@@ -391,3 +391,76 @@ def warning():
 @pytest.fixture
 def log():
     yield _AssertLogsContext
+
+
+@pytest.fixture
+def tcp_proxy(loop):
+    proxy = None
+
+    async def go(src_port, dst_port):
+        nonlocal proxy
+        proxy = TcpProxy(
+            dst_port=dst_port,
+            src_port=src_port,
+        )
+        await proxy.start()
+        return proxy
+    yield go
+    if proxy is not None:
+        loop.run_until_complete(proxy.disconnect())
+
+
+class TcpProxy:
+    """
+    TCP proxy. Allows simulating connection breaks in tests.
+    """
+    MAX_BYTES = 1024
+
+    def __init__(self, *, src_port, dst_port):
+        self.src_host = '127.0.0.1'
+        self.src_port = src_port
+        self.dst_host = '127.0.0.1'
+        self.dst_port = dst_port
+        self.connections = set()
+
+    async def start(self):
+        return await asyncio.start_server(
+            self.handle_client,
+            host=self.src_host,
+            port=self.src_port,
+        )
+
+    async def disconnect(self):
+        while self.connections:
+            writer = self.connections.pop()
+            writer.close()
+            await writer.wait_closed()
+
+    @staticmethod
+    async def _pipe(
+        reader: asyncio.StreamReader, writer: asyncio.StreamWriter
+    ):
+        try:
+            while not reader.at_eof():
+                bytes_read = await reader.read(TcpProxy.MAX_BYTES)
+                writer.write(bytes_read)
+        finally:
+            writer.close()
+
+    async def handle_client(
+        self,
+        client_reader: asyncio.StreamReader,
+        client_writer: asyncio.StreamWriter,
+    ):
+        server_reader, server_writer = await asyncio.open_connection(
+            host=self.dst_host,
+            port=self.dst_port
+        )
+
+        self.connections.add(server_writer)
+        self.connections.add(client_writer)
+
+        await asyncio.wait([
+            self._pipe(server_reader, client_writer),
+            self._pipe(client_reader, server_writer),
+        ])

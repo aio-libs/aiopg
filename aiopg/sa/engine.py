@@ -5,7 +5,6 @@ import aiopg
 from ..connection import TIMEOUT
 from ..utils import _PoolAcquireContextManager, _PoolContextManager
 from .connection import SAConnection
-from .exc import InvalidRequestError
 
 try:
     from sqlalchemy.dialects.postgresql.psycopg2 import (
@@ -169,10 +168,6 @@ class Engine:
         return conn
 
     def release(self, conn):
-        """Revert back connection to pool."""
-        if conn.in_transaction:
-            raise InvalidRequestError("Cannot release a connection with "
-                                      "not finished transaction")
         raw = conn.connection
         fut = self._pool.release(raw)
         return fut
