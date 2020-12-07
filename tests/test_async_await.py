@@ -55,7 +55,7 @@ async def test_pool_context_manager_timeout(pg_params, loop):
     async with aiopg.create_pool(**pg_params, minsize=1,
                                  maxsize=1) as pool:
         cursor_ctx = await pool.cursor()
-        with pytest.warns(ResourceWarning):
+        with pytest.warns(ResourceWarning, match='Invalid transaction status'):
             with cursor_ctx as cursor:
                 hung_task = cursor.execute('SELECT pg_sleep(10000);')
                 # start task
