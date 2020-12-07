@@ -21,7 +21,7 @@ __all__ = ('connect', 'create_pool', 'get_running_loop',
            'Connection', 'Cursor', 'Pool', 'version', 'version_info',
            'DEFAULT_TIMEOUT', 'IsolationLevel', 'Transaction')
 
-__version__ = '1.1.0a0'
+__version__ = '1.1.0b0'
 
 version = __version__ + ' , Python ' + sys.version
 
