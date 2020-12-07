@@ -61,6 +61,9 @@ jobs:
     - name: Make dists
       run:
         python setup.py sdist bdist_wheel
+    - name: Check dists
+      run:
+        twine check dist/*
     - name: PyPI upload
       env:
         TWINE_USERNAME: __token__
