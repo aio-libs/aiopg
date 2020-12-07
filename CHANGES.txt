@@ -1,13 +1,13 @@
-1.1.0b0 (2020-12-07)
+1.1.0b1 (2020-12-07)
 ^^^^^^^^^^^^^^^^^^^^
 
-* Fix on_connect multiple call on acquire `#552 https://github.com/aio-libs/aiopg/pull/552`_
+* Fix on_connect multiple call on acquire `#552 <https://github.com/aio-libs/aiopg/pull/552>`_
 
-* Fix python 3.8 warnings `#622 https://github.com/aio-libs/aiopg/pull/642`_
+* Fix python 3.8 warnings `#622 <https://github.com/aio-libs/aiopg/pull/642>`_
 
-* Bump minimum psycopg version to 2.8.4 `#754 https://github.com/aio-libs/aiopg/pull/754`_
+* Bump minimum psycopg version to 2.8.4 `#754 <https://github.com/aio-libs/aiopg/pull/754>`_
 
-* Fix Engine.release method to release connection in any way `#756 https://github.com/aio-libs/aiopg/pull/756`_
+* Fix Engine.release method to release connection in any way `#756 <https://github.com/aio-libs/aiopg/pull/756>`_
 
 
 1.0.0 (2019-09-20)

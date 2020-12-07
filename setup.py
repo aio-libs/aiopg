@@ -56,6 +56,7 @@ setup(
     version=read_version(),
     description='Postgres integration with asyncio.',
     long_description='\n\n'.join((read('README.rst'), read_changelog())),
+    long_description_content_type='text/x-rst',
     classifiers=classifiers,
     platforms=['macOS', 'POSIX', 'Windows'],
     author='Andrew Svetlov',
