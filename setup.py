@@ -63,7 +63,7 @@ setup(
     python_requires='>=3.6',
     project_urls={
         'Chat: Gitter': 'https://gitter.im/aio-libs/Lobby',
-        'CI: Travis': 'https://travis-ci.com/aio-libs/aiopg',
+        'CI: GA': 'https://github.com/aio-libs/aiopg/actions?query=workflow%3ACI',
         'Coverage: codecov': 'https://codecov.io/gh/aio-libs/aiopg',
         'Docs: RTD': 'https://aiopg.readthedocs.io',
         'GitHub: issues': 'https://github.com/aio-libs/aiopg/issues',
