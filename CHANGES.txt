@@ -1,3 +1,9 @@
+1.1.0b2 (2020-12-09)
+^^^^^^^^^^^^^^^^^^^^
+
+* Added missing slots to context managers `#763 <https://github.com/aio-libs/aiopg/pull/763>`_
+
+
 1.1.0b1 (2020-12-07)
 ^^^^^^^^^^^^^^^^^^^^
 
