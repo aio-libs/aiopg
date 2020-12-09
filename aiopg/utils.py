@@ -100,6 +100,8 @@ class _ContextManager(Coroutine):
 
 
 class _SAConnectionContextManager(_ContextManager):
+    __slots__ = ()
+
     def __aiter__(self):
         return self
 
@@ -108,7 +110,7 @@ class _SAConnectionContextManager(_ContextManager):
             self._obj = await self._coro
 
         try:
-            return (await self._obj.__anext__())
+            return await self._obj.__anext__()
         except StopAsyncIteration:
             self._obj.close()
             self._obj = None
@@ -116,6 +118,8 @@ class _SAConnectionContextManager(_ContextManager):
 
 
 class _PoolContextManager(_ContextManager):
+    __slots__ = ()
+
     async def __aexit__(self, exc_type, exc, tb):
         self._obj.close()
         await self._obj.wait_closed()
@@ -123,6 +127,8 @@ class _PoolContextManager(_ContextManager):
 
 
 class _TransactionPointContextManager(_ContextManager):
+    __slots__ = ()
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:
             await self._obj.rollback_savepoint()
@@ -133,6 +139,8 @@ class _TransactionPointContextManager(_ContextManager):
 
 
 class _TransactionBeginContextManager(_ContextManager):
+    __slots__ = ()
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:
             await self._obj.rollback()
@@ -143,6 +151,8 @@ class _TransactionBeginContextManager(_ContextManager):
 
 
 class _TransactionContextManager(_ContextManager):
+    __slots__ = ()
+
     async def __aexit__(self, exc_type, exc, tb):
         if exc_type:
             await self._obj.rollback()
