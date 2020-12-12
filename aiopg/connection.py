@@ -14,7 +14,7 @@ from psycopg2 import extras
 from psycopg2.extensions import POLL_ERROR, POLL_OK, POLL_READ, POLL_WRITE
 
 from .cursor import Cursor
-from .utils import _ContextManager, create_future, get_running_loop
+from .utils import _ContextManager, get_running_loop
 
 __all__ = ('connect',)
 
@@ -72,7 +72,7 @@ class Connection:
         self._enable_hstore = enable_hstore
         self._enable_uuid = enable_uuid
         self._loop = get_running_loop(kwargs.pop('loop', None) is not None)
-        self._waiter = create_future(self._loop)
+        self._waiter = self._loop.create_future()
 
         kwargs['async_'] = kwargs.pop('async', True)
         self._conn = psycopg2.connect(dsn, **kwargs)
@@ -181,7 +181,7 @@ class Connection:
                 raise RuntimeError('%s() called while another coroutine is '
                                    'already waiting for incoming '
                                    'data' % func_name)
-        self._waiter = create_future(self._loop)
+        self._waiter = self._loop.create_future()
         return self._waiter
 
     async def _poll(self, waiter, timeout):
@@ -189,7 +189,7 @@ class Connection:
         self._ready(self._weakref)
 
         async def cancel():
-            self._waiter = create_future(self._loop)
+            self._waiter = self._loop.create_future()
             self._cancelling = True
             self._cancellation_waiter = self._waiter
             self._conn.cancel()
@@ -307,7 +307,7 @@ class Connection:
 
     def close(self):
         self._close()
-        ret = create_future(self._loop)
+        ret = self._loop.create_future()
         ret.set_result(None)
         return ret
 

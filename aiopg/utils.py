@@ -43,13 +43,6 @@ def get_running_loop(is_warn: bool = False) -> asyncio.AbstractEventLoop:
     return loop
 
 
-def create_future(loop):
-    try:
-        return loop.create_future()
-    except AttributeError:
-        return asyncio.Future(loop=loop)
-
-
 class _ContextManager(Coroutine):
     __slots__ = ('_coro', '_obj')
 
