@@ -10,7 +10,6 @@ from .utils import (
     _PoolConnectionContextManager,
     _PoolContextManager,
     _PoolCursorContextManager,
-    create_future,
     ensure_future,
     get_running_loop,
 )
@@ -230,7 +229,7 @@ class Pool(asyncio.AbstractServer):
     def release(self, conn):
         """Release free connection back to the connection pool.
         """
-        fut = create_future(self._loop)
+        fut = self._loop.create_future()
         fut.set_result(None)
         if conn in self._terminated:
             assert conn.closed, conn
