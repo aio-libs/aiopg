@@ -445,7 +445,7 @@ async def test_unlimited_size(create_pool):
     assert pool._free.maxlen is None
 
 
-async def test_connection_in_good_state_after_timeout(create_pool):
+async def test_connection_closed_after_timeout(create_pool):
     async def sleep(conn):
         cur = await conn.cursor()
         await cur.execute('SELECT pg_sleep(10);')
@@ -457,7 +457,7 @@ async def test_connection_in_good_state_after_timeout(create_pool):
         with pytest.raises(asyncio.TimeoutError):
             await sleep(conn)
 
-    assert 1 == pool.freesize
+    assert 0 == pool.freesize
 
     with (await pool) as conn:
         cur = await conn.cursor()
