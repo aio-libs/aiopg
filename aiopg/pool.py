@@ -2,6 +2,7 @@ import asyncio
 import collections
 import warnings
 
+import async_timeout
 from psycopg2.extensions import TRANSACTION_STATUS_IDLE
 
 from .connection import TIMEOUT, connect
@@ -158,7 +159,7 @@ class Pool(asyncio.AbstractServer):
     async def _acquire(self):
         if self._closing:
             raise RuntimeError("Cannot acquire connection after closing pool")
-        async with self._cond:
+        async with async_timeout.timeout(self._timeout), self._cond:
             while True:
                 await self._fill_free_pool(True)
                 if self._free:
