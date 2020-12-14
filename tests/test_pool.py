@@ -571,3 +571,11 @@ async def test_pool_on_connect(create_pool, pool_minsize):
         await cur.execute('SELECT 1')
 
     assert cb_called_times == 1
+
+
+async def test_acquire_timeout_no_connections_available(create_pool):
+    pool = await create_pool(minsize=1, maxsize=1, timeout=5)
+    async with pool.acquire():
+        with pytest.raises(asyncio.TimeoutError):
+            async with pool.acquire():
+                pytest.fail("Should not be here")
