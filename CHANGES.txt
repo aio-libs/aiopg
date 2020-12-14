@@ -1,3 +1,9 @@
+1.2.0b0 (2020-12-15)
+^^^^^^^^^^^^^^^^^^^^
+
+* Implement timeout on acquiring connection from pool `#766 <https://github.com/aio-libs/aiopg/pull/766>`_
+
+
 1.1.0 (2020-12-10)
 ^^^^^^^^^^^^^^^^^^
 

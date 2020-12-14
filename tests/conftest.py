@@ -424,8 +424,8 @@ class TcpProxy:
         self.connections = set()
 
     async def start(self):
-        return await asyncio.start_server(
-            self.handle_client,
+        await asyncio.start_server(
+            self._handle_client,
             host=self.src_host,
             port=self.src_port,
         )
@@ -445,10 +445,11 @@ class TcpProxy:
             while not reader.at_eof():
                 bytes_read = await reader.read(TcpProxy.MAX_BYTES)
                 writer.write(bytes_read)
+                await writer.drain()
         finally:
             writer.close()
 
-    async def handle_client(
+    async def _handle_client(
         self,
         client_reader: asyncio.StreamReader,
         client_writer: asyncio.StreamWriter,
