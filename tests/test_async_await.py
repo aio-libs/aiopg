@@ -59,11 +59,10 @@ async def test_pool_context_manager_timeout(pg_params, loop):
             with cursor_ctx as cursor:
                 hung_task = cursor.execute('SELECT pg_sleep(10000);')
                 # start task
-                fut = loop.create_task(hung_task)
+                loop.create_task(hung_task)
                 # sleep for a bit so it gets going
                 await asyncio.sleep(1)
 
-        fut.cancel()
         cursor_ctx = await pool.cursor()
         with cursor_ctx as cursor:
             resp = await cursor.execute('SELECT 42;')

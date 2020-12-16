@@ -83,8 +83,6 @@ class Connection:
         self._timeout = timeout
         self._last_usage = self._loop.time()
         self._writing = False
-        self._cancelling = False
-        self._cancellation_waiter = None
         self._echo = echo
         self._cursor_instance = None
         self._notifies = asyncio.Queue()
@@ -173,14 +171,8 @@ class Connection:
 
     def _create_waiter(self, func_name):
         if self._waiter is not None:
-            if self._cancelling:
-                if not self._waiter.done():
-                    raise RuntimeError('%s() called while connection is '
-                                       'being cancelled' % func_name)
-            else:
-                raise RuntimeError('%s() called while another coroutine is '
-                                   'already waiting for incoming '
-                                   'data' % func_name)
+            raise RuntimeError('%s() called while another coroutine is '
+                               'already waiting for incoming data' % func_name)
         self._waiter = self._loop.create_future()
         return self._waiter
 
@@ -188,24 +180,10 @@ class Connection:
         assert waiter is self._waiter, (waiter, self._waiter)
         self._ready(self._weakref)
 
-        async def cancel():
-            self._waiter = self._loop.create_future()
-            self._cancelling = True
-            self._cancellation_waiter = self._waiter
-            self._conn.cancel()
-            if not self._conn.isexecuting():
-                return
-            try:
-                await asyncio.wait_for(self._waiter, timeout)
-            except psycopg2.extensions.QueryCanceledError:
-                pass
-            except asyncio.TimeoutError:
-                self._close()
-
         try:
             await asyncio.wait_for(self._waiter, timeout)
         except (asyncio.CancelledError, asyncio.TimeoutError) as exc:
-            await asyncio.shield(cancel())
+            await asyncio.shield(self.close())
             raise exc
         except psycopg2.extensions.QueryCanceledError as exc:
             self._loop.call_exception_handler({
@@ -215,13 +193,7 @@ class Connection:
             })
             raise asyncio.CancelledError
         finally:
-            if self._cancelling:
-                self._cancelling = False
-                if self._waiter is self._cancellation_waiter:
-                    self._waiter = None
-                self._cancellation_waiter = None
-            else:
-                self._waiter = None
+            self._waiter = None
 
     def _isexecuting(self):
         return self._conn.isexecuting()
@@ -360,18 +332,8 @@ class Connection:
             "tpc_recover cannot be used in asynchronous mode")
 
     async def cancel(self):
-        """Cancel the current database operation."""
-        if self._waiter is None:
-            return
-
-        async def cancel():
-            self._conn.cancel()
-            try:
-                await self._waiter
-            except psycopg2.extensions.QueryCanceledError:
-                pass
-
-        await asyncio.shield(cancel())
+        raise psycopg2.ProgrammingError(
+            "cancel cannot be used in asynchronous mode")
 
     async def reset(self):
         raise psycopg2.ProgrammingError(

@@ -148,24 +148,12 @@ Example::
       The readonly property that underlying
       :class:`psycopg2.connection` instance.
 
-   .. comethod:: cancel(timeout=None)
+   .. comethod:: cancel()
 
-      Cancel current database operation.
+      .. versionchanged:: 1.2.0
 
-      The method interrupts the processing of the current
-      operation. If no query is being executed, it does nothing. You
-      can call this function from a different thread than the one
-      currently executing a database operation, for instance if you
-      want to cancel a long running query if a button is pushed in the
-      UI. Interrupting query execution will cause the cancelled method
-      to raise a :exc:`psycopg2.extensions.QueryCanceledError`. Note that
-      the termination of the query is not guaranteed to succeed: see
-      the documentation for |PQcancel|_.
-
-      :param float timeout: timeout for cancelling.
-
-      .. |PQcancel| replace:: ``PQcancel()``
-      .. _PQcancel: http://www.postgresql.org/docs/current/static/libpq-cancel.html#LIBPQ-PQCANCEL
+          Not supported in asynchronous mode (:exc:`psycopg2.ProgrammingError`
+          is raised).
 
    .. attribute:: dsn
 

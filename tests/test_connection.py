@@ -13,7 +13,6 @@ import pytest
 import aiopg
 from aiopg.connection import TIMEOUT, Connection
 from aiopg.cursor import Cursor
-from aiopg.utils import ensure_future
 
 PY_341 = sys.version_info >= (3, 4, 1)
 
@@ -253,63 +252,10 @@ async def test_server_version(connect):
     assert 0 < conn.server_version
 
 
-async def test_cancel_noop(connect):
+async def test_cancel_not_supported(connect):
     conn = await connect()
-    await conn.cancel()
-
-
-async def test_cancel_pending_op(connect, loop):
-    def exception_handler(loop_, context):
-        assert context['message'] == context['exception'].pgerror
-        assert context['future'].exception() is context['exception']
-        assert loop_ is loop
-
-    loop.set_exception_handler(exception_handler)
-    fut = asyncio.Future(loop=loop)
-
-    async def inner():
-        fut.set_result(None)
-        await cur.execute("SELECT pg_sleep(10)")
-
-    conn = await connect()
-    cur = await conn.cursor()
-    task = ensure_future(inner(), loop=loop)
-    await fut
-    await asyncio.sleep(0.1, loop=loop)
-    await conn.cancel()
-
-    with pytest.raises(asyncio.CancelledError):
-        await task
-
-
-async def test_cancelled_connection_is_not_usable_until_cancellation(connect,
-                                                                     loop):
-    async def inner(future, cursor):
-        future.set_result(None)
-        await cursor.execute("SELECT pg_sleep(10)")
-
-    fut = asyncio.Future(loop=loop)
-    conn = await connect()
-    cur = await conn.cursor()
-
-    task = ensure_future(inner(fut, cur), loop=loop)
-    await fut
-    await asyncio.sleep(0.1, loop=loop)
-
-    task.cancel()
-
-    for i in range(100):
-        await asyncio.sleep(0)
-        if conn._cancelling:
-            break
-    else:
-        assert False, "Connection did not start cancelling"
-
-    # cur = await conn.cursor()
-    with pytest.raises(RuntimeError) as e:
-        await cur.execute('SELECT 1')
-    assert str(e.value) == ('cursor.execute() called while connection '
-                            'is being cancelled')
+    with pytest.raises(psycopg2.ProgrammingError):
+        await conn.cancel()
 
 
 async def test_close2(connect, loop):
@@ -442,8 +388,6 @@ async def test_execute_twice(connect):
     with pytest.raises(RuntimeError):
         next(coro2.__await__())
 
-    await conn.cancel()
-
 
 async def test_connect_to_unsupported_port(unused_port, loop, pg_params):
     port = unused_port()
@@ -550,16 +494,13 @@ async def test_notifies(connect):
     cur1.close()
 
 
-async def test_close_cursor_on_timeout_error(connect):
+async def test_close_connection_on_timeout_error(connect):
     conn = await connect()
     cur = await conn.cursor(timeout=0.01)
     with pytest.raises(asyncio.TimeoutError):
         await cur.execute("SELECT pg_sleep(10)")
 
-    assert cur.closed
-    assert not conn.closed
-
-    conn.close()
+    assert conn.closed
 
 
 async def test_issue_111_crash_on_connect_error():
