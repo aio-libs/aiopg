@@ -407,9 +407,9 @@ async def test_binary_protocol_error(connect):
         await cur.execute('SELECT 1')
 
 
-async def test_closing_in_separate_task(connect, loop):
-    closed_event = asyncio.Event(loop=loop)
-    exec_created = asyncio.Event(loop=loop)
+async def test_closing_in_separate_task(connect):
+    closed_event = asyncio.Event()
+    exec_created = asyncio.Event()
 
     async def waiter(conn):
         cur = await conn.cursor()
@@ -425,7 +425,7 @@ async def test_closing_in_separate_task(connect, loop):
         closed_event.set()
 
     conn = await connect()
-    await asyncio.gather(waiter(conn), closer(conn), loop=loop)
+    await asyncio.gather(waiter(conn), closer(conn))
 
 
 async def test_connection_timeout(connect):
