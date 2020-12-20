@@ -12,7 +12,6 @@ try:
 except AttributeError:
     ensure_future = getattr(asyncio, 'async')
 
-
 if sys.version_info >= (3, 7, 0):
     __get_running_loop = asyncio.get_running_loop
 else:
