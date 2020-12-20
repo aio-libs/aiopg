@@ -199,7 +199,7 @@ class Connection:
         return self._conn.isexecuting()
 
     def cursor(self, name=None, cursor_factory=None,
-               scrollable=None, withhold=False, timeout=None):
+               scrollable=None, withhold=False, timeout=None, isolation_level=None):
         """A coroutine that returns a new cursor object using the connection.
 
         *cursor_factory* argument can be used to create non-standard
@@ -215,11 +215,12 @@ class Connection:
         self._last_usage = self._loop.time()
         coro = self._cursor(name=name, cursor_factory=cursor_factory,
                             scrollable=scrollable, withhold=withhold,
-                            timeout=timeout)
+                            timeout=timeout, isolation_level=isolation_level)
         return _ContextManager(coro)
 
     async def _cursor(self, name=None, cursor_factory=None,
-                      scrollable=None, withhold=False, timeout=None):
+                      scrollable=None, withhold=False, timeout=None,
+                      isolation_level=None):
 
         if not self.closed_cursor:
             warnings.warn(('You can only have one cursor per connection. '
@@ -235,7 +236,7 @@ class Connection:
                                        cursor_factory=cursor_factory,
                                        scrollable=scrollable,
                                        withhold=withhold)
-        self._cursor_instance = Cursor(self, impl, timeout, self._echo)
+        self._cursor_instance = Cursor(self, impl, timeout, self._echo, isolation_level)
         return self._cursor_instance
 
     async def _cursor_impl(self, name=None, cursor_factory=None,
