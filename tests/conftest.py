@@ -242,7 +242,7 @@ def make_engine(loop, pg_params):
 
 
 @pytest.fixture
-def make_sa_connection(make_engine):
+def make_sa_connection(make_engine, loop):
     conn = None
     engine = None
 
@@ -255,7 +255,7 @@ def make_sa_connection(make_engine):
     yield go
 
     if conn is not None:
-        engine.release(conn)
+        loop.run_until_complete(engine.release(conn))
 
 
 class _AssertWarnsContext:

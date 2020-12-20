@@ -113,7 +113,7 @@ async def test_cannot_acquire_after_closing(make_engine):
     await engine.wait_closed()
 
 
-async def test_wait_closed(make_engine, loop):
+async def test_wait_closed(make_engine):
     engine = await make_engine(minsize=10)
 
     c1 = await engine.acquire()
@@ -124,7 +124,7 @@ async def test_wait_closed(make_engine, loop):
     ops = []
 
     async def do_release(conn):
-        await asyncio.sleep(0, loop=loop)
+        await asyncio.sleep(0)
         engine.release(conn)
         ops.append('release')
 
@@ -135,8 +135,7 @@ async def test_wait_closed(make_engine, loop):
     engine.close()
     await asyncio.gather(wait_closed(),
                          do_release(c1),
-                         do_release(c2),
-                         loop=loop)
+                         do_release(c2))
     assert ['release', 'release', 'wait_closed'] == ops
     assert 0 == engine.freesize
 

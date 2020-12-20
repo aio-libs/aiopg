@@ -119,7 +119,7 @@ async def test_initial_empty(create_pool):
     assert 2 == pool.freesize
 
 
-async def test_parallel_tasks(create_pool, loop):
+async def test_parallel_tasks(create_pool):
     pool = await create_pool(minsize=0, maxsize=2)
     assert 2 == pool.maxsize
     assert 0 == pool.minsize
@@ -129,7 +129,7 @@ async def test_parallel_tasks(create_pool, loop):
     fut1 = pool.acquire()
     fut2 = pool.acquire()
 
-    conn1, conn2 = await asyncio.gather(fut1, fut2, loop=loop)
+    conn1, conn2 = await asyncio.gather(fut1, fut2)
     assert 2 == pool.size
     assert 0 == pool.freesize
     assert {conn1, conn2} == pool._used
@@ -150,14 +150,14 @@ async def test_parallel_tasks(create_pool, loop):
     pool.release(conn3)
 
 
-async def test_parallel_tasks_more(create_pool, loop):
+async def test_parallel_tasks_more(create_pool):
     pool = await create_pool(minsize=0, maxsize=3)
 
     fut1 = pool.acquire()
     fut2 = pool.acquire()
     fut3 = pool.acquire()
 
-    conn1, conn2, conn3 = await asyncio.gather(fut1, fut2, fut3, loop=loop)
+    conn1, conn2, conn3 = await asyncio.gather(fut1, fut2, fut3)
     assert 3 == pool.size
     assert 0 == pool.freesize
     assert {conn1, conn2, conn3} == pool._used
@@ -245,15 +245,14 @@ async def test_release_with_invalid_status_wait_release(create_pool):
     )
 
 
-async def test_fill_free(create_pool, loop):
+async def test_fill_free(create_pool):
     pool = await create_pool(minsize=1)
     with (await pool):
         assert 0 == pool.freesize
         assert 1 == pool.size
 
         conn = await asyncio.wait_for(pool.acquire(),
-                                      timeout=0.5,
-                                      loop=loop)
+                                      timeout=0.5)
         assert 0 == pool.freesize
         assert 2 == pool.size
         pool.release(conn)
@@ -310,7 +309,7 @@ async def test_invalid__maxsize(create_pool):
         await create_pool(minsize=5, maxsize=2)
 
 
-async def test_true_parallel_tasks(create_pool, loop):
+async def test_true_parallel_tasks(create_pool):
     pool = await create_pool(minsize=0, maxsize=1)
     assert 1 == pool.maxsize
     assert 0 == pool.minsize
@@ -327,18 +326,18 @@ async def test_true_parallel_tasks(create_pool, loop):
         conn = await pool.acquire()
         maxsize = max(maxsize, pool.size)
         minfreesize = min(minfreesize, pool.freesize)
-        await asyncio.sleep(0.01, loop=loop)
+        await asyncio.sleep(0.01)
         pool.release(conn)
         maxsize = max(maxsize, pool.size)
         minfreesize = min(minfreesize, pool.freesize)
 
-    await asyncio.gather(inner(), inner(), loop=loop)
+    await asyncio.gather(inner(), inner())
 
     assert 1 == maxsize
     assert 0 == minfreesize
 
 
-async def test_wait_closed(create_pool, loop):
+async def test_wait_closed(create_pool):
     pool = await create_pool(minsize=10)
 
     c1 = await pool.acquire()
@@ -349,7 +348,7 @@ async def test_wait_closed(create_pool, loop):
     ops = []
 
     async def do_release(conn):
-        await asyncio.sleep(0, loop=loop)
+        await asyncio.sleep(0)
         pool.release(conn)
         ops.append('release')
 
@@ -360,8 +359,7 @@ async def test_wait_closed(create_pool, loop):
     pool.close()
     await asyncio.gather(wait_closed(),
                          do_release(c1),
-                         do_release(c2),
-                         loop=loop)
+                         do_release(c2))
     assert ['release', 'release', 'wait_closed'] == ops
     assert 0 == pool.freesize
 
@@ -424,13 +422,13 @@ async def test_release_terminated_pool_with_wait_release(create_pool):
     await pool.release(conn)
 
 
-async def test_close_with_acquired_connections(create_pool, loop):
+async def test_close_with_acquired_connections(create_pool):
     pool = await create_pool()
     await pool.acquire()
     pool.close()
 
     with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(pool.wait_closed(), 0.1, loop=loop)
+        await asyncio.wait_for(pool.wait_closed(), 0.1)
 
 
 async def test___del__(pg_params, warning):
@@ -466,7 +464,7 @@ async def test_connection_closed_after_timeout(create_pool):
         assert (1,) == val
 
 
-async def test_pool_with_connection_recycling(create_pool, loop):
+async def test_pool_with_connection_recycling(create_pool):
     pool = await create_pool(minsize=1,
                              maxsize=1,
                              pool_recycle=3)
@@ -476,7 +474,7 @@ async def test_pool_with_connection_recycling(create_pool, loop):
         val = await cur.fetchone()
         assert (1,) == val
 
-    await asyncio.sleep(5, loop=loop)
+    await asyncio.sleep(5)
 
     assert 1 == pool.freesize
     with (await pool) as conn:
@@ -511,7 +509,7 @@ async def test_connection_in_good_state_after_timeout_in_transaction(
 
 
 async def test_drop_connection_if_timedout(make_connection,
-                                           create_pool, loop):
+                                           create_pool):
     async def _kill_connections():
         # Drop all connections on server
         conn = await make_connection()
@@ -524,7 +522,7 @@ async def test_drop_connection_if_timedout(make_connection,
 
     pool = await create_pool(minsize=3)
     await _kill_connections()
-    await asyncio.sleep(0.5, loop=loop)
+    await asyncio.sleep(0.5)
 
     assert len(pool._free) == 3
     assert all([c.closed for c in pool._free])
