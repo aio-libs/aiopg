@@ -17,17 +17,20 @@ def engine(make_connection, loop):
     return loop.run_until_complete(start())
 
 
-@pytest.mark.parametrize('isolation_level,readonly,deferrable', [
-    (IsolationLevel.default, False, False),
-    (IsolationLevel.read_committed, False, False),
-    (IsolationLevel.repeatable_read, False, False),
-    (IsolationLevel.serializable, False, False),
-    (IsolationLevel.serializable, False, True),
+@pytest.mark.parametrize('isolation_level', [
+    IsolationLevel.default,
+    IsolationLevel.read_committed,
+    IsolationLevel.repeatable_read,
+    IsolationLevel.serializable,
 ])
-async def test_transaction(engine, isolation_level, readonly, deferrable):
+@pytest.mark.parametrize('deferrable', [
+    False,
+    True,
+])
+async def test_transaction(engine, isolation_level, deferrable):
     async with engine.cursor() as cur:
         async with Transaction(cur, isolation_level,
-                               readonly=readonly, deferrable=deferrable):
+                               readonly=False, deferrable=deferrable):
             await cur.execute("insert into tbl values(1, 'data')")
             await cur.execute('select * from tbl where id = 1')
             row = await cur.fetchone()
@@ -36,18 +39,40 @@ async def test_transaction(engine, isolation_level, readonly, deferrable):
             assert row[1] == 'data'
 
 
-async def test_transaction_readonly_insert(engine):
+@pytest.mark.parametrize('isolation_level', [
+    IsolationLevel.default,
+    IsolationLevel.read_committed,
+    IsolationLevel.repeatable_read,
+    IsolationLevel.serializable,
+])
+@pytest.mark.parametrize('deferrable', [
+    False,
+    True,
+])
+async def test_transaction_readonly_insert(
+    engine, isolation_level, deferrable
+):
     async with engine.cursor() as cur:
-        async with Transaction(cur, IsolationLevel.serializable,
-                               readonly=True):
+        async with Transaction(cur, isolation_level,
+                               readonly=True, deferrable=deferrable):
             with pytest.raises(psycopg2.InternalError):
                 await cur.execute("insert into tbl values(1, 'data')")
 
 
-async def test_transaction_readonly(engine):
+@pytest.mark.parametrize('isolation_level', [
+    IsolationLevel.default,
+    IsolationLevel.read_committed,
+    IsolationLevel.repeatable_read,
+    IsolationLevel.serializable,
+])
+@pytest.mark.parametrize('deferrable', [
+    False,
+    True,
+])
+async def test_transaction_readonly(engine, isolation_level, deferrable):
     async with engine.cursor() as cur:
-        async with Transaction(cur, IsolationLevel.serializable,
-                               readonly=True):
+        async with Transaction(cur, isolation_level,
+                               readonly=True, deferrable=deferrable):
             await cur.execute('select * from tbl where id = 22')
             row = await cur.fetchone()
 
