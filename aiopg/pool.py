@@ -12,6 +12,7 @@ from .utils import (
     _PoolContextManager,
     _PoolCursorContextManager,
     get_running_loop,
+    ensure_future,
 )
 
 
@@ -252,7 +253,7 @@ class Pool(asyncio.AbstractServer):
             else:
                 conn.free_cursor()
                 self._free.append(conn)
-            fut = asyncio.ensure_future(self._wakeup())
+            fut = ensure_future(self._wakeup(), loop=self._loop)
         return fut
 
     async def cursor(self, name=None, cursor_factory=None,
