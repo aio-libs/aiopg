@@ -2,7 +2,6 @@ import psycopg2
 import pytest
 
 from aiopg import IsolationLevel, Transaction
-from aiopg.transaction import IsolationCompiler
 
 
 @pytest.fixture
@@ -117,17 +116,6 @@ async def test_transaction_fail_oldstyle(engine, fn):
 def test_transaction_value_error():
     with pytest.raises(ValueError):
         Transaction(None, IsolationLevel.read_committed, readonly=True)
-
-
-def test_transaction_isolation_implemented():
-    class IsolationCompilerTest(IsolationCompiler):
-        def begin(self):
-            return super().begin()
-
-    tr = IsolationCompilerTest(False, False)
-
-    with pytest.raises(NotImplementedError):
-        tr.begin()
 
 
 async def test_transaction_finalization_warning(engine, monkeypatch):

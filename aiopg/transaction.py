@@ -11,19 +11,12 @@ __all__ = ('IsolationLevel', 'Transaction')
 
 
 class IsolationCompiler(ABC):
-    name = ''
+    __slots__ = ()
 
-    __slots__ = ('_readonly', '_deferrable')
-
-    def __init__(self, readonly, deferrable):
-        self._readonly = readonly
-        self._deferrable = deferrable
-        self._check_readonly_deferrable()
-
-    def _check_readonly_deferrable(self):
-        available = self._readonly or self._deferrable
-        if not isinstance(self, SerializableCompiler) and available:
-            raise ValueError('Is only available for serializable transactions')
+    @property
+    @abstractmethod
+    def name(self):
+        ...
 
     def savepoint(self, unique_id):
         return 'SAVEPOINT {}'.format(unique_id)
@@ -42,28 +35,52 @@ class IsolationCompiler(ABC):
 
     @abstractmethod
     def begin(self):
-        raise NotImplementedError("Please Implement this method")
+        ...
 
     def __repr__(self):
         return self.name
 
 
 class ReadCommittedCompiler(IsolationCompiler):
-    name = 'Read committed'
+    __slots__ = ()
+
+    def __init__(self, readonly, deferrable):
+        if readonly or deferrable:
+            raise ValueError("Readonly or deferrable are not supported")
+
+    @property
+    def name(self):
+        return 'Read committed'
 
     def begin(self):
-        return 'BEGIN'
+        return 'BEGIN ISOLATION LEVEL READ COMMITTED'
 
 
 class RepeatableReadCompiler(IsolationCompiler):
-    name = 'Repeatable read'
+    __slots__ = ()
+
+    def __init__(self, readonly, deferrable):
+        if readonly or deferrable:
+            raise ValueError("Readonly or deferrable are not supported")
+
+    @property
+    def name(self):
+        return 'Repeatable read'
 
     def begin(self):
         return 'BEGIN ISOLATION LEVEL REPEATABLE READ'
 
 
 class SerializableCompiler(IsolationCompiler):
-    name = 'Serializable'
+    __slots__ = ('_readonly', '_deferrable')
+
+    def __init__(self, readonly, deferrable):
+        self._readonly = readonly
+        self._deferrable = deferrable
+
+    @property
+    def name(self):
+        return 'Serializable'
 
     def begin(self):
         query = 'BEGIN ISOLATION LEVEL SERIALIZABLE'
@@ -77,7 +94,23 @@ class SerializableCompiler(IsolationCompiler):
         return query
 
 
+class DefaultCompiler(IsolationCompiler):
+    __slots__ = ()
+
+    def __init__(self, readonly, deferrable):
+        if readonly or deferrable:
+            raise ValueError("Readonly or deferrable are not supported")
+
+    @property
+    def name(self):
+        return 'Default'
+
+    def begin(self):
+        return 'BEGIN'
+
+
 class IsolationLevel(enum.Enum):
+    default = DefaultCompiler
     serializable = SerializableCompiler
     repeatable_read = RepeatableReadCompiler
     read_committed = ReadCommittedCompiler
@@ -173,7 +206,7 @@ class Transaction:
                 ResourceWarning)
 
     async def __aenter__(self):
-        return (await self.begin())
+        return await self.begin()
 
     async def __aexit__(self, exc_type, exc, tb):
         if exc_type is not None:
