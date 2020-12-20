@@ -16,7 +16,7 @@ class IsolationCompiler(ABC):
     @property
     @abstractmethod
     def name(self):
-        ...
+        ...  # pragma: no cover
 
     def savepoint(self, unique_id):
         return 'SAVEPOINT {}'.format(unique_id)
@@ -35,7 +35,7 @@ class IsolationCompiler(ABC):
 
     @abstractmethod
     def begin(self):
-        ...
+        ...  # pragma: no cover
 
     def __repr__(self):
         return self.name
