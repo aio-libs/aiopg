@@ -18,6 +18,7 @@ def engine(make_connection, loop):
 
 
 @pytest.mark.parametrize('isolation_level,readonly,deferrable', [
+    (IsolationLevel.default, False, False),
     (IsolationLevel.read_committed, False, False),
     (IsolationLevel.repeatable_read, False, False),
     (IsolationLevel.serializable, False, False),

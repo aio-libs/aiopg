@@ -110,10 +110,10 @@ class DefaultCompiler(IsolationCompiler):
 
 
 class IsolationLevel(enum.Enum):
-    default = DefaultCompiler
     serializable = SerializableCompiler
     repeatable_read = RepeatableReadCompiler
     read_committed = ReadCommittedCompiler
+    default = DefaultCompiler
 
     def __call__(self, readonly, deferrable):
         return self.value(readonly, deferrable)
