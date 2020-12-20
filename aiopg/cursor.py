@@ -13,7 +13,9 @@ class Cursor:
         self._impl = impl
         self._timeout = timeout
         self._echo = echo
-        self._transaction = Transaction(self, isolation_level or IsolationLevel.default)
+        self._transaction = Transaction(
+            self, isolation_level or IsolationLevel.default
+        )
 
     @property
     def echo(self):

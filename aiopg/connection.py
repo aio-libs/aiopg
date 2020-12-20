@@ -199,7 +199,8 @@ class Connection:
         return self._conn.isexecuting()
 
     def cursor(self, name=None, cursor_factory=None,
-               scrollable=None, withhold=False, timeout=None, isolation_level=None):
+               scrollable=None, withhold=False, timeout=None,
+               isolation_level=None):
         """A coroutine that returns a new cursor object using the connection.
 
         *cursor_factory* argument can be used to create non-standard
@@ -236,7 +237,9 @@ class Connection:
                                        cursor_factory=cursor_factory,
                                        scrollable=scrollable,
                                        withhold=withhold)
-        self._cursor_instance = Cursor(self, impl, timeout, self._echo, isolation_level)
+        self._cursor_instance = Cursor(
+            self, impl, timeout, self._echo, isolation_level
+        )
         return self._cursor_instance
 
     async def _cursor_impl(self, name=None, cursor_factory=None,
