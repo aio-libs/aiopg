@@ -11,8 +11,8 @@ from .utils import (
     _PoolConnectionContextManager,
     _PoolContextManager,
     _PoolCursorContextManager,
-    get_running_loop,
     ensure_future,
+    get_running_loop,
 )
 
 
