@@ -2,7 +2,6 @@ import psycopg2
 import pytest
 
 from aiopg import IsolationLevel, Transaction
-from aiopg.transaction import IsolationCompiler
 
 
 @pytest.fixture
@@ -20,17 +19,20 @@ def engine(make_engine, loop):
     return loop.run_until_complete(start())
 
 
-@pytest.mark.parametrize('isolation_level,readonly,deferrable', [
-    (IsolationLevel.read_committed, False, False),
-    (IsolationLevel.repeatable_read, False, False),
-    (IsolationLevel.serializable, False, False),
-    (IsolationLevel.serializable, False, True),
+@pytest.mark.parametrize('isolation_level', [
+    IsolationLevel.default,
+    IsolationLevel.read_committed,
+    IsolationLevel.repeatable_read,
+    IsolationLevel.serializable,
 ])
-async def test_transaction_oldstyle(engine, isolation_level, readonly,
-                                    deferrable):
+@pytest.mark.parametrize('deferrable', [
+    False,
+    True,
+])
+async def test_transaction_oldstyle(engine, isolation_level, deferrable):
     async with engine.acquire() as cur:
         tr = Transaction(cur, isolation_level,
-                         readonly=readonly, deferrable=deferrable)
+                         readonly=False, deferrable=deferrable)
         await tr.begin()
         await cur.execute("insert into tbl values(1, 'data')")
         resp = await cur.execute('select * from tbl where id = 1')
@@ -112,22 +114,6 @@ async def test_transaction_fail_oldstyle(engine, fn):
     with pytest.raises(psycopg2.ProgrammingError):
         async with engine.acquire() as cur:
             await fn(cur)
-
-
-def test_transaction_value_error():
-    with pytest.raises(ValueError):
-        Transaction(None, IsolationLevel.read_committed, readonly=True)
-
-
-def test_transaction_isolation_implemented():
-    class IsolationCompilerTest(IsolationCompiler):
-        def begin(self):
-            return super().begin()
-
-    tr = IsolationCompilerTest(False, False)
-
-    with pytest.raises(NotImplementedError):
-        tr.begin()
 
 
 async def test_transaction_finalization_warning(engine, monkeypatch):

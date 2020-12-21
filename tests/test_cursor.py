@@ -5,7 +5,9 @@ import psycopg2
 import psycopg2.tz
 import pytest
 
+from aiopg import IsolationLevel
 from aiopg.connection import TIMEOUT
+from aiopg.transaction import ReadCommittedCompiler
 
 
 @pytest.fixture
@@ -302,6 +304,12 @@ async def test_echo_false(connect):
     conn = await connect()
     cur = await conn.cursor()
     assert not cur.echo
+
+
+async def test_isolation_level(connect):
+    conn = await connect()
+    cur = await conn.cursor(isolation_level=IsolationLevel.read_committed)
+    assert isinstance(cur._transaction._isolation, ReadCommittedCompiler)
 
 
 async def test_iter(connect):

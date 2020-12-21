@@ -1,7 +1,7 @@
 import enum
 import uuid
 import warnings
-from abc import ABC, abstractmethod
+from abc import ABC
 
 import psycopg2
 
@@ -11,19 +11,16 @@ __all__ = ('IsolationLevel', 'Transaction')
 
 
 class IsolationCompiler(ABC):
-    name = ''
+    __slots__ = ('_isolation_level', '_readonly', '_deferrable')
 
-    __slots__ = ('_readonly', '_deferrable')
-
-    def __init__(self, readonly, deferrable):
+    def __init__(self, isolation_level, readonly, deferrable):
+        self._isolation_level = isolation_level
         self._readonly = readonly
         self._deferrable = deferrable
-        self._check_readonly_deferrable()
 
-    def _check_readonly_deferrable(self):
-        available = self._readonly or self._deferrable
-        if not isinstance(self, SerializableCompiler) and available:
-            raise ValueError('Is only available for serializable transactions')
+    @property
+    def name(self):
+        return self._isolation_level
 
     def savepoint(self, unique_id):
         return 'SAVEPOINT {}'.format(unique_id)
@@ -40,33 +37,12 @@ class IsolationCompiler(ABC):
     def rollback(self):
         return 'ROLLBACK'
 
-    @abstractmethod
     def begin(self):
-        raise NotImplementedError("Please Implement this method")
-
-    def __repr__(self):
-        return self.name
-
-
-class ReadCommittedCompiler(IsolationCompiler):
-    name = 'Read committed'
-
-    def begin(self):
-        return 'BEGIN'
-
-
-class RepeatableReadCompiler(IsolationCompiler):
-    name = 'Repeatable read'
-
-    def begin(self):
-        return 'BEGIN ISOLATION LEVEL REPEATABLE READ'
-
-
-class SerializableCompiler(IsolationCompiler):
-    name = 'Serializable'
-
-    def begin(self):
-        query = 'BEGIN ISOLATION LEVEL SERIALIZABLE'
+        query = 'BEGIN'
+        if self._isolation_level is not None:
+            query += (
+                ' ISOLATION LEVEL {}'.format(self._isolation_level.upper())
+            )
 
         if self._readonly:
             query += ' READ ONLY'
@@ -76,11 +52,47 @@ class SerializableCompiler(IsolationCompiler):
 
         return query
 
+    def __repr__(self):
+        return self.name
+
+
+class ReadCommittedCompiler(IsolationCompiler):
+    __slots__ = ()
+
+    def __init__(self, readonly, deferrable):
+        super().__init__('Read committed', readonly, deferrable)
+
+
+class RepeatableReadCompiler(IsolationCompiler):
+    __slots__ = ()
+
+    def __init__(self, readonly, deferrable):
+        super().__init__('Repeatable read', readonly, deferrable)
+
+
+class SerializableCompiler(IsolationCompiler):
+    __slots__ = ()
+
+    def __init__(self, readonly, deferrable):
+        super().__init__('Serializable', readonly, deferrable)
+
+
+class DefaultCompiler(IsolationCompiler):
+    __slots__ = ()
+
+    def __init__(self, readonly, deferrable):
+        super().__init__(None, readonly, deferrable)
+
+    @property
+    def name(self):
+        return 'Default'
+
 
 class IsolationLevel(enum.Enum):
     serializable = SerializableCompiler
     repeatable_read = RepeatableReadCompiler
     read_committed = ReadCommittedCompiler
+    default = DefaultCompiler
 
     def __call__(self, readonly, deferrable):
         return self.value(readonly, deferrable)
@@ -173,7 +185,7 @@ class Transaction:
                 ResourceWarning)
 
     async def __aenter__(self):
-        return (await self.begin())
+        return await self.begin()
 
     async def __aexit__(self, exc_type, exc, tb):
         if exc_type is not None:

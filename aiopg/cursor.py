@@ -8,12 +8,14 @@ from .utils import _TransactionBeginContextManager
 
 
 class Cursor:
-    def __init__(self, conn, impl, timeout, echo):
+    def __init__(self, conn, impl, timeout, echo, isolation_level):
         self._conn = conn
         self._impl = impl
         self._timeout = timeout
         self._echo = echo
-        self._transaction = Transaction(self, IsolationLevel.repeatable_read)
+        self._transaction = Transaction(
+            self, isolation_level or IsolationLevel.default
+        )
 
     @property
     def echo(self):
