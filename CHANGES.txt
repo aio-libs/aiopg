@@ -1,3 +1,11 @@
+1.2.0b2 (2020-12-21)
+^^^^^^^^^^^^^^^^^^^^
+
+* Fix IsolationLevel.read_committed and introduce IsolationLevel.default `#770 <https://github.com/aio-libs/aiopg/pull/770>`_
+
+* Fix python 3.8 warnings in tests `#771 <https://github.com/aio-libs/aiopg/pull/771>`_
+
+
 1.2.0b1 (2020-12-16)
 ^^^^^^^^^^^^^^^^^^^^
 
