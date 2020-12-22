@@ -19,7 +19,7 @@ class CustomStrList(sa.types.TypeDecorator):
         super().__init__(*args, **kwargs)
 
     def process_bind_param(self, value, dialect):
-        return (f'{self._sep}').join(map(str, value))
+        return f'{self._sep}'.join(map(str, value))
 
     def process_result_value(self, value, dialect):
         if value is None:
