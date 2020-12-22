@@ -78,7 +78,7 @@ class RowProxy(Mapping):
         return repr(self.as_tuple())
 
 
-class ResultMetaData(object):
+class ResultMetaData:
     """Handle cursor.description, applying additional info from an execution
     context."""
 

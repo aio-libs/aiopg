@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # aiopg documentation build configuration file, created by
 # sphinx-quickstart on Sat Apr  5 00:00:44 2014.
