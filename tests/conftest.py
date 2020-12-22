@@ -128,11 +128,11 @@ def pytest_generate_tests(metafunc):
 @pytest.fixture(scope='session')
 def pg_server(unused_port, docker, session_id, pg_tag, request):
     if not request.config.option.no_pull:
-        docker.pull('postgres:{}'.format(pg_tag))
+        docker.pull(f'postgres:{pg_tag}')
 
     container_args = dict(
-        image='postgres:{}'.format(pg_tag),
-        name='aiopg-test-server-{}-{}'.format(pg_tag, session_id),
+        image=f'postgres:{pg_tag}',
+        name=f'aiopg-test-server-{pg_tag}-{session_id}',
         ports=[5432],
         detach=True,
     )
@@ -306,15 +306,14 @@ class _AssertWarnsContext:
         # Now we simply try to choose a helpful failure message
         if first_matching is not None:
             __tracebackhide__ = True
-            assert 0, '"{}" does not match "{}"'.format(
-                self.expected_regex.pattern, str(first_matching))
+            assert 0, (f'"{self.expected_regex.pattern}" '
+                       f'does not match "{first_matching}"')
         if self.obj_name:
             __tracebackhide__ = True
-            assert 0, "{} not triggered by {}".format(exc_name,
-                                                      self.obj_name)
+            assert 0, f"{exc_name} not triggered by {self.obj_name}"
         else:
             __tracebackhide__ = True
-            assert 0, "{} not triggered".format(exc_name)
+            assert 0, f"{exc_name} not triggered"
 
 
 _LoggingWatcher = collections.namedtuple("_LoggingWatcher",
@@ -378,9 +377,8 @@ class _AssertLogsContext:
             return False
         if len(self.watcher.records) == 0:
             __tracebackhide__ = True
-            assert 0, ("no logs of level {} or higher triggered on {}"
-                       .format(logging.getLevelName(self.level),
-                               self.logger.name))
+            assert 0, (f"no logs of level {logging.getLevelName(self.level)} "
+                       f"or higher triggered on {self.logger.name}")
 
 
 @pytest.fixture

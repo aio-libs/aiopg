@@ -58,7 +58,7 @@ async def fill_data(conn):
                 is_private = random.uniform(0, 1) < 0.8
                 await conn.execute(emails.insert().values(
                     user_id=uid,
-                    email='{}+{}@gmail.com'.format(name, num),
+                    email=f'{name}+{num}@gmail.com',
                     private=is_private))
 
 

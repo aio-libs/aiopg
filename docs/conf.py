@@ -76,7 +76,7 @@ master_doc = 'index'
 project = 'aiopg'
 date = datetime.date.today()
 
-copyright = '2014-{year}, Andrew Svetlov, Alexey Firsov'.format(year=date.year)
+copyright = f'2014-{date.year}, Andrew Svetlov, Alexey Firsov'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

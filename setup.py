@@ -29,7 +29,7 @@ def read_version():
 
 
 def read_changelog(path='CHANGES.txt'):
-    return 'Changelog\n---------\n\n{}'.format(read(path))
+    return f'Changelog\n---------\n\n{read(path)}'
 
 
 classifiers = [

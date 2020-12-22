@@ -42,8 +42,8 @@ class RowProxy(Mapping):
         #         raise
         if index is None:
             raise exc.InvalidRequestError(
-                "Ambiguous column name '%s' in result set! "
-                "try 'use_labels' option on select statement." % key)
+                f"Ambiguous column name {key!r} in result set! "
+                f"try 'use_labels' option on select statement.")
         if processor is not None:
             return processor(self._row[index])
         else:
@@ -194,8 +194,8 @@ class ResultMetaData:
         if result is None:
             if raiseerr:
                 raise exc.NoSuchColumnError(
-                    "Could not locate column in row for column '%s'" %
-                    expression._string_or_unprintable(key))
+                    f"Could not locate column in row for column "
+                    f"{expression._string_or_unprintable(key)!r}")
             else:
                 return None
         else:

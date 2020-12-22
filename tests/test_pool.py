@@ -202,8 +202,8 @@ async def test_release_with_invalid_status(create_pool):
     assert not pool._used
     assert conn.closed
     m_log.warn.assert_called_with(
-        "Invalid transaction status on "
-        "released connection: {}".format(TRANSACTION_STATUS_INTRANS),
+        f"Invalid transaction status on "
+        f"released connection: {TRANSACTION_STATUS_INTRANS}",
         ResourceWarning
     )
 
@@ -239,14 +239,14 @@ async def test_release_with_invalid_status_wait_release(create_pool):
     assert not pool._used
     assert conn.closed
     m_log.warn.assert_called_with(
-        "Invalid transaction status on "
-        "released connection: {}".format(TRANSACTION_STATUS_INTRANS),
+        f"Invalid transaction status on "
+        f"released connection: {TRANSACTION_STATUS_INTRANS}",
         ResourceWarning
     )
 
 
 async def test_fill_free(create_pool):
-    pool = await create_pool(minsize=1)
+    pool = await create_pool(minsize=0)
     with (await pool):
         assert 0 == pool.freesize
         assert 1 == pool.size

@@ -190,7 +190,7 @@ class SAConnection:
     async def _begin_impl(self, isolation_level, readonly, deferrable):
         stmt = 'BEGIN'
         if isolation_level is not None:
-            stmt += ' ISOLATION LEVEL ' + isolation_level
+            stmt += f' ISOLATION LEVEL {isolation_level}'
         if readonly:
             stmt += ' READ ONLY'
         if deferrable:
@@ -243,11 +243,11 @@ class SAConnection:
 
     async def _savepoint_impl(self, name=None):
         self._savepoint_seq += 1
-        name = 'aiopg_sa_savepoint_%s' % self._savepoint_seq
+        name = f'aiopg_sa_savepoint_{self._savepoint_seq}'
 
         cur = await self._get_cursor()
         try:
-            await cur.execute('SAVEPOINT ' + name)
+            await cur.execute(f'SAVEPOINT {name}')
             return name
         finally:
             cur.close()
@@ -255,7 +255,7 @@ class SAConnection:
     async def _rollback_to_savepoint_impl(self, name, parent):
         cur = await self._get_cursor()
         try:
-            await cur.execute('ROLLBACK TO SAVEPOINT ' + name)
+            await cur.execute(f'ROLLBACK TO SAVEPOINT {name}')
         finally:
             cur.close()
         self._transaction = parent
@@ -263,7 +263,7 @@ class SAConnection:
     async def _release_savepoint_impl(self, name, parent):
         cur = await self._get_cursor()
         try:
-            await cur.execute('RELEASE SAVEPOINT ' + name)
+            await cur.execute(f'RELEASE SAVEPOINT {name}')
         finally:
             cur.close()
         self._transaction = parent
@@ -292,7 +292,7 @@ class SAConnection:
         return self._transaction
 
     async def _prepare_twophase_impl(self, xid):
-        await self.execute("PREPARE TRANSACTION '%s'" % xid)
+        await self.execute(f"PREPARE TRANSACTION {xid!r}")
 
     async def recover_twophase(self):
         """Return a list of prepared twophase transaction ids."""
@@ -302,14 +302,14 @@ class SAConnection:
     async def rollback_prepared(self, xid, *, is_prepared=True):
         """Rollback prepared twophase transaction."""
         if is_prepared:
-            await self.execute("ROLLBACK PREPARED '%s'" % xid)
+            await self.execute(f"ROLLBACK PREPARED {xid:!r}")
         else:
             await self._rollback_impl()
 
     async def commit_prepared(self, xid, *, is_prepared=True):
         """Commit prepared twophase transaction."""
         if is_prepared:
-            await self.execute("COMMIT PREPARED '%s'" % xid)
+            await self.execute(f"COMMIT PREPARED {xid!r}")
         else:
             await self._commit_impl()
 

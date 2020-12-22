@@ -382,16 +382,10 @@ class Cursor:
         return
 
     def __repr__(self):
-        msg = (
-            '<'
-            '{module_name}::{class_name} '
-            'name={name}, '
-            'closed={closed}'
-            '>'
-        )
-        return msg.format(
-            module_name=type(self).__module__,
-            class_name=type(self).__name__,
-            name=self.name,
-            closed=self.closed
+        return (
+            f'<'
+            f'{type(self).__module__}::{type(self).__name__} '
+            f'name={self.name}, '
+            f'closed={self.closed}'
+            f'>'
         )

@@ -242,8 +242,8 @@ class Pool(asyncio.AbstractServer):
             tran_status = conn._conn.get_transaction_status()
             if tran_status != TRANSACTION_STATUS_IDLE:
                 warnings.warn(
-                    ("Invalid transaction status on "
-                     "released connection: {}").format(tran_status),
+                    f"Invalid transaction status on "
+                    f"released connection: {tran_status}",
                     ResourceWarning
                 )
                 conn.close()
@@ -308,5 +308,5 @@ class Pool(asyncio.AbstractServer):
                 conn.close()
                 left += 1
             warnings.warn(
-                "Unclosed {} connections in {!r}".format(left, self),
+                f"Unclosed {left} connections in {self!r}",
                 ResourceWarning)

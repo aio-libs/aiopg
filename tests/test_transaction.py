@@ -123,8 +123,8 @@ async def test_transaction_finalization_warning(engine, monkeypatch):
         def valid(x, _):
             assert x in [
                 'Invalid transaction status on released connection: 2',
-                'You have not closed transaction {!r}'.format(tr),
-                'You have not closed savepoint {!r}'.format(tr)
+                f'You have not closed transaction {tr!r}',
+                f'You have not closed savepoint {tr!r}'
             ]
 
         monkeypatch.setattr('aiopg.transaction.warnings.warn', valid)

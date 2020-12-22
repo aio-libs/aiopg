@@ -23,13 +23,13 @@ class IsolationCompiler(ABC):
         return self._isolation_level
 
     def savepoint(self, unique_id):
-        return 'SAVEPOINT {}'.format(unique_id)
+        return f'SAVEPOINT {unique_id}'
 
     def release_savepoint(self, unique_id):
-        return 'RELEASE SAVEPOINT {}'.format(unique_id)
+        return f'RELEASE SAVEPOINT {unique_id}'
 
     def rollback_savepoint(self, unique_id):
-        return 'ROLLBACK TO SAVEPOINT {}'.format(unique_id)
+        return f'ROLLBACK TO SAVEPOINT {unique_id}'
 
     def commit(self):
         return 'COMMIT'
@@ -41,7 +41,7 @@ class IsolationCompiler(ABC):
         query = 'BEGIN'
         if self._isolation_level is not None:
             query += (
-                ' ISOLATION LEVEL {}'.format(self._isolation_level.upper())
+                f' ISOLATION LEVEL {self._isolation_level.upper()}'
             )
 
         if self._readonly:
@@ -147,7 +147,7 @@ class Transaction:
         if self._unique_id is not None:
             raise psycopg2.ProgrammingError('You do not shut down savepoint')
 
-        self._unique_id = 's{}'.format(uuid.uuid1().hex)
+        self._unique_id = f's{uuid.uuid1().hex}'
         await self._cur.execute(
             self._isolation.savepoint(self._unique_id))
 
@@ -167,21 +167,18 @@ class Transaction:
             raise psycopg2.ProgrammingError('You do not start savepoint')
 
     def __repr__(self):
-        return "<{} transaction={} id={:#x}>".format(
-            self.__class__.__name__,
-            self._isolation,
-            id(self)
-        )
+        return (f"<{self.__class__.__name__} "
+                f"transaction={self._isolation} id={id(self):#x}>")
 
     def __del__(self):
         if self._is_begin:
             warnings.warn(
-                "You have not closed transaction {!r}".format(self),
+                f"You have not closed transaction {self!r}",
                 ResourceWarning)
 
         if self._unique_id is not None:
             warnings.warn(
-                "You have not closed savepoint {!r}".format(self),
+                f"You have not closed savepoint {self!r}",
                 ResourceWarning)
 
     async def __aenter__(self):

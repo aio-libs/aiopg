@@ -32,9 +32,8 @@ class PythonEnum(types.TypeDecorator):
         for __, case in self.python_enum_type.__members__.items():
             if case.value == value:
                 return case
-        raise TypeError("Cannot map Enum value '{}' to Python's {}".format(
-            value, self.python_enum_type
-        ))
+        raise TypeError(f"Cannot map Enum value {value!r} "
+                        f"to Python's {self.python_enum_type}")
 
     def copy(self):
         return PythonEnum(self.python_enum_type, **self.kwargs)
