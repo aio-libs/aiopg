@@ -12,17 +12,15 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 import datetime
-import os
-import os.path
 import re
+
+from pathlib import Path
 
 
 def get_release():
     regexp = re.compile(r"^__version__\W*=\W*'([\d.abrc]+)'")
-    here = os.path.dirname(__file__)
-    root = os.path.dirname(here)
-    init_py = os.path.join(root, 'aiopg', '__init__.py')
-    with open(init_py) as f:
+    init_py = Path(__file__).resolve().parent.parent / 'aiopg' / '__init__.py'
+    with init_py.open() as f:
         for line in f:
             match = regexp.match(line)
             if match is not None:
@@ -38,8 +36,8 @@ def get_version(release):
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-# sys.path.insert(0, os.path.abspath('.'))
+# documentation root, use Path.resolve to make it absolute, like shown here.
+# sys.path.insert(0, str(Path('.').resolve()))
 
 # -- General configuration ------------------------------------------------
 

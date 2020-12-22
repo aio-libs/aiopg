@@ -1,5 +1,5 @@
-import os
 import re
+from pathlib import Path
 
 from setuptools import setup, find_packages
 
@@ -7,25 +7,23 @@ install_requires = ['psycopg2-binary>=2.8.4', 'async_timeout>=3.0,<4.0']
 extras_require = {'sa': ['sqlalchemy[postgresql_psycopg2binary]>=1.1']}
 
 
-def read(f):
-    return open(os.path.join(os.path.dirname(__file__), f)).read().strip()
+def read(*parts):
+    return Path(__file__).resolve().parent.joinpath(*parts).read_text().strip()
 
 
 def get_maintainers(path='MAINTAINERS.txt'):
-    with open(os.path.join(os.path.dirname(__file__), path)) as f:
-        return ', '.join(x.strip().strip('*').strip() for x in f.readlines())
+    return ', '.join(
+        x.strip().strip('*').strip() for x in read(path).splitlines())
 
 
 def read_version():
     regexp = re.compile(r"^__version__\W*=\W*'([\d.abrc]+)'")
-    init_py = os.path.join(os.path.dirname(__file__), 'aiopg', '__init__.py')
-    with open(init_py) as f:
-        for line in f:
-            match = regexp.match(line)
-            if match is not None:
-                return match.group(1)
-        else:
-            raise RuntimeError('Cannot find version in aiopg/__init__.py')
+    for line in read('aiopg', '__init__.py').splitlines():
+        match = regexp.match(line)
+        if match is not None:
+            return match.group(1)
+    else:
+        raise RuntimeError('Cannot find version in aiopg/__init__.py')
 
 
 def read_changelog(path='CHANGES.txt'):
