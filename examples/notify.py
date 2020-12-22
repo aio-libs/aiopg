@@ -8,7 +8,7 @@ dsn = 'dbname=aiopg user=aiopg password=passwd host=127.0.0.1'
 async def notify(conn):
     async with conn.cursor() as cur:
         for i in range(5):
-            msg = "message {}".format(i)
+            msg = f"message {i}"
             print('Send ->', msg)
             await cur.execute("NOTIFY channel, %s", (msg,))
 

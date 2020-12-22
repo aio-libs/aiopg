@@ -58,9 +58,8 @@ The :attr:`aiopg.Connection.free_cursor` method is called in several places:
     .. code-block:: py3
 
         warnings.warn(
-            ('You can only have one cursor per connection. '
-             'The cursor for connection will be '
-             'closed forcibly {!r}.'
-            ).format(self),
+            f'You can only have one cursor per connection. '
+            f'The cursor for connection will be '
+            f'closed forcibly {self!r}.',
             ResourceWarning
         )

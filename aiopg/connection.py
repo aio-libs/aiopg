@@ -154,10 +154,9 @@ class Connection:
                 self._fatal_error("Fatal error on aiopg connection: "
                                   "POLL_ERROR from underlying .poll() call")
             else:
-                self._fatal_error("Fatal error on aiopg connection: "
-                                  "unknown answer {} from underlying "
-                                  ".poll() call"
-                                  .format(state))
+                self._fatal_error(f"Fatal error on aiopg connection: "
+                                  f"unknown answer {state} from underlying "
+                                  f".poll() call")
 
     def _fatal_error(self, message):
         # Should be called from exception handler only.
@@ -171,8 +170,8 @@ class Connection:
 
     def _create_waiter(self, func_name):
         if self._waiter is not None:
-            raise RuntimeError('%s() called while another coroutine is '
-                               'already waiting for incoming data' % func_name)
+            raise RuntimeError(f'{func_name}() called while another coroutine '
+                               f'is already waiting for incoming data')
         self._waiter = self._loop.create_future()
         return self._waiter
 
@@ -224,9 +223,9 @@ class Connection:
                       isolation_level=None):
 
         if not self.closed_cursor:
-            warnings.warn(('You can only have one cursor per connection. '
-                           'The cursor for connection will be closed forcibly'
-                           ' {!r}.').format(self), ResourceWarning)
+            warnings.warn(f'You can only have one cursor per connection. '
+                          f'The cursor for connection will be closed forcibly'
+                          f' {self!r}.', ResourceWarning)
 
         self.free_cursor()
 
@@ -450,22 +449,14 @@ class Connection:
         return self._echo
 
     def __repr__(self):
-        msg = (
-            '<'
-            '{module_name}::{class_name} '
-            'isexecuting={isexecuting}, '
-            'closed={closed}, '
-            'echo={echo}, '
-            'cursor={cursor}'
-            '>'
-        )
-        return msg.format(
-            module_name=type(self).__module__,
-            class_name=type(self).__name__,
-            echo=self.echo,
-            isexecuting=self._isexecuting(),
-            closed=bool(self.closed),
-            cursor=repr(self._cursor_instance)
+        return (
+            f'<'
+            f'{type(self).__module__}::{type(self).__name__} '
+            f'isexecuting={self._isexecuting()}, '
+            f'closed={self.closed}, '
+            f'echo={self.echo}, '
+            f'cursor={self._cursor_instance}'
+            f'>'
         )
 
     def __del__(self):
@@ -475,7 +466,7 @@ class Connection:
             return
         if _conn is not None and not _conn.closed:
             self.close()
-            warnings.warn("Unclosed connection {!r}".format(self),
+            warnings.warn(f"Unclosed connection {self!r}",
                           ResourceWarning)
 
             context = {'connection': self,

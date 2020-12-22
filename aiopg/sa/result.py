@@ -42,8 +42,8 @@ class RowProxy(Mapping):
         #         raise
         if index is None:
             raise exc.InvalidRequestError(
-                "Ambiguous column name '%s' in result set! "
-                "try 'use_labels' option on select statement." % key)
+                f"Ambiguous column name {key!r} in result set! "
+                f"try 'use_labels' option on select statement.")
         if processor is not None:
             return processor(self._row[index])
         else:
@@ -78,7 +78,7 @@ class RowProxy(Mapping):
         return repr(self.as_tuple())
 
 
-class ResultMetaData(object):
+class ResultMetaData:
     """Handle cursor.description, applying additional info from an execution
     context."""
 
@@ -176,9 +176,9 @@ class ResultMetaData(object):
         # or colummn('name') constructs to ColumnElements, or after a
         # pickle/unpickle roundtrip
         elif isinstance(key, expression.ColumnElement):
-            if (key._label and key._label in map):
+            if key._label and key._label in map:
                 result = map[key._label]
-            elif (hasattr(key, 'key') and key.key in map):
+            elif hasattr(key, 'key') and key.key in map:
                 # match is only on name.
                 result = map[key.key]
             # search extra hard to make sure this
@@ -194,8 +194,8 @@ class ResultMetaData(object):
         if result is None:
             if raiseerr:
                 raise exc.NoSuchColumnError(
-                    "Could not locate column in row for column '%s'" %
-                    expression._string_or_unprintable(key))
+                    f"Could not locate column in row for column "
+                    f"{expression._string_or_unprintable(key)!r}")
             else:
                 return None
         else:
