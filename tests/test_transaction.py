@@ -208,3 +208,36 @@ async def test_timeout_in_savepoint_context_manager(make_engine):
 
     engine.terminate()
     await engine.wait_closed()
+
+
+async def test_cancel_in_transaction_context_manager(engine, loop):
+    with pytest.raises(asyncio.CancelledError):
+        async with engine.acquire() as connection:
+            async with Transaction(connection, IsolationLevel.read_committed):
+                task = loop.create_task(
+                    connection.execute("SELECT pg_sleep(10)"))
+
+                async def cancel_soon():
+                    asyncio.sleep(1)
+                    task.cancel()
+
+                loop.create_task(cancel_soon())
+                await task
+
+
+async def test_cancel_in_savepoint_context_manager(engine, loop):
+    with pytest.raises(asyncio.CancelledError):
+        async with engine.acquire() as connection:
+            async with Transaction(
+                connection, IsolationLevel.read_committed
+            ) as transaction:
+                async with transaction.point():
+                    task = loop.create_task(
+                        connection.execute("SELECT pg_sleep(10)"))
+
+                    async def cancel_soon():
+                        asyncio.sleep(1)
+                        task.cancel()
+
+                    loop.create_task(cancel_soon())
+                    await task
