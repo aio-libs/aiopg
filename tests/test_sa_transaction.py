@@ -1,3 +1,4 @@
+import asyncio
 from unittest import mock
 
 import pytest
@@ -411,3 +412,26 @@ async def test_transaction_mode(connect):
     res1 = await conn.scalar(select([func.count()]).select_from(tbl))
     assert 5 == res1
     await tr8.commit()
+
+
+async def test_timeout_in_transaction_context_manager(make_engine):
+    engine = await make_engine(timeout=1)
+    with pytest.raises(asyncio.TimeoutError):
+        async with engine.acquire() as connection:
+            async with connection.begin():
+                await connection.execute("SELECT pg_sleep(10)")
+
+    engine.terminate()
+    await engine.wait_closed()
+
+
+async def test_timeout_in_nested_transaction_context_manager(make_engine):
+    engine = await make_engine(timeout=1)
+    with pytest.raises(asyncio.TimeoutError):
+        async with engine.acquire() as connection:
+            async with connection.begin():
+                async with connection.begin_nested():
+                    await connection.execute("SELECT pg_sleep(10)")
+
+    engine.terminate()
+    await engine.wait_closed()

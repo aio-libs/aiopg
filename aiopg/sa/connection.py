@@ -211,6 +211,10 @@ class SAConnection:
             self._transaction = None
 
     async def _rollback_impl(self):
+        if self._connection.closed:
+            self._transaction = None
+            return
+
         cur = await self._get_cursor()
         try:
             await cur.execute('ROLLBACK')
@@ -253,6 +257,10 @@ class SAConnection:
             cur.close()
 
     async def _rollback_to_savepoint_impl(self, name, parent):
+        if self._connection.closed:
+            self._transaction = None
+            return
+
         cur = await self._get_cursor()
         try:
             await cur.execute(f'ROLLBACK TO SAVEPOINT {name}')

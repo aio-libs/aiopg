@@ -1,3 +1,5 @@
+import asyncio
+
 import psycopg2
 import pytest
 
@@ -181,3 +183,28 @@ async def test_transaction_point_oldstyle(engine):
                        (3, 'data')]
 
         await tr.commit()
+
+
+async def test_timeout_in_transaction_context_manager(make_engine):
+    engine = await make_engine(timeout=1)
+    with pytest.raises(asyncio.TimeoutError):
+        async with engine.acquire() as connection:
+            async with Transaction(connection, IsolationLevel.read_committed):
+                await connection.execute("SELECT pg_sleep(10)")
+
+    engine.terminate()
+    await engine.wait_closed()
+
+
+async def test_timeout_in_savepoint_context_manager(make_engine):
+    engine = await make_engine(timeout=1)
+    with pytest.raises(asyncio.TimeoutError):
+        async with engine.acquire() as connection:
+            async with Transaction(
+                connection, IsolationLevel.read_committed
+            ) as transaction:
+                async with transaction.point():
+                    await connection.execute("SELECT pg_sleep(10)")
+
+    engine.terminate()
+    await engine.wait_closed()
