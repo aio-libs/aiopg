@@ -1,5 +1,5 @@
 coverage==5.4
-docker==4.4.2
+docker==4.4.3
 flake8==3.8.4
 isort==5.7.0
 -e .[sa]
