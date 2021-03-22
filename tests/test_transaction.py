@@ -218,7 +218,7 @@ async def test_cancel_in_transaction_context_manager(engine, loop):
                     connection.execute("SELECT pg_sleep(10)"))
 
                 async def cancel_soon():
-                    asyncio.sleep(1)
+                    await asyncio.sleep(1)
                     task.cancel()
 
                 loop.create_task(cancel_soon())
@@ -236,7 +236,7 @@ async def test_cancel_in_savepoint_context_manager(engine, loop):
                         connection.execute("SELECT pg_sleep(10)"))
 
                     async def cancel_soon():
-                        asyncio.sleep(1)
+                        await asyncio.sleep(1)
                         task.cancel()
 
                     loop.create_task(cancel_soon())
