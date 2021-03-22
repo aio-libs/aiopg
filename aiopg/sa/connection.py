@@ -258,7 +258,7 @@ class SAConnection:
 
     async def _rollback_to_savepoint_impl(self, name, parent):
         if self._connection.closed:
-            self._transaction = None
+            self._transaction = parent
             return
 
         cur = await self._get_cursor()
