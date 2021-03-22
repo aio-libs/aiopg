@@ -1,3 +1,11 @@
+1.2.0b3 (2021-03-22)
+^^^^^^^^^^^^^^^^^^^^
+
+* Don't run ROLLBACK when the connection is closed `#778 <https://github.com/aio-libs/aiopg/pull/778>`_
+
+* Multiple cursors support `#801 <https://github.com/aio-libs/aiopg/pull/801>`_
+
+
 1.2.0b2 (2020-12-21)
 ^^^^^^^^^^^^^^^^^^^^
 
