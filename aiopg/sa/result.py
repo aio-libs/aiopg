@@ -132,7 +132,7 @@ class ResultMetaData:
             primary_keymap[i] = rec
 
             # populate primary keymap, looking for conflicts.
-            if primary_keymap.setdefault(name, rec) is not rec:
+            if primary_keymap.setdefault(name, rec) != rec:
                 # place a record that doesn't have the "index" - this
                 # is interpreted later as an AmbiguousColumnError,
                 # but only when actually accessed.   Columns
@@ -290,10 +290,9 @@ class ResultProxy:
         cursor_description = self.cursor.description
         if cursor_description is not None:
             self._metadata = ResultMetaData(self, cursor_description)
-            self._weak = weakref.ref(self, lambda wr: self.cursor.close())
+            self._weak = weakref.ref(self, lambda _: self.close())
         else:
             self.close()
-            self._weak = None
 
     @property
     def returns_rows(self):
@@ -329,11 +328,14 @@ class ResultProxy:
         * cursor.description is None.
         """
 
-        if not self.closed:
-            self.cursor.close()
-            # allow consistent errors
-            self._cursor = None
-            self._weak = None
+        if self._cursor is None:
+            return
+
+        if not self._cursor.closed:
+            self._cursor.close()
+
+        self._cursor = None
+        self._weak = None
 
     def __aiter__(self):
         return self

@@ -99,11 +99,11 @@ class IsolationLevel(enum.Enum):
 
 
 class Transaction:
-    __slots__ = ('_cur', '_is_begin', '_isolation', '_unique_id')
+    __slots__ = ('_cursor', '_is_begin', '_isolation', '_unique_id')
 
-    def __init__(self, cur, isolation_level,
+    def __init__(self, cursor, isolation_level,
                  readonly=False, deferrable=False):
-        self._cur = cur
+        self._cursor = cursor
         self._is_begin = False
         self._unique_id = None
         self._isolation = isolation_level(readonly, deferrable)
@@ -117,30 +117,30 @@ class Transaction:
             raise psycopg2.ProgrammingError(
                 'You are trying to open a new transaction, use the save point')
         self._is_begin = True
-        await self._cur.execute(self._isolation.begin())
+        await self._cursor.execute(self._isolation.begin())
         return self
 
     async def commit(self):
         self._check_commit_rollback()
-        await self._cur.execute(self._isolation.commit())
+        await self._cursor.execute(self._isolation.commit())
         self._is_begin = False
 
     async def rollback(self):
         self._check_commit_rollback()
-        if not self._cur.closed:
-            await self._cur.execute(self._isolation.rollback())
+        if not self._cursor.closed:
+            await self._cursor.execute(self._isolation.rollback())
         self._is_begin = False
 
     async def rollback_savepoint(self):
         self._check_release_rollback()
-        if not self._cur.closed:
-            await self._cur.execute(
+        if not self._cursor.closed:
+            await self._cursor.execute(
                 self._isolation.rollback_savepoint(self._unique_id))
         self._unique_id = None
 
     async def release_savepoint(self):
         self._check_release_rollback()
-        await self._cur.execute(
+        await self._cursor.execute(
             self._isolation.release_savepoint(self._unique_id))
         self._unique_id = None
 
@@ -150,7 +150,7 @@ class Transaction:
             raise psycopg2.ProgrammingError('You do not shut down savepoint')
 
         self._unique_id = f's{uuid.uuid1().hex}'
-        await self._cur.execute(
+        await self._cursor.execute(
             self._isolation.savepoint(self._unique_id))
 
         return self

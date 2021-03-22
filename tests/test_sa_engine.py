@@ -21,7 +21,7 @@ tbl = Table('sa_tbl3', meta,
 def engine(make_engine, loop):
     async def start():
         engine = await make_engine()
-        with (await engine) as conn:
+        async with engine.acquire() as conn:
             await conn.execute("DROP TABLE IF EXISTS sa_tbl3")
             await conn.execute("CREATE TABLE sa_tbl3 "
                                "(id serial, name varchar(255))")

@@ -3,7 +3,7 @@ import collections
 import warnings
 
 import async_timeout
-from psycopg2.extensions import TRANSACTION_STATUS_IDLE
+import psycopg2.extensions
 
 from .connection import TIMEOUT, connect
 from .utils import (
@@ -11,7 +11,7 @@ from .utils import (
     _PoolConnectionContextManager,
     _PoolContextManager,
     _PoolCursorContextManager,
-    ensure_future,
+    create_completed_future,
     get_running_loop,
 )
 
@@ -43,7 +43,7 @@ class Pool(asyncio.AbstractServer):
             raise ValueError("maxsize should be not less than minsize")
         self._dsn = dsn
         self._minsize = minsize
-        self._loop = get_running_loop(kwargs.pop('loop', None) is not None)
+        self._loop = get_running_loop()
         self._timeout = timeout
         self._recycle = pool_recycle
         self._enable_json = enable_json
@@ -230,31 +230,29 @@ class Pool(asyncio.AbstractServer):
     def release(self, conn):
         """Release free connection back to the connection pool.
         """
-        fut = self._loop.create_future()
-        fut.set_result(None)
+        future = create_completed_future(self._loop)
         if conn in self._terminated:
             assert conn.closed, conn
             self._terminated.remove(conn)
-            return fut
+            return future
         assert conn in self._used, (conn, self._used)
         self._used.remove(conn)
-        if not conn.closed:
-            tran_status = conn._conn.get_transaction_status()
-            if tran_status != TRANSACTION_STATUS_IDLE:
-                warnings.warn(
-                    f"Invalid transaction status on "
-                    f"released connection: {tran_status}",
-                    ResourceWarning
-                )
-                conn.close()
-                return fut
-            if self._closing:
-                conn.close()
-            else:
-                conn.free_cursor()
-                self._free.append(conn)
-            fut = ensure_future(self._wakeup(), loop=self._loop)
-        return fut
+        if conn.closed:
+            return future
+        transaction_status = conn.raw.get_transaction_status()
+        if transaction_status != psycopg2.extensions.TRANSACTION_STATUS_IDLE:
+            warnings.warn(
+                f"Invalid transaction status on "
+                f"released connection: {transaction_status}",
+                ResourceWarning
+            )
+            conn.close()
+            return future
+        if self._closing:
+            conn.close()
+        else:
+            self._free.append(conn)
+        return asyncio.ensure_future(self._wakeup(), loop=self._loop)
 
     async def cursor(self, name=None, cursor_factory=None,
                      scrollable=None, withhold=False, *, timeout=None):
