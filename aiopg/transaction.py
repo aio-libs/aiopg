@@ -127,13 +127,15 @@ class Transaction:
 
     async def rollback(self):
         self._check_commit_rollback()
-        await self._cur.execute(self._isolation.rollback())
+        if not self._cur.closed:
+            await self._cur.execute(self._isolation.rollback())
         self._is_begin = False
 
     async def rollback_savepoint(self):
         self._check_release_rollback()
-        await self._cur.execute(
-            self._isolation.rollback_savepoint(self._unique_id))
+        if not self._cur.closed:
+            await self._cur.execute(
+                self._isolation.rollback_savepoint(self._unique_id))
         self._unique_id = None
 
     async def release_savepoint(self):
