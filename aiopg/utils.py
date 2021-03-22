@@ -1,16 +1,8 @@
 import asyncio
 import sys
-import warnings
 from collections.abc import Coroutine
 
 import psycopg2
-
-from .log import logger
-
-try:
-    ensure_future = asyncio.ensure_future
-except AttributeError:
-    ensure_future = getattr(asyncio, 'async')
 
 if sys.version_info >= (3, 7, 0):
     __get_running_loop = asyncio.get_running_loop
@@ -22,25 +14,16 @@ else:
         return loop
 
 
-def get_running_loop(is_warn: bool = False) -> asyncio.AbstractEventLoop:
-    loop = __get_running_loop()
+def get_running_loop() -> asyncio.AbstractEventLoop:
+    return __get_running_loop()
 
-    if is_warn:
-        warnings.warn(
-            'aiopg always uses "aiopg.get_running_loop", '
-            'look the documentation.',
-            DeprecationWarning,
-            stacklevel=3
-        )
 
-        if loop.get_debug():
-            logger.warning(
-                'aiopg always uses "aiopg.get_running_loop", '
-                'look the documentation.',
-                exc_info=True
-            )
-
-    return loop
+def create_completed_future(
+    loop: asyncio.AbstractEventLoop
+) -> asyncio.Future:
+    future = loop.create_future()
+    future.set_result(None)
+    return future
 
 
 class _ContextManager(Coroutine):
@@ -56,10 +39,9 @@ class _ContextManager(Coroutine):
     def throw(self, typ, val=None, tb=None):
         if val is None:
             return self._coro.throw(typ)
-        elif tb is None:
+        if tb is None:
             return self._coro.throw(typ, val)
-        else:
-            return self._coro.throw(typ, val, tb)
+        return self._coro.throw(typ, val, tb)
 
     def close(self):
         return self._coro.close()
@@ -88,8 +70,13 @@ class _ContextManager(Coroutine):
         return self._obj
 
     async def __aexit__(self, exc_type, exc, tb):
-        self._obj.close()
-        self._obj = None
+        try:
+            if asyncio.iscoroutinefunction(self._obj.close):
+                await self._obj.close()
+            else:
+                self._obj.close()
+        finally:
+            self._obj = None
 
 
 class _SAConnectionContextManager(_ContextManager):

@@ -10,11 +10,11 @@ import weakref
 from collections.abc import Mapping
 
 import psycopg2
-from psycopg2 import extras
-from psycopg2.extensions import POLL_ERROR, POLL_OK, POLL_READ, POLL_WRITE
+import psycopg2.extensions
+import psycopg2.extras
 
 from .cursor import Cursor
-from .utils import _ContextManager, get_running_loop
+from .utils import _ContextManager, create_completed_future, get_running_loop
 
 __all__ = ('connect',)
 
@@ -71,7 +71,7 @@ class Connection:
         self._enable_json = enable_json
         self._enable_hstore = enable_hstore
         self._enable_uuid = enable_uuid
-        self._loop = get_running_loop(kwargs.pop('loop', None) is not None)
+        self._loop = get_running_loop()
         self._waiter = self._loop.create_future()
 
         kwargs['async_'] = kwargs.pop('async', True)
@@ -84,7 +84,6 @@ class Connection:
         self._last_usage = self._loop.time()
         self._writing = False
         self._echo = echo
-        self._cursor_instance = None
         self._notifies = asyncio.Queue()
         self._weakref = weakref.ref(self)
         self._loop.add_reader(self._fileno, self._ready, self._weakref)
@@ -136,21 +135,21 @@ class Connection:
                 if waiter is not None and not waiter.done():
                     waiter.set_exception(
                         psycopg2.OperationalError("Connection closed"))
-            if state == POLL_OK:
+            if state == psycopg2.extensions.POLL_OK:
                 if self._writing:
                     self._loop.remove_writer(self._fileno)
                     self._writing = False
                 if waiter is not None and not waiter.done():
                     waiter.set_result(None)
-            elif state == POLL_READ:
+            elif state == psycopg2.extensions.POLL_READ:
                 if self._writing:
                     self._loop.remove_writer(self._fileno)
                     self._writing = False
-            elif state == POLL_WRITE:
+            elif state == psycopg2.extensions.POLL_WRITE:
                 if not self._writing:
                     self._loop.add_writer(self._fileno, self._ready, weak_self)
                     self._writing = True
-            elif state == POLL_ERROR:
+            elif state == psycopg2.extensions.POLL_ERROR:
                 self._fatal_error("Fatal error on aiopg connection: "
                                   "POLL_ERROR from underlying .poll() call")
             else:
@@ -209,9 +208,8 @@ class Connection:
         *name*, *scrollable* and *withhold* parameters are not supported by
         psycopg in asynchronous mode.
 
-        NOTE: as of [TODO] any previously created created cursor from this
-            connection will be closed
         """
+
         self._last_usage = self._loop.time()
         coro = self._cursor(name=name, cursor_factory=cursor_factory,
                             scrollable=scrollable, withhold=withhold,
@@ -222,13 +220,6 @@ class Connection:
                       scrollable=None, withhold=False, timeout=None,
                       isolation_level=None):
 
-        if not self.closed_cursor:
-            warnings.warn(f'You can only have one cursor per connection. '
-                          f'The cursor for connection will be closed forcibly'
-                          f' {self!r}.', ResourceWarning)
-
-        self.free_cursor()
-
         if timeout is None:
             timeout = self._timeout
 
@@ -236,10 +227,10 @@ class Connection:
                                        cursor_factory=cursor_factory,
                                        scrollable=scrollable,
                                        withhold=withhold)
-        self._cursor_instance = Cursor(
+        cursor = Cursor(
             self, impl, timeout, self._echo, isolation_level
         )
-        return self._cursor_instance
+        return cursor
 
     async def _cursor_impl(self, name=None, cursor_factory=None,
                            scrollable=None, withhold=False):
@@ -262,29 +253,14 @@ class Connection:
                 self._loop.remove_writer(self._fileno)
 
         self._conn.close()
-        self.free_cursor()
 
         if self._waiter is not None and not self._waiter.done():
             self._waiter.set_exception(
                 psycopg2.OperationalError("Connection closed"))
 
-    @property
-    def closed_cursor(self):
-        if not self._cursor_instance:
-            return True
-
-        return bool(self._cursor_instance.closed)
-
-    def free_cursor(self):
-        if not self.closed_cursor:
-            self._cursor_instance.close()
-            self._cursor_instance = None
-
     def close(self):
         self._close()
-        ret = self._loop.create_future()
-        ret.set_result(None)
-        return ret
+        return create_completed_future(self._loop)
 
     @property
     def closed(self):
@@ -455,7 +431,6 @@ class Connection:
             f'isexecuting={self._isexecuting()}, '
             f'closed={self.closed}, '
             f'echo={self.echo}, '
-            f'cursor={self._cursor_instance}'
             f'>'
         )
 
@@ -505,18 +480,18 @@ class Connection:
     async def _connect(self):
         try:
             await self._poll(self._waiter, self._timeout)
-        except Exception:
-            self.close()
+        except BaseException:
+            await asyncio.shield(self.close())
             raise
         if self._enable_json:
-            extras.register_default_json(self._conn)
+            psycopg2.extras.register_default_json(self._conn)
         if self._enable_uuid:
-            extras.register_uuid(conn_or_curs=self._conn)
+            psycopg2.extras.register_uuid(conn_or_curs=self._conn)
         if self._enable_hstore:
             oids = await self._get_oids()
             if oids is not None:
                 oid, array_oid = oids
-                extras.register_hstore(
+                psycopg2.extras.register_hstore(
                     self._conn,
                     oid=oid,
                     array_oid=array_oid
@@ -531,4 +506,4 @@ class Connection:
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        self.close()
+        await self.close()

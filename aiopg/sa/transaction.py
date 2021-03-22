@@ -24,6 +24,8 @@ class Transaction:
     SAConnection.begin_nested().
     """
 
+    __slots__ = ("_connection", "_parent", "_is_active")
+
     def __init__(self, connection, parent):
         self._connection = connection
         self._parent = parent or self
@@ -83,12 +85,12 @@ class Transaction:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if exc_type:
             await self.rollback()
-        else:
-            if self._is_active:
-                await self.commit()
+        elif self._is_active:
+            await self.commit()
 
 
 class RootTransaction(Transaction):
+    __slots__ = ()
 
     def __init__(self, connection):
         super().__init__(connection, None)
@@ -109,10 +111,11 @@ class NestedTransaction(Transaction):
     The interface is the same as that of Transaction class.
     """
 
-    _savepoint = None
+    __slots__ = ("_savepoint",)
 
     def __init__(self, connection, parent):
         super().__init__(connection, parent)
+        self._savepoint = None
 
     async def _do_rollback(self):
         assert self._savepoint is not None, "Broken transaction logic"
@@ -136,6 +139,8 @@ class TwoPhaseTransaction(Transaction):
     The interface is the same as that of Transaction class
     with the addition of the .prepare() method.
     """
+
+    __slots__ = ("_is_prepared", "_xid")
 
     def __init__(self, connection, xid):
         super().__init__(connection, None)

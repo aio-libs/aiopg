@@ -1,3 +1,7 @@
+import asyncio
+import contextlib
+import weakref
+
 from sqlalchemy.sql import ClauseElement
 from sqlalchemy.sql.ddl import DDLElement
 from sqlalchemy.sql.dml import UpdateBase
@@ -14,13 +18,22 @@ from .transaction import (
 
 
 class SAConnection:
+    __slots__ = (
+        "_connection",
+        "_transaction",
+        "_savepoint_seq",
+        "_engine",
+        "_dialect",
+        "_cursors",
+    )
+
     def __init__(self, connection, engine):
         self._connection = connection
         self._transaction = None
         self._savepoint_seq = 0
         self._engine = engine
         self._dialect = engine.dialect
-        self._cursor = None
+        self._cursors = weakref.WeakSet()
 
     def execute(self, query, *multiparams, **params):
         """Executes a SQL query with optional parameters.
@@ -62,15 +75,17 @@ class SAConnection:
         coro = self._execute(query, *multiparams, **params)
         return _SAConnectionContextManager(coro)
 
-    async def _get_cursor(self):
-        if self._cursor and not self._cursor.closed:
-            return self._cursor
+    async def _open_cursor(self):
+        cursor = await self._connection.cursor()
+        self._cursors.add(cursor)
+        return cursor
 
-        self._cursor = await self._connection.cursor()
-        return self._cursor
+    def _close_cursor(self, cursor):
+        self._cursors.remove(cursor)
+        cursor.close()
 
     async def _execute(self, query, *multiparams, **params):
-        cursor = await self._get_cursor()
+        cursor = await self._open_cursor()
         dp = _distill_params(multiparams, params)
         if len(dp) > 1:
             raise exc.ArgumentError("aiopg doesn't support executemany")
@@ -196,30 +211,30 @@ class SAConnection:
         if deferrable:
             stmt += ' DEFERRABLE'
 
-        cur = await self._get_cursor()
+        cursor = await self._open_cursor()
         try:
-            await cur.execute(stmt)
+            await cursor.execute(stmt)
         finally:
-            cur.close()
+            self._close_cursor(cursor)
 
     async def _commit_impl(self):
-        cur = await self._get_cursor()
+        cursor = await self._open_cursor()
         try:
-            await cur.execute('COMMIT')
+            await cursor.execute('COMMIT')
         finally:
-            cur.close()
+            self._close_cursor(cursor)
             self._transaction = None
 
     async def _rollback_impl(self):
-        if self._connection.closed:
-            self._transaction = None
-            return
-
-        cur = await self._get_cursor()
         try:
-            await cur.execute('ROLLBACK')
+            if self._connection.closed:
+                return
+            cursor = await self._open_cursor()
+            try:
+                await cursor.execute('ROLLBACK')
+            finally:
+                self._close_cursor(cursor)
         finally:
-            cur.close()
             self._transaction = None
 
     def begin_nested(self):
@@ -245,35 +260,36 @@ class SAConnection:
             self._transaction._savepoint = await self._savepoint_impl()
         return self._transaction
 
-    async def _savepoint_impl(self, name=None):
+    async def _savepoint_impl(self):
         self._savepoint_seq += 1
         name = f'aiopg_sa_savepoint_{self._savepoint_seq}'
 
-        cur = await self._get_cursor()
+        cursor = await self._open_cursor()
         try:
-            await cur.execute(f'SAVEPOINT {name}')
+            await cursor.execute(f'SAVEPOINT {name}')
             return name
         finally:
-            cur.close()
+            self._close_cursor(cursor)
 
     async def _rollback_to_savepoint_impl(self, name, parent):
-        if self._connection.closed:
-            self._transaction = parent
-            return
-
-        cur = await self._get_cursor()
         try:
-            await cur.execute(f'ROLLBACK TO SAVEPOINT {name}')
+            if self._connection.closed:
+                return
+            cursor = await self._open_cursor()
+            try:
+                await cursor.execute(f'ROLLBACK TO SAVEPOINT {name}')
+            finally:
+                self._close_cursor(cursor)
         finally:
-            cur.close()
-        self._transaction = parent
+            self._transaction = parent
 
     async def _release_savepoint_impl(self, name, parent):
-        cur = await self._get_cursor()
+        cursor = await self._open_cursor()
         try:
-            await cur.execute(f'RELEASE SAVEPOINT {name}')
+            await cursor.execute(f'RELEASE SAVEPOINT {name}')
         finally:
-            cur.close()
+            self._close_cursor(cursor)
+
         self._transaction = parent
 
     async def begin_twophase(self, xid=None):
@@ -296,7 +312,7 @@ class SAConnection:
         if xid is None:
             xid = self._dialect.create_xid()
         self._transaction = TwoPhaseTransaction(self, xid)
-        await self._begin_impl()
+        await self._begin_impl(None, False, False)
         return self._transaction
 
     async def _prepare_twophase_impl(self, xid):
@@ -340,18 +356,27 @@ class SAConnection:
         After .close() is called, the SAConnection is permanently in a
         closed state, and will allow no further operations.
         """
+
         if self.connection is None:
             return
 
-        if self._transaction is not None:
-            await self._transaction.rollback()
-            self._transaction = None
-        # don't close underlying connection, it can be reused by pool
-        # conn.close()
+        await asyncio.shield(self._close())
 
-        self._engine.release(self)
-        self._connection = None
-        self._engine = None
+    async def _close(self):
+        if self._transaction is not None:
+            with contextlib.suppress(Exception):
+                await self._transaction.rollback()
+            self._transaction = None
+
+        for cursor in self._cursors:
+            cursor.close()
+        self._cursors.clear()
+
+        if self._engine is not None:
+            with contextlib.suppress(Exception):
+                await self._engine.release(self)
+            self._connection = None
+            self._engine = None
 
 
 def _distill_params(multiparams, params):

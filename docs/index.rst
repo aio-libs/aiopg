@@ -36,9 +36,7 @@ Current version is |release|.
 
     3. Only support syntax ``async/await``
 
-    4. :ref:`aiopg-one-cursor`
-
-    5. :ref:`aiopg-run-loop`
+    4. :ref:`aiopg-run-loop`
 
 
 Features

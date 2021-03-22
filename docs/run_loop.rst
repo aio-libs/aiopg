@@ -38,32 +38,4 @@ For the version below ``python3.7`` we added this implementation.
                 raise RuntimeError('no running event loop')
             return loop
 
-This allows you to get a loop :class:`asyncio.AbstractEventLoop` correctly
-and causes :exc:`DeprecationWarning` if you explicitly
-pass a loop :class:`asyncio.AbstractEventLoop` for class or method:
-
-    * :class:`aiopg.Pool` and :meth:`aiopg.create_pool`
-    * :class:`aiopg.Connection` and :meth:`aiopg.connect`
-    * :meth:`aiopg.sa.create_engine`
-
-.. code-block:: py3
-
-    def get_running_loop(is_warn=False):
-        loop = __get_running_loop()
-
-        if is_warn:
-            warnings.warn(
-                'aiopg always uses "aiopg.get_running_loop", '
-                'look the documentation.',
-                DeprecationWarning,
-                stacklevel=3
-            )
-
-            if loop.get_debug():
-                logger.warning(
-                    'aiopg always uses "aiopg.get_running_loop", '
-                    'look the documentation.',
-                    exc_info=True
-                )
-
-        return loop
+This allows you to get a loop :class:`asyncio.AbstractEventLoop` correctly.

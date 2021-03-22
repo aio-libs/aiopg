@@ -1,9 +1,10 @@
+import asyncio
 import json
 
 import aiopg
 
 from ..connection import TIMEOUT
-from ..utils import _PoolAcquireContextManager, _PoolContextManager
+from ..utils import _ContextManager, _PoolContextManager, get_running_loop
 from .connection import SAConnection
 
 try:
@@ -88,10 +89,13 @@ class Engine:
     create_engine coroutine.
     """
 
+    __slots__ = ("_dialect", "_pool", "_dsn", "_loop")
+
     def __init__(self, dialect, pool, dsn):
         self._dialect = dialect
         self._pool = pool
         self._dsn = dsn
+        self._loop = get_running_loop()
 
     @property
     def dialect(self):
@@ -160,7 +164,7 @@ class Engine:
     def acquire(self):
         """Get a connection from pool."""
         coro = self._acquire()
-        return _EngineAcquireContextManager(coro, self)
+        return _EngineAcquireContextManager(coro)
 
     async def _acquire(self):
         raw = await self._pool.acquire()
@@ -168,8 +172,7 @@ class Engine:
         return conn
 
     def release(self, conn):
-        raw = conn.connection
-        fut = self._pool.release(raw)
+        fut = self._pool.release(conn.connection)
         return fut
 
     def __enter__(self):
@@ -195,7 +198,7 @@ class Engine:
         #     finally:
         #         engine.release(conn)
         conn = yield from self._acquire().__await__()
-        return _ConnectionContextManager(self, conn)
+        return _ConnectionContextManager(conn, self._loop)
 
     async def __aenter__(self):
         return self
@@ -206,7 +209,7 @@ class Engine:
 
 
 _EngineContextManager = _PoolContextManager
-_EngineAcquireContextManager = _PoolAcquireContextManager
+_EngineAcquireContextManager = _ContextManager
 
 
 class _ConnectionContextManager:
@@ -224,18 +227,15 @@ class _ConnectionContextManager:
             <block>
     """
 
-    __slots__ = ('_engine', '_conn')
+    __slots__ = ('_conn', '_loop')
 
-    def __init__(self, engine, conn):
-        self._engine = engine
+    def __init__(self, conn: SAConnection, loop: asyncio.AbstractEventLoop):
         self._conn = conn
+        self._loop = loop
 
     def __enter__(self):
         return self._conn
 
     def __exit__(self, *args):
-        try:
-            self._engine.release(self._conn)
-        finally:
-            self._engine = None
-            self._conn = None
+        asyncio.ensure_future(self._conn.close(), loop=self._loop)
+        self._conn = None
