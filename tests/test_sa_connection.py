@@ -76,7 +76,8 @@ async def test_execute_sa_select_with_in(connect):
     await conn.execute(tbl.insert(), 2, 'second')
     await conn.execute(tbl.insert(), 3, 'third')
 
-    res = await conn.execute(tbl.select().where(tbl.c.name.in_(['first', 'second'])))
+    res = await conn.execute(tbl.select().where(
+        tbl.c.name.in_(['first', 'second'])))
     rows = await res.fetchall()
     assert 2 == len(rows)
     assert (1, 'first') == rows[0]

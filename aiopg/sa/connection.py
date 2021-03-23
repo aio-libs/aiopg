@@ -103,7 +103,8 @@ class SAConnection:
         if isinstance(query, str):
             await cursor.execute(query, dp)
         elif isinstance(query, ClauseElement):
-            compiled = query.compile(dialect=self._dialect, compile_kwargs=self._query_compile_kwargs)
+            compiled = query.compile(dialect=self._dialect,
+                                     compile_kwargs=self._query_compile_kwargs)
             # parameters = compiled.params
             if not isinstance(query, DDLElement):
                 if dp and isinstance(dp, (list, tuple)):
@@ -403,8 +404,11 @@ def _distill_params(multiparams, params):
     elif len(multiparams) == 1:
         zero = multiparams[0]
         if isinstance(zero, (list, tuple)):
-            if not zero or hasattr(zero[0], '__iter__') and \
-                not hasattr(zero[0], 'strip'):
+            if (
+                not zero
+                or hasattr(zero[0], '__iter__')
+                and not hasattr(zero[0], 'strip')
+            ):
                 # execute(stmt, [{}, {}, {}, ...])
                 # execute(stmt, [(), (), (), ...])
                 return zero
@@ -418,8 +422,10 @@ def _distill_params(multiparams, params):
             # execute(stmt, "value")
             return [[zero]]
     else:
-        if (hasattr(multiparams[0], '__iter__') and
-            not hasattr(multiparams[0], 'strip')):
+        if (
+            hasattr(multiparams[0], '__iter__') and
+            not hasattr(multiparams[0], 'strip')
+        ):
             return multiparams
         else:
             return [multiparams]
