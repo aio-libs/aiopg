@@ -1,5 +1,7 @@
-1.2.0 (2021-03-23)
+1.2.1 (2021-03-23)
 ^^^^^^^^^^^^^^^^^^
+
+* Pop loop in connection init due to backward compatibility `#808 <https://github.com/aio-libs/aiopg/pull/808>`_
 
 
 1.2.0b4 (2021-03-23)
