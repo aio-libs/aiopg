@@ -75,7 +75,7 @@ class Connection:
         self._waiter = self._loop.create_future()
 
         kwargs['async_'] = kwargs.pop('async', True)
-        kwargs.pop('loop')  # backward compatibility
+        kwargs.pop('loop', None)  # backward compatibility
         self._conn = psycopg2.connect(dsn, **kwargs)
 
         self._dsn = self._conn.dsn
