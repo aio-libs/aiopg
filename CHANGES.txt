@@ -1,3 +1,9 @@
+1.2.0b4 (2021-03-23)
+^^^^^^^^^^^^^^^^^^^^
+
+* Set max supported sqlalchemy version `#805 <https://github.com/aio-libs/aiopg/pull/805>`_
+
+
 1.2.0b3 (2021-03-22)
 ^^^^^^^^^^^^^^^^^^^^
 
