@@ -18,6 +18,10 @@ from .transaction import (
 
 
 class SAConnection:
+    _QUERY_COMPILE_KWARGS = (
+        ("render_postcompile", True),
+    )
+
     __slots__ = (
         "_connection",
         "_transaction",
@@ -25,6 +29,7 @@ class SAConnection:
         "_engine",
         "_dialect",
         "_cursors",
+        "_query_compile_kwargs"
     )
 
     def __init__(self, connection, engine):
@@ -34,6 +39,7 @@ class SAConnection:
         self._engine = engine
         self._dialect = engine.dialect
         self._cursors = weakref.WeakSet()
+        self._query_compile_kwargs = dict(self._QUERY_COMPILE_KWARGS)
 
     def execute(self, query, *multiparams, **params):
         """Executes a SQL query with optional parameters.
@@ -97,7 +103,7 @@ class SAConnection:
         if isinstance(query, str):
             await cursor.execute(query, dp)
         elif isinstance(query, ClauseElement):
-            compiled = query.compile(dialect=self._dialect)
+            compiled = query.compile(dialect=self._dialect, compile_kwargs=self._query_compile_kwargs)
             # parameters = compiled.params
             if not isinstance(query, DDLElement):
                 if dp and isinstance(dp, (list, tuple)):
@@ -398,7 +404,7 @@ def _distill_params(multiparams, params):
         zero = multiparams[0]
         if isinstance(zero, (list, tuple)):
             if not zero or hasattr(zero[0], '__iter__') and \
-                    not hasattr(zero[0], 'strip'):
+                not hasattr(zero[0], 'strip'):
                 # execute(stmt, [{}, {}, {}, ...])
                 # execute(stmt, [(), (), (), ...])
                 return zero
@@ -413,7 +419,7 @@ def _distill_params(multiparams, params):
             return [[zero]]
     else:
         if (hasattr(multiparams[0], '__iter__') and
-                not hasattr(multiparams[0], 'strip')):
+            not hasattr(multiparams[0], 'strip')):
             return multiparams
         else:
             return [multiparams]
