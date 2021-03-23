@@ -103,10 +103,12 @@ class SAConnection:
         if isinstance(query, str):
             await cursor.execute(query, dp)
         elif isinstance(query, ClauseElement):
-            compiled = query.compile(dialect=self._dialect,
-                                     compile_kwargs=self._query_compile_kwargs)
             # parameters = compiled.params
             if not isinstance(query, DDLElement):
+                compiled = query.compile(
+                    dialect=self._dialect,
+                    compile_kwargs=self._query_compile_kwargs,
+                )
                 if dp and isinstance(dp, (list, tuple)):
                     if isinstance(query, UpdateBase):
                         dp = {c.key: pval
@@ -133,6 +135,7 @@ class SAConnection:
                 result_map = compiled._result_columns
 
             else:
+                compiled = query.compile(dialect=self._dialect)
                 if dp:
                     raise exc.ArgumentError("Don't mix sqlalchemy DDL clause "
                                             "and execution with parameters")

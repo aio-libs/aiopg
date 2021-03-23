@@ -89,8 +89,6 @@ class Engine:
     create_engine coroutine.
     """
 
-    CONNECTION_CLASS = SAConnection
-
     __slots__ = ("_dialect", "_pool", "_dsn", "_loop")
 
     def __init__(self, dialect, pool, dsn):
@@ -170,7 +168,7 @@ class Engine:
 
     async def _acquire(self):
         raw = await self._pool.acquire()
-        conn = self.CONNECTION_CLASS(raw, self)
+        conn = SAConnection(raw, self)
         return conn
 
     def release(self, conn):
