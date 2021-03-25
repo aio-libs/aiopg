@@ -18,6 +18,10 @@ from .transaction import (
 
 
 class SAConnection:
+    _QUERY_COMPILE_KWARGS = (
+        ("render_postcompile", True),
+    )
+
     __slots__ = (
         "_connection",
         "_transaction",
@@ -25,6 +29,7 @@ class SAConnection:
         "_engine",
         "_dialect",
         "_cursors",
+        "_query_compile_kwargs"
     )
 
     def __init__(self, connection, engine):
@@ -34,6 +39,7 @@ class SAConnection:
         self._engine = engine
         self._dialect = engine.dialect
         self._cursors = weakref.WeakSet()
+        self._query_compile_kwargs = dict(self._QUERY_COMPILE_KWARGS)
 
     def execute(self, query, *multiparams, **params):
         """Executes a SQL query with optional parameters.
@@ -97,9 +103,12 @@ class SAConnection:
         if isinstance(query, str):
             await cursor.execute(query, dp)
         elif isinstance(query, ClauseElement):
-            compiled = query.compile(dialect=self._dialect)
             # parameters = compiled.params
             if not isinstance(query, DDLElement):
+                compiled = query.compile(
+                    dialect=self._dialect,
+                    compile_kwargs=self._query_compile_kwargs,
+                )
                 if dp and isinstance(dp, (list, tuple)):
                     if isinstance(query, UpdateBase):
                         dp = {c.key: pval
@@ -126,6 +135,7 @@ class SAConnection:
                 result_map = compiled._result_columns
 
             else:
+                compiled = query.compile(dialect=self._dialect)
                 if dp:
                     raise exc.ArgumentError("Don't mix sqlalchemy DDL clause "
                                             "and execution with parameters")
@@ -397,8 +407,11 @@ def _distill_params(multiparams, params):
     elif len(multiparams) == 1:
         zero = multiparams[0]
         if isinstance(zero, (list, tuple)):
-            if not zero or hasattr(zero[0], '__iter__') and \
-                    not hasattr(zero[0], 'strip'):
+            if (
+                not zero
+                or hasattr(zero[0], '__iter__')
+                and not hasattr(zero[0], 'strip')
+            ):
                 # execute(stmt, [{}, {}, {}, ...])
                 # execute(stmt, [(), (), (), ...])
                 return zero
@@ -412,8 +425,10 @@ def _distill_params(multiparams, params):
             # execute(stmt, "value")
             return [[zero]]
     else:
-        if (hasattr(multiparams[0], '__iter__') and
-                not hasattr(multiparams[0], 'strip')):
+        if (
+            hasattr(multiparams[0], '__iter__') and
+            not hasattr(multiparams[0], 'strip')
+        ):
             return multiparams
         else:
             return [multiparams]
