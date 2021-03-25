@@ -1,3 +1,9 @@
+1.3.0b0 (2021-03-25)
+^^^^^^^^^^^^^^^^^^^^
+
+* Fix compatibility with SA 1.4 for IN statement `#806 <https://github.com/aio-libs/aiopg/pull/806>`_
+
+
 1.2.1 (2021-03-23)
 ^^^^^^^^^^^^^^^^^^
 
