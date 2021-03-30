@@ -82,6 +82,8 @@ class SAConnection:
         return _SAConnectionContextManager(coro)
 
     async def _open_cursor(self):
+        if self._connection is None:
+            raise exc.ResourceClosedError("This connection is closed.")
         cursor = await self._connection.cursor()
         self._cursors.add(cursor)
         return cursor
