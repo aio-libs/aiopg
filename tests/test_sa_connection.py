@@ -389,3 +389,11 @@ async def test_create_table(connect):
 
     res = await conn.execute("SELECT * FROM sa_tbl")
     assert 0 == len(await res.fetchall())
+
+
+async def test_execute_when_closed(connect):
+    conn = await connect()
+    await conn.close()
+
+    with pytest.raises(sa.ResourceClosedError):
+        await conn.execute(tbl.select())
