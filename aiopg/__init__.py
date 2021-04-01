@@ -29,7 +29,7 @@ VersionInfo = namedtuple('VersionInfo',
                          'major minor micro releaselevel serial')
 
 
-def _parse_version(ver):
+def _parse_version(ver: str) -> VersionInfo:
     RE = (
         r'^'
         r'(?P<major>\d+)\.(?P<minor>\d+)\.(?P<micro>\d+)'
@@ -37,6 +37,8 @@ def _parse_version(ver):
         r'$'
     )
     match = re.match(RE, ver)
+    if not match:
+        raise ImportError(f"Invalid package version {ver}")
     try:
         major = int(match.group('major'))
         minor = int(match.group('minor'))

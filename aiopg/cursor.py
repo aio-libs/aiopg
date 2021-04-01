@@ -1,14 +1,24 @@
 import asyncio
+from types import TracebackType
+from typing import Any, Optional, Tuple, Type
 
 import psycopg2
 
+from .connection import Connection
 from .log import logger
 from .transaction import IsolationLevel, Transaction
-from .utils import _TransactionBeginContextManager
+from .utils import _ContextManager, _TransactionBeginContextManager
 
 
 class Cursor:
-    def __init__(self, conn, impl, timeout, echo, isolation_level):
+    def __init__(
+        self,
+        conn: Connection,
+        impl: Any,
+        timeout: float,
+        echo: bool,
+        isolation_level: Optional[IsolationLevel] = None
+    ):
         self._conn = conn
         self._impl = impl
         self._timeout = timeout
@@ -18,12 +28,12 @@ class Cursor:
         )
 
     @property
-    def echo(self):
+    def echo(self) -> bool:
         """Return echo mode status."""
         return self._echo
 
     @property
-    def description(self):
+    def description(self) -> Optional[Tuple[Any]]:
         """This read-only attribute is a sequence of 7-item sequences.
 
         Each of these sequences is a collections.namedtuple containing
@@ -45,37 +55,37 @@ class Cursor:
         via the execute() method yet.
 
         """
-        return self._impl.description
+        return self._impl.description  # type: ignore
 
-    def close(self):
+    def close(self) -> None:
         """Close the cursor now."""
         if not self.closed:
             self._impl.close()
 
     @property
-    def closed(self):
+    def closed(self) -> bool:
         """Read-only boolean attribute: specifies if the cursor is closed."""
-        return self._impl.closed
+        return self._impl.closed  # type: ignore
 
     @property
-    def connection(self):
+    def connection(self) -> Connection:
         """Read-only attribute returning a reference to the `Connection`."""
         return self._conn
 
     @property
-    def raw(self):
+    def raw(self) -> Any:
         """Underlying psycopg cursor object, readonly"""
         return self._impl
 
     @property
-    def name(self):
+    def name(self) -> str:
         # Not supported
-        return self._impl.name
+        return self._impl.name  # type: ignore
 
     @property
-    def scrollable(self):
+    def scrollable(self) -> bool:
         # Not supported
-        return self._impl.scrollable
+        return self._impl.scrollable  # type: ignore
 
     @scrollable.setter
     def scrollable(self, val):
@@ -83,16 +93,22 @@ class Cursor:
         self._impl.scrollable = val
 
     @property
-    def withhold(self):
+    def withhold(self) -> bool:
         # Not supported
-        return self._impl.withhold
+        return self._impl.withhold  # type: ignore
 
     @withhold.setter
     def withhold(self, val):
         # Not supported
         self._impl.withhold = val
 
-    async def execute(self, operation, parameters=None, *, timeout=None):
+    async def execute(
+        self,
+        operation: str,
+        parameters: Any = None,
+        *,
+        timeout: Optional[float] = None
+    ):
         """Prepare and execute a database operation (query or command).
 
         Parameters may be provided as sequence or mapping and will be
@@ -146,17 +162,16 @@ class Cursor:
         else:
             await self._conn._poll(waiter, timeout)
 
-    def begin(self):
+    def begin(self) -> _TransactionBeginContextManager:
         return _TransactionBeginContextManager(self._transaction.begin())
 
-    def begin_nested(self):
+    def begin_nested(self) -> _ContextManager[Transaction]:
         if not self._transaction.is_begin:
-            return _TransactionBeginContextManager(
-                self._transaction.begin())
-        else:
-            return self._transaction.point()
+            return _TransactionBeginContextManager(self._transaction.begin())
 
-    def mogrify(self, operation, parameters=None):
+        return self._transaction.point()
+
+    def mogrify(self, operation: str, parameters: Any = None) -> str:
         """Return a query string after arguments binding.
 
         The string returned is exactly the one that would be sent to
@@ -164,11 +179,12 @@ class Cursor:
 
         """
         ret = self._impl.mogrify(operation, parameters)
-        assert not self._conn._isexecuting(), ("Don't support server side "
-                                               "mogrify")
+        assert not self._conn.isexecuting(), (
+            "Don't support server side mogrify"
+        )
         return ret
 
-    async def setinputsizes(self, sizes):
+    async def setinputsizes(self, sizes: int) -> None:
         """This method is exposed in compliance with the DBAPI.
 
         It currently does nothing but it is safe to call it.
@@ -184,8 +200,9 @@ class Cursor:
 
         """
         ret = self._impl.fetchone()
-        assert not self._conn._isexecuting(), ("Don't support server side "
-                                               "cursors yet")
+        assert not self._conn.isexecuting(), (
+            "Don't support server side cursors yet"
+        )
         return ret
 
     async def fetchmany(self, size=None):
@@ -205,8 +222,9 @@ class Cursor:
         if size is None:
             size = self._impl.arraysize
         ret = self._impl.fetchmany(size)
-        assert not self._conn._isexecuting(), ("Don't support server side "
-                                               "cursors yet")
+        assert not self._conn.isexecuting(), (
+            "Don't support server side cursors yet"
+        )
         return ret
 
     async def fetchall(self):
@@ -217,8 +235,9 @@ class Cursor:
 
         """
         ret = self._impl.fetchall()
-        assert not self._conn._isexecuting(), ("Don't support server side "
-                                               "cursors yet")
+        assert not self._conn.isexecuting(), (
+            "Don't support server side cursors yet"
+        )
         return ret
 
     async def scroll(self, value, mode="relative"):
@@ -230,12 +249,13 @@ class Cursor:
 
         """
         ret = self._impl.scroll(value, mode)
-        assert not self._conn._isexecuting(), ("Don't support server side "
-                                               "cursors yet")
+        assert not self._conn.isexecuting(), (
+            "Don't support server side cursors yet"
+        )
         return ret
 
     @property
-    def arraysize(self):
+    def arraysize(self) -> int:
         """How many rows will be returned by fetchmany() call.
 
         This read/write attribute specifies the number of rows to
@@ -243,10 +263,10 @@ class Cursor:
         1 meaning to fetch a single row at a time.
 
         """
-        return self._impl.arraysize
+        return self._impl.arraysize  # type: ignore
 
     @arraysize.setter
-    def arraysize(self, val):
+    def arraysize(self, val: int) -> None:
         """How many rows will be returned by fetchmany() call.
 
         This read/write attribute specifies the number of rows to
@@ -257,17 +277,17 @@ class Cursor:
         self._impl.arraysize = val
 
     @property
-    def itersize(self):
+    def itersize(self) -> int:
         # Not supported
-        return self._impl.itersize
+        return self._impl.itersize  # type: ignore
 
     @itersize.setter
-    def itersize(self, val):
+    def itersize(self, val: int) -> None:
         # Not supported
         self._impl.itersize = val
 
     @property
-    def rowcount(self):
+    def rowcount(self) -> int:
         """Returns the number of rows that has been produced of affected.
 
         This read-only attribute specifies the number of rows that the
@@ -280,20 +300,20 @@ class Cursor:
         can't be determined by the interface.
 
         """
-        return self._impl.rowcount
+        return self._impl.rowcount  # type: ignore
 
     @property
-    def rownumber(self):
+    def rownumber(self) -> int:
         """Row index.
 
         This read-only attribute provides the current 0-based index of the
         cursor in the result set or ``None`` if the index cannot be
         determined."""
 
-        return self._impl.rownumber
+        return self._impl.rownumber  # type: ignore
 
     @property
-    def lastrowid(self):
+    def lastrowid(self) -> int:
         """OID of the last inserted row.
 
         This read-only attribute provides the OID of the last row
@@ -302,10 +322,10 @@ class Cursor:
         the attribute is set to None.
 
         """
-        return self._impl.lastrowid
+        return self._impl.lastrowid  # type: ignore
 
     @property
-    def query(self):
+    def query(self) -> Optional[str]:
         """The last executed query string.
 
         Read-only attribute containing the body of the last query sent
@@ -316,9 +336,8 @@ class Cursor:
         return self._impl.query
 
     @property
-    def statusmessage(self):
+    def statusmessage(self) -> str:
         """the message returned by the last command."""
-
         return self._impl.statusmessage
 
     # async def cast(self, old, s):
@@ -346,21 +365,20 @@ class Cursor:
         # Does nothing
         self._impl.setoutputsize(size, column)
 
-    async def copy_from(self, file, table, sep='\t', null='\\N', size=8192,
-                        columns=None):
+    async def copy_from(self, *args: Any, **kwargs: Any) -> None:
         raise psycopg2.ProgrammingError(
             "copy_from cannot be used in asynchronous mode")
 
-    async def copy_to(self, file, table, sep='\t', null='\\N', columns=None):
+    async def copy_to(self, *args: Any, **kwargs: Any) -> None:
         raise psycopg2.ProgrammingError(
             "copy_to cannot be used in asynchronous mode")
 
-    async def copy_expert(self, sql, file, size=8192):
+    async def copy_expert(self, *args: Any, **kwargs: Any) -> None:
         raise psycopg2.ProgrammingError(
             "copy_expert cannot be used in asynchronous mode")
 
     @property
-    def timeout(self):
+    def timeout(self) -> float:
         """Return default timeout for cursor operations."""
         return self._timeout
 
@@ -371,17 +389,20 @@ class Cursor:
         ret = await self.fetchone()
         if ret is not None:
             return ret
-        else:
-            raise StopAsyncIteration
+        raise StopAsyncIteration
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> 'Cursor':
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        tb: Optional[TracebackType],
+    ) -> None:
         self.close()
-        return
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f'<'
             f'{type(self).__module__}::{type(self).__name__} '
