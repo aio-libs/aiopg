@@ -1,11 +1,11 @@
 import asyncio
 import sys
-from collections.abc import Coroutine
 from types import TracebackType
 from typing import (
     Any,
     Awaitable,
     Callable,
+    Coroutine,
     Generator,
     Generic,
     Optional,
@@ -30,7 +30,7 @@ def get_running_loop() -> asyncio.AbstractEventLoop:
 
 def create_completed_future(
     loop: asyncio.AbstractEventLoop
-) -> asyncio.Future[Any]:
+) -> 'asyncio.Future[Any]':
     future = loop.create_future()
     future.set_result(None)
     return future

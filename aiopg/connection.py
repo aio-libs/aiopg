@@ -22,6 +22,7 @@ from typing import (
     Sequence,
     Tuple,
     Type,
+    cast,
 )
 
 import psycopg2
@@ -721,7 +722,7 @@ class Connection:
         self._enable_hstore = enable_hstore
         self._enable_uuid = enable_uuid
         self._loop = get_running_loop()
-        self._waiter: Optional[asyncio.Future[None]] = (
+        self._waiter: Optional['asyncio.Future[None]'] = (
             self._loop.create_future()
         )
 
@@ -746,8 +747,8 @@ class Connection:
             self._source_traceback = traceback.extract_stack(sys._getframe(1))
 
     @staticmethod
-    def _ready(weak_self: weakref.ref['Connection']) -> None:
-        self = weak_self()
+    def _ready(weak_self: 'weakref.ref[Any]') -> None:
+        self = cast(Connection, weak_self())
         if self is None:
             return
 
@@ -823,7 +824,7 @@ class Connection:
         if self._waiter and not self._waiter.done():
             self._waiter.set_exception(psycopg2.OperationalError(message))
 
-    def _create_waiter(self, func_name: str) -> asyncio.Future[None]:
+    def _create_waiter(self, func_name: str) -> 'asyncio.Future[None]':
         if self._waiter is not None:
             raise RuntimeError(f'{func_name}() called while another coroutine '
                                f'is already waiting for incoming data')
@@ -831,7 +832,7 @@ class Connection:
         return self._waiter
 
     async def _poll(
-        self, waiter: asyncio.Future[None], timeout: float
+        self, waiter: 'asyncio.Future[None]', timeout: float
     ) -> None:
         assert waiter is self._waiter, (waiter, self._waiter)
         self._ready(self._weakref)
@@ -946,7 +947,7 @@ class Connection:
             self._waiter.set_exception(
                 psycopg2.OperationalError("Connection closed"))
 
-    def close(self) -> asyncio.Future[None]:
+    def close(self) -> 'asyncio.Future[None]':
         self._close()
         return create_completed_future(self._loop)
 

@@ -367,7 +367,7 @@ class Pool:
         async with self._cond:
             self._cond.notify()
 
-    def release(self, conn: Connection) -> asyncio.Future[None]:
+    def release(self, conn: Connection) -> 'asyncio.Future[None]':
         """Release free connection back to the connection pool.
         """
         future = create_completed_future(self._loop)
