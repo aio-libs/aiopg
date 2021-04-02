@@ -170,6 +170,14 @@ class IsolationLevel(enum.Enum):
         return self.value(readonly, deferrable)  # type: ignore
 
 
+async def _release_savepoint(t: 'Transaction') -> None:
+    await t.release_savepoint()
+
+
+async def _rollback_savepoint(t: 'Transaction') -> None:
+    await t.rollback_savepoint()
+
+
 class Transaction:
     __slots__ = ('_cursor', '_is_begin', '_isolation', '_unique_id')
 
@@ -240,8 +248,8 @@ class Transaction:
     def point(self) -> _ContextManager['Transaction']:
         return _ContextManager[Transaction](
             self.savepoint(),
-            lambda x: x.release_savepoint(),
-            lambda x: x.rollback_savepoint(),
+            _release_savepoint,
+            _rollback_savepoint,
         )
 
     def _check_commit_rollback(self) -> None:
@@ -282,6 +290,14 @@ class Transaction:
             await self.rollback()
         else:
             await self.commit()
+
+
+async def _commit_transaction(t: Transaction) -> None:
+    await t.commit()
+
+
+async def _rollback_transaction(t: Transaction) -> None:
+    await t.rollback()
 
 
 class Cursor:
@@ -445,8 +461,8 @@ class Cursor:
     def begin(self) -> _ContextManager[Transaction]:
         return _ContextManager[Transaction](
             self._transaction.begin(),
-            lambda x: x.commit(),
-            lambda x: x.rollback()
+            _commit_transaction,
+            _rollback_transaction,
         )
 
     def begin_nested(self) -> _ContextManager[Transaction]:
@@ -455,8 +471,8 @@ class Cursor:
 
         return _ContextManager[Transaction](
             self._transaction.begin(),
-            lambda x: x.commit(),
-            lambda x: x.rollback()
+            _commit_transaction,
+            _rollback_transaction,
         )
 
     def mogrify(self, operation: str, parameters: Any = None) -> str:
@@ -698,6 +714,10 @@ class Cursor:
         )
 
 
+async def _close_cursor(c: Cursor) -> None:
+    c.close()
+
+
 class Connection:
     """Low-level asynchronous interface for wrapped psycopg2 connection.
 
@@ -884,7 +904,7 @@ class Connection:
             timeout=timeout,
             isolation_level=isolation_level
         )
-        return _ContextManager[Cursor](coro, self._close_cursor)
+        return _ContextManager[Cursor](coro, _close_cursor)
 
     async def _cursor(
         self,
@@ -1200,7 +1220,3 @@ class Connection:
         tb: Optional[TracebackType],
     ) -> None:
         await self.close()
-
-    @staticmethod
-    async def _close_cursor(c: Cursor) -> None:
-        c.close()

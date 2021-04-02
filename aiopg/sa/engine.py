@@ -85,6 +85,10 @@ async def _close_engine(engine: 'Engine') -> None:
     await engine.wait_closed()
 
 
+async def _close_connection(c: SAConnection) -> None:
+    await c.close()
+
+
 class Engine:
     """Connects a aiopg.Pool and
     sqlalchemy.engine.interfaces.Dialect together to provide a
@@ -169,7 +173,7 @@ class Engine:
     def acquire(self):
         """Get a connection from pool."""
         coro = self._acquire()
-        return _ContextManager[SAConnection](coro, lambda x: x.close())
+        return _ContextManager[SAConnection](coro, _close_connection)
 
     async def _acquire(self):
         raw = await self._pool.acquire()

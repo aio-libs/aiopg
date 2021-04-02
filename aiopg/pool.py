@@ -279,7 +279,7 @@ class Pool:
     def acquire(self) -> _ContextManager[Connection]:
         """Acquire free connection from the pool."""
         coro = self._acquire()
-        return _ContextManager[Connection](coro, lambda x: self.release(x))
+        return _ContextManager[Connection](coro, self.release)
 
     @classmethod
     async def from_pool_fill(cls, *args: Any, **kwargs: Any) -> 'Pool':
