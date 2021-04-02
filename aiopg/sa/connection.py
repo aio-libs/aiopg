@@ -6,7 +6,7 @@ from sqlalchemy.sql import ClauseElement
 from sqlalchemy.sql.ddl import DDLElement
 from sqlalchemy.sql.dml import UpdateBase
 
-from ..utils import _ContextManager
+from ..utils import _ContextManager, _IterableContextManager
 from . import exc
 from .result import ResultProxy
 from .transaction import (
@@ -92,7 +92,7 @@ class SAConnection:
 
         """
         coro = self._execute(query, *multiparams, **params)
-        return _ContextManager[ResultProxy](coro, _close_result_proxy)
+        return _IterableContextManager[ResultProxy](coro, _close_result_proxy)
 
     async def _open_cursor(self):
         if self._connection is None:

@@ -100,3 +100,26 @@ class _ContextManager(Coroutine[Any, None, _TObj], Generic[_TObj]):
                 await self._release(self._obj)
         finally:
             self._obj = None
+
+
+class _IterableContextManager(_ContextManager[_TObj]):
+    __slots__ = ()
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+
+    def __aiter__(self) -> '_IterableContextManager[_TObj]':
+        return self
+
+    async def __anext__(self) -> _TObj:
+        if self._obj is None:
+            self._obj = await self._coro
+
+        try:
+            return await self._obj.__anext__()  # type: ignore
+        except StopAsyncIteration:
+            try:
+                await self._release(self._obj)
+            finally:
+                self._obj = None
+            raise
