@@ -8,9 +8,14 @@ doc: clean-docs
 	@echo "open file://`pwd`/docs/_build/html/index.html"
 
 isort:
-	isort aiopg
-	isort tests
-	isort examples
+	isort --use-parentheses --multi-line 3 --combine-as --trailing-comma aiopg
+	isort --use-parentheses --multi-line 3 --combine-as --trailing-comma tests
+	isort --use-parentheses --multi-line 3 --combine-as --trailing-comma examples
+
+black:
+	black --line-length 79 aiopg
+	black --line-length 79 tests
+	black --line-length 79 examples
 
 lint: .lint
 
@@ -19,13 +24,18 @@ lint: .lint
 	    $(shell find examples -type f)
 	flake8 aiopg tests examples
 	python setup.py check -rms
-	@if ! isort -c aiopg tests examples; then \
+	@if ! black --line-length 79 --check aiopg tests examples; then \
+            echo "Format errors, run 'make black' to fix them!!!"; \
+            false; \
+	fi
+	@if ! isort --use-parentheses --multi-line 3 --combine-as --trailing-comma -c aiopg tests examples; then \
             echo "Import sort errors, run 'make isort' to fix them!!!"; \
             isort --diff aiopg tests examples; \
             false; \
 	fi
 	@if ! mypy --strict --ignore-missing-imports --exclude sa aiopg; then \
 	    echo "Typing errors"; \
+	    false; \
 	fi
 
 test: flake

@@ -10,9 +10,10 @@ from aiopg.sa import create_engine
 metadata = sa.MetaData()
 
 users = sa.Table(
-    'users_sa_isolation_transaction', metadata,
-    sa.Column('id', sa.Integer, primary_key=True),
-    sa.Column('name', sa.String(255))
+    "users_sa_isolation_transaction",
+    metadata,
+    sa.Column("id", sa.Integer, primary_key=True),
+    sa.Column("name", sa.String(255)),
 )
 
 
@@ -21,8 +22,8 @@ async def create_sa_transaction_tables(conn):
 
 
 async def repea_sa_transaction(conn, conn2):
-    isolation_level = 'REPEATABLE READ'
-    await conn.execute(sa.insert(users).values(id=1, name='test1'))
+    isolation_level = "REPEATABLE READ"
+    await conn.execute(sa.insert(users).values(id=1, name="test1"))
     t1 = await conn.begin(isolation_level=isolation_level)
 
     where = users.c.id == 1
@@ -31,20 +32,21 @@ async def repea_sa_transaction(conn, conn2):
 
     assert await (await conn2.execute(q_user)).fetchone() == user
 
-    await conn.execute(sa.update(users).values({'name': 'name2'}).where(where))
+    await conn.execute(sa.update(users).values({"name": "name2"}).where(where))
 
     t2 = await conn2.begin(isolation_level=isolation_level)
     assert await (await conn2.execute(q_user)).fetchone() == user
 
     await t1.commit()
 
-    await conn2.execute(users.insert().values({'id': 2, 'name': 'test'}))
+    await conn2.execute(users.insert().values({"id": 2, "name": "test"}))
 
     try:
         await conn2.execute(
-            sa.update(users).values({'name': 't'}).where(where))
+            sa.update(users).values({"name": "t"}).where(where)
+        )
     except TransactionRollbackError as e:
-        assert e.pgcode == '40001'
+        assert e.pgcode == "40001"
 
     await t2.commit()
 
@@ -54,8 +56,8 @@ async def repea_sa_transaction(conn, conn2):
 
 
 async def serializable_sa_transaction(conn, conn2):
-    isolation_level = 'SERIALIZABLE'
-    await conn.execute(sa.insert(users).values(id=1, name='test1'))
+    isolation_level = "SERIALIZABLE"
+    await conn.execute(sa.insert(users).values(id=1, name="test1"))
     t1 = await conn.begin(isolation_level=isolation_level)
 
     where = users.c.id == 1
@@ -64,7 +66,7 @@ async def serializable_sa_transaction(conn, conn2):
 
     assert await (await conn2.execute(q_user)).fetchone() == user
 
-    await conn.execute(sa.update(users).values({'name': 'name2'}).where(where))
+    await conn.execute(sa.update(users).values({"name": "name2"}).where(where))
 
     t2 = await conn2.begin(isolation_level=isolation_level)
     assert await (await conn2.execute(q_user)).fetchone() == user
@@ -72,38 +74,36 @@ async def serializable_sa_transaction(conn, conn2):
     await t1.commit()
 
     try:
-        await conn2.execute(users.insert().values({'id': 2, 'name': 'test'}))
+        await conn2.execute(users.insert().values({"id": 2, "name": "test"}))
     except TransactionRollbackError as e:
-        assert e.pgcode == '40001'
+        assert e.pgcode == "40001"
 
     try:
-        await conn2.execute(users.update().values({'name': 't'}).where(where))
+        await conn2.execute(users.update().values({"name": "t"}).where(where))
     except InternalError as e:
-        assert e.pgcode == '25P02'
+        assert e.pgcode == "25P02"
 
     await t2.commit()
 
     user = dict(await (await conn2.execute(q_user)).fetchone())
-    assert user == {'name': 'name2', 'id': 1}
+    assert user == {"name": "name2", "id": 1}
 
     await conn.execute(sa.delete(users))
     assert len(await (await conn.execute(users.select())).fetchall()) == 0
 
 
 async def read_only_read_sa_transaction(conn, deferrable):
-    await conn.execute(sa.insert(users).values(id=1, name='test1'))
+    await conn.execute(sa.insert(users).values(id=1, name="test1"))
     t1 = await conn.begin(
-        isolation_level='SERIALIZABLE',
-        readonly=True,
-        deferrable=deferrable
+        isolation_level="SERIALIZABLE", readonly=True, deferrable=deferrable
     )
 
     where = users.c.id == 1
 
     try:
-        await conn.execute(sa.update(users).values({'name': 't'}).where(where))
+        await conn.execute(sa.update(users).values({"name": "t"}).where(where))
     except InternalError as e:
-        assert e.pgcode == '25006'
+        assert e.pgcode == "25006"
 
     await t1.commit()
 
@@ -112,7 +112,7 @@ async def read_only_read_sa_transaction(conn, deferrable):
 
 
 async def isolation_read_sa_transaction(conn, conn2):
-    await conn.execute(sa.insert(users).values(id=1, name='test1'))
+    await conn.execute(sa.insert(users).values(id=1, name="test1"))
     t1 = await conn.begin()
 
     where = users.c.id == 1
@@ -121,7 +121,7 @@ async def isolation_read_sa_transaction(conn, conn2):
 
     assert await (await conn2.execute(q_user)).fetchone() == user
 
-    await conn.execute(sa.update(users).values({'name': 'name2'}).where(where))
+    await conn.execute(sa.update(users).values({"name": "name2"}).where(where))
 
     t2 = await conn2.begin()
     assert await (await conn2.execute(q_user)).fetchone() == user
@@ -138,10 +138,9 @@ async def isolation_read_sa_transaction(conn, conn2):
 
 
 async def go():
-    engine = await create_engine(user='aiopg',
-                                 database='aiopg',
-                                 host='127.0.0.1',
-                                 password='passwd')
+    engine = await create_engine(
+        user="aiopg", database="aiopg", host="127.0.0.1", password="passwd"
+    )
     async with engine:
         async with engine.acquire() as conn:
             await create_sa_transaction_tables(conn)

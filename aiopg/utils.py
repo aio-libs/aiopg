@@ -17,10 +17,11 @@ from typing import (
 if sys.version_info >= (3, 7, 0):
     __get_running_loop = asyncio.get_running_loop
 else:
+
     def __get_running_loop() -> asyncio.AbstractEventLoop:
         loop = asyncio.get_event_loop()
         if not loop.is_running():
-            raise RuntimeError('no running event loop')
+            raise RuntimeError("no running event loop")
         return loop
 
 
@@ -29,8 +30,8 @@ def get_running_loop() -> asyncio.AbstractEventLoop:
 
 
 def create_completed_future(
-    loop: asyncio.AbstractEventLoop
-) -> 'asyncio.Future[Any]':
+    loop: asyncio.AbstractEventLoop,
+) -> "asyncio.Future[Any]":
     future = loop.create_future()
     future.set_result(None)
     return future
@@ -41,31 +42,29 @@ _Release = Callable[[_TObj], Awaitable[None]]
 
 
 class _ContextManager(Coroutine[Any, None, _TObj], Generic[_TObj]):
-    __slots__ = ('_coro', '_obj', '_release', '_release_on_exception')
+    __slots__ = ("_coro", "_obj", "_release", "_release_on_exception")
 
     def __init__(
         self,
         coro: Coroutine[Any, None, _TObj],
         release: _Release[_TObj],
-        release_on_exception: Optional[_Release[_TObj]] = None
+        release_on_exception: Optional[_Release[_TObj]] = None,
     ):
         self._coro = coro
         self._obj: Optional[_TObj] = None
         self._release = release
         self._release_on_exception = (
-            release
-            if release_on_exception is None
-            else release_on_exception
+            release if release_on_exception is None else release_on_exception
         )
 
-    def send(self, value: Any) -> 'Any':
+    def send(self, value: Any) -> "Any":
         return self._coro.send(value)
 
     def throw(  # type: ignore
         self,
         typ: Type[BaseException],
         val: Optional[Union[BaseException, object]] = None,
-        tb: Optional[TracebackType] = None
+        tb: Optional[TracebackType] = None,
     ) -> Any:
         if val is None:
             return self._coro.throw(typ)
@@ -108,7 +107,7 @@ class _IterableContextManager(_ContextManager[_TObj]):
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
 
-    def __aiter__(self) -> '_IterableContextManager[_TObj]':
+    def __aiter__(self) -> "_IterableContextManager[_TObj]":
         return self
 
     async def __anext__(self) -> _TObj:

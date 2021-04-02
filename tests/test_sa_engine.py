@@ -11,10 +11,12 @@ sa = pytest.importorskip("aiopg.sa")  # noqa
 
 
 meta = MetaData()
-tbl = Table('sa_tbl3', meta,
-            Column('id', Integer, nullable=False,
-                   primary_key=True),
-            Column('name', String(255)))
+tbl = Table(
+    "sa_tbl3",
+    meta,
+    Column("id", Integer, nullable=False, primary_key=True),
+    Column("name", String(255)),
+)
 
 
 @pytest.fixture
@@ -23,9 +25,11 @@ def engine(make_engine, loop):
         engine = await make_engine()
         async with engine.acquire() as conn:
             await conn.execute("DROP TABLE IF EXISTS sa_tbl3")
-            await conn.execute("CREATE TABLE sa_tbl3 "
-                               "(id serial, name varchar(255))")
+            await conn.execute(
+                "CREATE TABLE sa_tbl3 " "(id serial, name varchar(255))"
+            )
         return engine
+
     return loop.run_until_complete(start())
 
 
@@ -34,18 +38,18 @@ def test_dialect(engine):
 
 
 def test_name(engine):
-    assert 'postgresql' == engine.name
+    assert "postgresql" == engine.name
 
 
 def test_driver(engine):
-    assert 'psycopg2' == engine.driver
+    assert "psycopg2" == engine.driver
 
 
 def test_dsn(engine, pg_params):
     params = pg_params.copy()
-    params['password'] = 'xxx'
-    params['dbname'] = params.pop('database')
-    params['port'] = str(params['port'])
+    params["password"] = "xxx"
+    params["dbname"] = params.pop("database")
+    params["port"] = str(params["port"])
     assert parse_dsn(engine.dsn) == params
 
 
@@ -81,7 +85,7 @@ def test_not_context_manager(engine):
 async def test_release_transacted(engine):
     conn = await engine.acquire()
     tr = await conn.begin()
-    with pytest.warns(ResourceWarning, match='Invalid transaction status'):
+    with pytest.warns(ResourceWarning, match="Invalid transaction status"):
         await engine.release(conn)
     del tr
     assert conn.closed
@@ -126,17 +130,15 @@ async def test_wait_closed(make_engine):
     async def do_release(conn):
         await asyncio.sleep(0)
         engine.release(conn)
-        ops.append('release')
+        ops.append("release")
 
     async def wait_closed():
         await engine.wait_closed()
-        ops.append('wait_closed')
+        ops.append("wait_closed")
 
     engine.close()
-    await asyncio.gather(wait_closed(),
-                         do_release(c1),
-                         do_release(c2))
-    assert ['release', 'release', 'wait_closed'] == ops
+    await asyncio.gather(wait_closed(), do_release(c1), do_release(c2))
+    assert ["release", "release", "wait_closed"] == ops
     assert 0 == engine.freesize
 
 
@@ -158,14 +160,12 @@ async def test_release_after_connection_disconnected_before_select(
     tcp_proxy = await tcp_proxy(proxy_port, server_port)
     engine = await make_engine(port=proxy_port)
 
-    with pytest.raises(
-        (psycopg2.InterfaceError, psycopg2.OperationalError)
-    ):
-        with pytest.warns(ResourceWarning, match='Invalid transaction status'):
+    with pytest.raises((psycopg2.InterfaceError, psycopg2.OperationalError)):
+        with pytest.warns(ResourceWarning, match="Invalid transaction status"):
             async with engine.acquire() as conn, conn.begin():
-                await conn.execute('SELECT 1;')
+                await conn.execute("SELECT 1;")
                 await tcp_proxy.disconnect()
-                await conn.execute('SELECT 1;')
+                await conn.execute("SELECT 1;")
 
     assert engine.size == 0
 
@@ -179,12 +179,10 @@ async def test_release_after_connection_disconnected_before_begin(
     tcp_proxy = await tcp_proxy(proxy_port, server_port)
     engine = await make_engine(port=proxy_port)
 
-    with pytest.raises(
-        (psycopg2.InterfaceError, psycopg2.OperationalError)
-    ):
-        with pytest.warns(ResourceWarning, match='Invalid transaction status'):
+    with pytest.raises((psycopg2.InterfaceError, psycopg2.OperationalError)):
+        with pytest.warns(ResourceWarning, match="Invalid transaction status"):
             async with engine.acquire() as conn:
-                await conn.execute('SELECT 1;')
+                await conn.execute("SELECT 1;")
                 await tcp_proxy.disconnect()
                 async with conn.begin():
                     pytest.fail("Should not be here")

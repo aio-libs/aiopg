@@ -8,9 +8,10 @@ from aiopg.sa import create_engine
 metadata = sa.MetaData()
 
 users = sa.Table(
-    'users_sa_transaction', metadata,
-    sa.Column('id', sa.Integer, primary_key=True),
-    sa.Column('name', sa.String(255))
+    "users_sa_transaction",
+    metadata,
+    sa.Column("id", sa.Integer, primary_key=True),
+    sa.Column("name", sa.String(255)),
 )
 
 
@@ -27,8 +28,8 @@ async def success_transaction(conn):
     await check_count_users(conn, count=0)
 
     async with conn.begin():
-        await conn.execute(sa.insert(users).values(id=1, name='test1'))
-        await conn.execute(sa.insert(users).values(id=2, name='test2'))
+        await conn.execute(sa.insert(users).values(id=1, name="test1"))
+        await conn.execute(sa.insert(users).values(id=2, name="test2"))
 
     await check_count_users(conn, count=2)
 
@@ -45,7 +46,7 @@ async def fail_transaction(conn):
     trans = await conn.begin()
 
     try:
-        await conn.execute(sa.insert(users).values(id=1, name='test1'))
+        await conn.execute(sa.insert(users).values(id=1, name="test1"))
         raise RuntimeError()
 
     except RuntimeError:
@@ -60,10 +61,10 @@ async def success_nested_transaction(conn):
     await check_count_users(conn, count=0)
 
     async with conn.begin_nested():
-        await conn.execute(sa.insert(users).values(id=1, name='test1'))
+        await conn.execute(sa.insert(users).values(id=1, name="test1"))
 
         async with conn.begin_nested():
-            await conn.execute(sa.insert(users).values(id=2, name='test2'))
+            await conn.execute(sa.insert(users).values(id=2, name="test2"))
 
     await check_count_users(conn, count=2)
 
@@ -78,11 +79,11 @@ async def fail_nested_transaction(conn):
     await check_count_users(conn, count=0)
 
     async with conn.begin_nested():
-        await conn.execute(sa.insert(users).values(id=1, name='test1'))
+        await conn.execute(sa.insert(users).values(id=1, name="test1"))
 
         tr_f = await conn.begin_nested()
         try:
-            await conn.execute(sa.insert(users).values(id=2, name='test2'))
+            await conn.execute(sa.insert(users).values(id=2, name="test2"))
             raise RuntimeError()
 
         except RuntimeError:
@@ -91,7 +92,7 @@ async def fail_nested_transaction(conn):
             await tr_f.commit()
 
         async with conn.begin_nested():
-            await conn.execute(sa.insert(users).values(id=2, name='test2'))
+            await conn.execute(sa.insert(users).values(id=2, name="test2"))
 
     await check_count_users(conn, count=2)
 
@@ -106,13 +107,13 @@ async def fail_first_nested_transaction(conn):
     trans = await conn.begin_nested()
 
     try:
-        await conn.execute(sa.insert(users).values(id=1, name='test1'))
+        await conn.execute(sa.insert(users).values(id=1, name="test1"))
 
         async with conn.begin_nested():
-            await conn.execute(sa.insert(users).values(id=2, name='test2'))
+            await conn.execute(sa.insert(users).values(id=2, name="test2"))
 
         async with conn.begin_nested():
-            await conn.execute(sa.insert(users).values(id=3, name='test3'))
+            await conn.execute(sa.insert(users).values(id=3, name="test3"))
 
         raise RuntimeError()
 
@@ -125,10 +126,9 @@ async def fail_first_nested_transaction(conn):
 
 
 async def go():
-    engine = await create_engine(user='aiopg',
-                                 database='aiopg',
-                                 host='127.0.0.1',
-                                 password='passwd')
+    engine = await create_engine(
+        user="aiopg", database="aiopg", host="127.0.0.1", password="passwd"
+    )
     async with engine:
         async with engine.acquire() as conn:
             await create_sa_transaction_tables(conn)
