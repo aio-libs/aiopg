@@ -4,7 +4,7 @@ import json
 import aiopg
 
 from ..connection import TIMEOUT
-from ..utils import _ContextManager, _PoolContextManager, get_running_loop
+from ..utils import _ContextManager, get_running_loop
 from .connection import SAConnection
 
 try:
@@ -62,7 +62,7 @@ def create_engine(dsn=None, *, minsize=1, maxsize=10, dialect=_dialect,
     coro = _create_engine(dsn=dsn, minsize=minsize, maxsize=maxsize,
                           dialect=dialect, timeout=timeout,
                           pool_recycle=pool_recycle, **kwargs)
-    return _EngineContextManager(coro)
+    return _ContextManager(coro, _close_engine)
 
 
 async def _create_engine(dsn=None, *, minsize=1, maxsize=10, dialect=_dialect,
@@ -78,6 +78,11 @@ async def _create_engine(dsn=None, *, minsize=1, maxsize=10, dialect=_dialect,
         return Engine(dialect, pool, real_dsn)
     finally:
         await pool.release(conn)
+
+
+async def _close_engine(engine: 'Engine') -> None:
+    engine.close()
+    await engine.wait_closed()
 
 
 class Engine:
@@ -164,16 +169,14 @@ class Engine:
     def acquire(self):
         """Get a connection from pool."""
         coro = self._acquire()
-        return _EngineAcquireContextManager(coro)
+        return _ContextManager[SAConnection](coro, lambda x: x.close())
 
     async def _acquire(self):
         raw = await self._pool.acquire()
-        conn = SAConnection(raw, self)
-        return conn
+        return SAConnection(raw, self)
 
     def release(self, conn):
-        fut = self._pool.release(conn.connection)
-        return fut
+        return self._pool.release(conn.connection)
 
     def __enter__(self):
         raise RuntimeError(
@@ -206,10 +209,6 @@ class Engine:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         self.close()
         await self.wait_closed()
-
-
-_EngineContextManager = _PoolContextManager
-_EngineAcquireContextManager = _ContextManager
 
 
 class _ConnectionContextManager:

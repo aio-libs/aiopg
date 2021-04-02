@@ -4,10 +4,19 @@ import warnings
 from collections import namedtuple
 
 from .connection import TIMEOUT as DEFAULT_TIMEOUT
-from .connection import Connection, connect
-from .cursor import Cursor
+from .connection import (
+    Connection,
+    Cursor,
+    DefaultCompiler,
+    IsolationCompiler,
+    IsolationLevel,
+    ReadCommittedCompiler,
+    RepeatableReadCompiler,
+    SerializableCompiler,
+    Transaction,
+    connect,
+)
 from .pool import Pool, create_pool
-from .transaction import IsolationLevel, Transaction
 from .utils import get_running_loop
 
 warnings.filterwarnings(

@@ -1,24 +1,35 @@
+import abc
 import asyncio
 import contextlib
+import datetime
+import enum
 import errno
 import platform
 import select
 import sys
 import traceback
+import uuid
 import warnings
 import weakref
 from collections.abc import Mapping
 from types import TracebackType
-from typing import Any, Optional, Type
+from typing import (
+    Any,
+    Callable,
+    Generator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+)
 
 import psycopg2
 import psycopg2.extensions
 import psycopg2.extras
 
-from .cursor import Cursor
+from .log import logger
 from .utils import _ContextManager, create_completed_future, get_running_loop
-
-__all__ = ('connect',)
 
 TIMEOUT = 60.0
 
@@ -45,17 +56,21 @@ def connect(
     Returns instantiated Connection object.
 
     """
-    coro = Connection(
-        dsn,
-        timeout,
-        bool(echo),
-        enable_hstore=enable_hstore,
-        enable_uuid=enable_uuid,
-        enable_json=enable_json,
-        **kwargs
-    )
+    async def connect_() -> Connection:
+        return Connection(
+            dsn,
+            timeout,
+            bool(echo),
+            enable_hstore=enable_hstore,
+            enable_uuid=enable_uuid,
+            enable_json=enable_json,
+            **kwargs
+        )
+    return _ContextManager[Connection](connect_(), disconnect)
 
-    return _ContextManager[Connection](coro, lambda x: x.close())
+
+async def disconnect(c: 'Connection') -> None:
+    await c.close()
 
 
 def _is_bad_descriptor_error(os_error: OSError) -> bool:
@@ -63,6 +78,624 @@ def _is_bad_descriptor_error(os_error: OSError) -> bool:
         winerror = int(getattr(os_error, "winerror", 0))
         return winerror == WSAENOTSOCK
     return os_error.errno == errno.EBADF
+
+
+class IsolationCompiler(abc.ABC):
+    __slots__ = ('_isolation_level', '_readonly', '_deferrable')
+
+    def __init__(
+        self, isolation_level: Optional[str], readonly: bool, deferrable: bool
+    ):
+        self._isolation_level = isolation_level
+        self._readonly = readonly
+        self._deferrable = deferrable
+
+    @property
+    def name(self) -> str:
+        return self._isolation_level or "Unknown"
+
+    def savepoint(self, unique_id: str) -> str:
+        return f'SAVEPOINT {unique_id}'
+
+    def release_savepoint(self, unique_id: str) -> str:
+        return f'RELEASE SAVEPOINT {unique_id}'
+
+    def rollback_savepoint(self, unique_id: str) -> str:
+        return f'ROLLBACK TO SAVEPOINT {unique_id}'
+
+    def commit(self) -> str:
+        return 'COMMIT'
+
+    def rollback(self) -> str:
+        return 'ROLLBACK'
+
+    def begin(self) -> str:
+        query = 'BEGIN'
+        if self._isolation_level is not None:
+            query += (
+                f' ISOLATION LEVEL {self._isolation_level.upper()}'
+            )
+
+        if self._readonly:
+            query += ' READ ONLY'
+
+        if self._deferrable:
+            query += ' DEFERRABLE'
+
+        return query
+
+    def __repr__(self) -> str:
+        return self.name
+
+
+class ReadCommittedCompiler(IsolationCompiler):
+    __slots__ = ()
+
+    def __init__(self, readonly: bool, deferrable: bool):
+        super().__init__('Read committed', readonly, deferrable)
+
+
+class RepeatableReadCompiler(IsolationCompiler):
+    __slots__ = ()
+
+    def __init__(self, readonly: bool, deferrable: bool):
+        super().__init__('Repeatable read', readonly, deferrable)
+
+
+class SerializableCompiler(IsolationCompiler):
+    __slots__ = ()
+
+    def __init__(self, readonly: bool, deferrable: bool):
+        super().__init__('Serializable', readonly, deferrable)
+
+
+class DefaultCompiler(IsolationCompiler):
+    __slots__ = ()
+
+    def __init__(self, readonly: bool, deferrable: bool):
+        super().__init__(None, readonly, deferrable)
+
+    @property
+    def name(self) -> str:
+        return 'Default'
+
+
+class IsolationLevel(enum.Enum):
+    serializable = SerializableCompiler
+    repeatable_read = RepeatableReadCompiler
+    read_committed = ReadCommittedCompiler
+    default = DefaultCompiler
+
+    def __call__(self, readonly: bool, deferrable: bool) -> IsolationCompiler:
+        return self.value(readonly, deferrable)  # type: ignore
+
+
+class Transaction:
+    __slots__ = ('_cursor', '_is_begin', '_isolation', '_unique_id')
+
+    def __init__(
+        self,
+        cursor: 'Cursor',
+        isolation_level: Callable[[bool, bool], IsolationCompiler],
+        readonly: bool = False,
+        deferrable: bool = False
+    ):
+        self._cursor = cursor
+        self._is_begin = False
+        self._unique_id: Optional[str] = None
+        self._isolation = isolation_level(readonly, deferrable)
+
+    @property
+    def is_begin(self) -> bool:
+        return self._is_begin
+
+    async def begin(self) -> 'Transaction':
+        if self._is_begin:
+            raise psycopg2.ProgrammingError(
+                'You are trying to open a new transaction, use the save point')
+        self._is_begin = True
+        await self._cursor.execute(self._isolation.begin())
+        return self
+
+    async def commit(self) -> None:
+        self._check_commit_rollback()
+        await self._cursor.execute(self._isolation.commit())
+        self._is_begin = False
+
+    async def rollback(self) -> None:
+        self._check_commit_rollback()
+        if not self._cursor.closed:
+            await self._cursor.execute(self._isolation.rollback())
+        self._is_begin = False
+
+    async def rollback_savepoint(self) -> None:
+        self._check_release_rollback()
+        if not self._cursor.closed:
+            await self._cursor.execute(
+                self._isolation.rollback_savepoint(
+                    self._unique_id  # type: ignore
+                )
+            )
+        self._unique_id = None
+
+    async def release_savepoint(self) -> None:
+        self._check_release_rollback()
+        await self._cursor.execute(
+            self._isolation.release_savepoint(self._unique_id)  # type: ignore
+        )
+        self._unique_id = None
+
+    async def savepoint(self) -> 'Transaction':
+        self._check_commit_rollback()
+        if self._unique_id is not None:
+            raise psycopg2.ProgrammingError('You do not shut down savepoint')
+
+        self._unique_id = f's{uuid.uuid1().hex}'
+        await self._cursor.execute(
+            self._isolation.savepoint(self._unique_id)
+        )
+
+        return self
+
+    def point(self) -> _ContextManager['Transaction']:
+        return _ContextManager[Transaction](
+            self.savepoint(),
+            lambda x: x.release_savepoint(),
+            lambda x: x.rollback_savepoint(),
+        )
+
+    def _check_commit_rollback(self) -> None:
+        if not self._is_begin:
+            raise psycopg2.ProgrammingError('You are trying to commit '
+                                            'the transaction does not open')
+
+    def _check_release_rollback(self) -> None:
+        self._check_commit_rollback()
+        if self._unique_id is None:
+            raise psycopg2.ProgrammingError('You do not start savepoint')
+
+    def __repr__(self) -> str:
+        return (f"<{self.__class__.__name__} "
+                f"transaction={self._isolation} id={id(self):#x}>")
+
+    def __del__(self) -> None:
+        if self._is_begin:
+            warnings.warn(
+                f"You have not closed transaction {self!r}",
+                ResourceWarning)
+
+        if self._unique_id is not None:
+            warnings.warn(
+                f"You have not closed savepoint {self!r}",
+                ResourceWarning)
+
+    async def __aenter__(self) -> 'Transaction':
+        return await self.begin()
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        tb: Optional[TracebackType],
+    ) -> None:
+        if exc_type is not None:
+            await self.rollback()
+        else:
+            await self.commit()
+
+
+class Cursor:
+    def __init__(
+        self,
+        conn: 'Connection',
+        impl: Any,
+        timeout: float,
+        echo: bool,
+        isolation_level: Optional[IsolationLevel] = None
+    ):
+        self._conn = conn
+        self._impl = impl
+        self._timeout = timeout
+        self._echo = echo
+        self._transaction = Transaction(
+            self, isolation_level or IsolationLevel.default
+        )
+
+    @property
+    def echo(self) -> bool:
+        """Return echo mode status."""
+        return self._echo
+
+    @property
+    def description(self) -> Optional[Sequence[Any]]:
+        """This read-only attribute is a sequence of 7-item sequences.
+
+        Each of these sequences is a collections.namedtuple containing
+        information describing one result column:
+
+        0.  name: the name of the column returned.
+        1.  type_code: the PostgreSQL OID of the column.
+        2.  display_size: the actual length of the column in bytes.
+        3.  internal_size: the size in bytes of the column associated to
+            this column on the server.
+        4.  precision: total number of significant digits in columns of
+            type NUMERIC. None for other types.
+        5.  scale: count of decimal digits in the fractional part in
+            columns of type NUMERIC. None for other types.
+        6.  null_ok: always None as not easy to retrieve from the libpq.
+
+        This attribute will be None for operations that do not
+        return rows or if the cursor has not had an operation invoked
+        via the execute() method yet.
+
+        """
+        return self._impl.description  # type: ignore
+
+    def close(self) -> None:
+        """Close the cursor now."""
+        if not self.closed:
+            self._impl.close()
+
+    @property
+    def closed(self) -> bool:
+        """Read-only boolean attribute: specifies if the cursor is closed."""
+        return self._impl.closed  # type: ignore
+
+    @property
+    def connection(self) -> 'Connection':
+        """Read-only attribute returning a reference to the `Connection`."""
+        return self._conn
+
+    @property
+    def raw(self) -> Any:
+        """Underlying psycopg cursor object, readonly"""
+        return self._impl
+
+    @property
+    def name(self) -> str:
+        # Not supported
+        return self._impl.name  # type: ignore
+
+    @property
+    def scrollable(self) -> Optional[bool]:
+        # Not supported
+        return self._impl.scrollable  # type: ignore
+
+    @scrollable.setter
+    def scrollable(self, val: bool) -> None:
+        # Not supported
+        self._impl.scrollable = val
+
+    @property
+    def withhold(self) -> bool:
+        # Not supported
+        return self._impl.withhold  # type: ignore
+
+    @withhold.setter
+    def withhold(self, val: bool) -> None:
+        # Not supported
+        self._impl.withhold = val
+
+    async def execute(
+        self,
+        operation: str,
+        parameters: Any = None,
+        *,
+        timeout: Optional[float] = None
+    ) -> None:
+        """Prepare and execute a database operation (query or command).
+
+        Parameters may be provided as sequence or mapping and will be
+        bound to variables in the operation.  Variables are specified
+        either with positional %s or named %({name})s placeholders.
+
+        """
+        if timeout is None:
+            timeout = self._timeout
+        waiter = self._conn._create_waiter('cursor.execute')
+        if self._echo:
+            logger.info(operation)
+            logger.info("%r", parameters)
+        try:
+            self._impl.execute(operation, parameters)
+        except BaseException:
+            self._conn._waiter = None
+            raise
+        try:
+            await self._conn._poll(waiter, timeout)
+        except asyncio.TimeoutError:
+            self._impl.close()
+            raise
+
+    async def executemany(self, *args: Any, **kwargs: Any) -> None:
+        # Not supported
+        raise psycopg2.ProgrammingError(
+            "executemany cannot be used in asynchronous mode")
+
+    async def callproc(
+        self,
+        procname: str,
+        parameters: Any = None,
+        *,
+        timeout: Optional[float] = None
+    ) -> None:
+        """Call a stored database procedure with the given name.
+
+        The sequence of parameters must contain one entry for each
+        argument that the procedure expects. The result of the call is
+        returned as modified copy of the input sequence. Input
+        parameters are left untouched, output and input/output
+        parameters replaced with possibly new values.
+
+        """
+        if timeout is None:
+            timeout = self._timeout
+        waiter = self._conn._create_waiter('cursor.callproc')
+        if self._echo:
+            logger.info("CALL %s", procname)
+            logger.info("%r", parameters)
+        try:
+            self._impl.callproc(procname, parameters)
+        except BaseException:
+            self._conn._waiter = None
+            raise
+        else:
+            await self._conn._poll(waiter, timeout)
+
+    def begin(self) -> _ContextManager[Transaction]:
+        return _ContextManager[Transaction](
+            self._transaction.begin(),
+            lambda x: x.commit(),
+            lambda x: x.rollback()
+        )
+
+    def begin_nested(self) -> _ContextManager[Transaction]:
+        if self._transaction.is_begin:
+            return self._transaction.point()
+
+        return _ContextManager[Transaction](
+            self._transaction.begin(),
+            lambda x: x.commit(),
+            lambda x: x.rollback()
+        )
+
+    def mogrify(self, operation: str, parameters: Any = None) -> str:
+        """Return a query string after arguments binding.
+
+        The string returned is exactly the one that would be sent to
+        the database running the .execute() method or similar.
+
+        """
+        ret = self._impl.mogrify(operation, parameters)
+        assert not self._conn.isexecuting(), (
+            "Don't support server side mogrify"
+        )
+        return ret  # type: ignore
+
+    async def setinputsizes(self, sizes: int) -> None:
+        """This method is exposed in compliance with the DBAPI.
+
+        It currently does nothing but it is safe to call it.
+
+        """
+        self._impl.setinputsizes(sizes)
+
+    async def fetchone(self) -> Any:
+        """Fetch the next row of a query result set.
+
+        Returns a single tuple, or None when no more data is
+        available.
+
+        """
+        ret = self._impl.fetchone()
+        assert not self._conn.isexecuting(), (
+            "Don't support server side cursors yet"
+        )
+        return ret
+
+    async def fetchmany(self, size: Optional[int] = None) -> List[Any]:
+        """Fetch the next set of rows of a query result.
+
+        Returns a list of tuples. An empty list is returned when no
+        more rows are available.
+
+        The number of rows to fetch per call is specified by the
+        parameter.  If it is not given, the cursor's .arraysize
+        determines the number of rows to be fetched. The method should
+        try to fetch as many rows as indicated by the size
+        parameter. If this is not possible due to the specified number
+        of rows not being available, fewer rows may be returned.
+
+        """
+        if size is None:
+            size = self._impl.arraysize
+        ret = self._impl.fetchmany(size)
+        assert not self._conn.isexecuting(), (
+            "Don't support server side cursors yet"
+        )
+        return ret  # type: ignore
+
+    async def fetchall(self) -> List[Any]:
+        """Fetch all (remaining) rows of a query result.
+
+        Returns them as a list of tuples.  An empty list is returned
+        if there is no more record to fetch.
+
+        """
+        ret = self._impl.fetchall()
+        assert not self._conn.isexecuting(), (
+            "Don't support server side cursors yet"
+        )
+        return ret  # type: ignore
+
+    async def scroll(self, value: int, mode: str = "relative") -> None:
+        """Scroll to a new position according to mode.
+
+        If mode is relative (default), value is taken as offset
+        to the current position in the result set, if set to
+        absolute, value states an absolute target position.
+
+        """
+        self._impl.scroll(value, mode)
+        assert not self._conn.isexecuting(), (
+            "Don't support server side cursors yet"
+        )
+
+    @property
+    def arraysize(self) -> int:
+        """How many rows will be returned by fetchmany() call.
+
+        This read/write attribute specifies the number of rows to
+        fetch at a time with fetchmany(). It defaults to
+        1 meaning to fetch a single row at a time.
+
+        """
+        return self._impl.arraysize  # type: ignore
+
+    @arraysize.setter
+    def arraysize(self, val: int) -> None:
+        """How many rows will be returned by fetchmany() call.
+
+        This read/write attribute specifies the number of rows to
+        fetch at a time with fetchmany(). It defaults to
+        1 meaning to fetch a single row at a time.
+
+        """
+        self._impl.arraysize = val
+
+    @property
+    def itersize(self) -> int:
+        # Not supported
+        return self._impl.itersize  # type: ignore
+
+    @itersize.setter
+    def itersize(self, val: int) -> None:
+        # Not supported
+        self._impl.itersize = val
+
+    @property
+    def rowcount(self) -> int:
+        """Returns the number of rows that has been produced of affected.
+
+        This read-only attribute specifies the number of rows that the
+        last :meth:`execute` produced (for Data Query Language
+        statements like SELECT) or affected (for Data Manipulation
+        Language statements like UPDATE or INSERT).
+
+        The attribute is -1 in case no .execute() has been performed
+        on the cursor or the row count of the last operation if it
+        can't be determined by the interface.
+
+        """
+        return self._impl.rowcount  # type: ignore
+
+    @property
+    def rownumber(self) -> int:
+        """Row index.
+
+        This read-only attribute provides the current 0-based index of the
+        cursor in the result set or ``None`` if the index cannot be
+        determined."""
+
+        return self._impl.rownumber  # type: ignore
+
+    @property
+    def lastrowid(self) -> int:
+        """OID of the last inserted row.
+
+        This read-only attribute provides the OID of the last row
+        inserted by the cursor. If the table wasn't created with OID
+        support or the last operation is not a single record insert,
+        the attribute is set to None.
+
+        """
+        return self._impl.lastrowid  # type: ignore
+
+    @property
+    def query(self) -> Optional[str]:
+        """The last executed query string.
+
+        Read-only attribute containing the body of the last query sent
+        to the backend (including bound arguments) as bytes
+        string. None if no query has been executed yet.
+
+        """
+        return self._impl.query  # type: ignore
+
+    @property
+    def statusmessage(self) -> str:
+        """the message returned by the last command."""
+        return self._impl.statusmessage  # type: ignore
+
+    @property
+    def tzinfo_factory(self) -> datetime.tzinfo:
+        """The time zone factory used to handle data types such as
+        `TIMESTAMP WITH TIME ZONE`.
+        """
+        return self._impl.tzinfo_factory  # type: ignore
+
+    @tzinfo_factory.setter
+    def tzinfo_factory(self, val: datetime.tzinfo) -> None:
+        """The time zone factory used to handle data types such as
+        `TIMESTAMP WITH TIME ZONE`.
+        """
+        self._impl.tzinfo_factory = val
+
+    async def nextset(self) -> None:
+        # Not supported
+        self._impl.nextset()  # raises psycopg2.NotSupportedError
+
+    async def setoutputsize(
+        self, size: int, column: Optional[int] = None
+    ) -> None:
+        # Does nothing
+        self._impl.setoutputsize(size, column)
+
+    async def copy_from(self, *args: Any, **kwargs: Any) -> None:
+        raise psycopg2.ProgrammingError(
+            "copy_from cannot be used in asynchronous mode")
+
+    async def copy_to(self, *args: Any, **kwargs: Any) -> None:
+        raise psycopg2.ProgrammingError(
+            "copy_to cannot be used in asynchronous mode")
+
+    async def copy_expert(self, *args: Any, **kwargs: Any) -> None:
+        raise psycopg2.ProgrammingError(
+            "copy_expert cannot be used in asynchronous mode")
+
+    @property
+    def timeout(self) -> float:
+        """Return default timeout for cursor operations."""
+        return self._timeout
+
+    def __aiter__(self) -> 'Cursor':
+        return self
+
+    async def __anext__(self) -> Any:
+        ret = await self.fetchone()
+        if ret is not None:
+            return ret
+        raise StopAsyncIteration
+
+    async def __aenter__(self) -> 'Cursor':
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        tb: Optional[TracebackType],
+    ) -> None:
+        self.close()
+
+    def __repr__(self) -> str:
+        return (
+            f'<'
+            f'{type(self).__module__}::{type(self).__name__} '
+            f'name={self.name}, '
+            f'closed={self.closed}'
+            f'>'
+        )
 
 
 class Connection:
@@ -99,12 +732,12 @@ class Connection:
 
         self._dsn = self._conn.dsn
         assert self._conn.isexecuting(), "Is conn an async at all???"
-        self._fileno = self._conn.fileno()
+        self._fileno: int = self._conn.fileno()
         self._timeout = timeout
         self._last_usage = self._loop.time()
         self._writing = False
         self._echo = echo
-        self._notifies = asyncio.Queue()
+        self._notifies = asyncio.Queue()  # type: ignore
         self._weakref = weakref.ref(self)
         self._loop.add_reader(self._fileno, self._ready, self._weakref)
 
@@ -134,7 +767,7 @@ class Connection:
                             self._loop.remove_reader(self._fileno)
                             # forget a bad file descriptor, don't try to
                             # touch it
-                            self._fileno = None
+                            self._fileno = None  # type: ignore
 
             try:
                 if self._writing:
@@ -218,9 +851,15 @@ class Connection:
     def isexecuting(self) -> bool:
         return self._conn.isexecuting()  # type: ignore
 
-    def cursor(self, name=None, cursor_factory=None,
-               scrollable=None, withhold=False, timeout=None,
-               isolation_level=None):
+    def cursor(
+        self,
+        name: Optional[str] = None,
+        cursor_factory: Any = None,
+        scrollable: Optional[bool] = None,
+        withhold: bool = False,
+        timeout: Optional[float] = None,
+        isolation_level: Optional[IsolationLevel] = None
+    ) -> _ContextManager[Cursor]:
         """A coroutine that returns a new cursor object using the connection.
 
         *cursor_factory* argument can be used to create non-standard
@@ -233,15 +872,25 @@ class Connection:
         """
 
         self._last_usage = self._loop.time()
-        coro = self._cursor(name=name, cursor_factory=cursor_factory,
-                            scrollable=scrollable, withhold=withhold,
-                            timeout=timeout, isolation_level=isolation_level)
-        return _ContextManager(coro)
+        coro = self._cursor(
+            name=name,
+            cursor_factory=cursor_factory,
+            scrollable=scrollable,
+            withhold=withhold,
+            timeout=timeout,
+            isolation_level=isolation_level
+        )
+        return _ContextManager[Cursor](coro, self._close_cursor)
 
-    async def _cursor(self, name=None, cursor_factory=None,
-                      scrollable=None, withhold=False, timeout=None,
-                      isolation_level=None):
-
+    async def _cursor(
+        self,
+        name: Optional[str] = None,
+        cursor_factory: Any = None,
+        scrollable: Optional[bool] = None,
+        withhold: bool = False,
+        timeout: Optional[float] = None,
+        isolation_level: Optional[IsolationLevel] = None
+    ) -> Cursor:
         if timeout is None:
             timeout = self._timeout
 
@@ -250,20 +899,32 @@ class Connection:
             cursor_factory=cursor_factory,
             scrollable=scrollable,
             withhold=withhold
-        )  # type: ignore
+        )
         cursor = Cursor(
             self, impl, timeout, self._echo, isolation_level
         )
         return cursor
 
-    async def _cursor_impl(self, name=None, cursor_factory=None,
-                           scrollable=None, withhold=False):
+    async def _cursor_impl(
+        self,
+        name: Optional[str] = None,
+        cursor_factory: Any = None,
+        scrollable: Optional[bool] = None,
+        withhold: bool = False
+    ) -> Any:
         if cursor_factory is None:
-            impl = self._conn.cursor(name=name,
-                                     scrollable=scrollable, withhold=withhold)
+            impl = self._conn.cursor(
+                name=name,
+                scrollable=scrollable,
+                withhold=withhold
+            )
         else:
-            impl = self._conn.cursor(name=name, cursor_factory=cursor_factory,
-                                     scrollable=scrollable, withhold=withhold)
+            impl = self._conn.cursor(
+                name=name,
+                cursor_factory=cursor_factory,
+                scrollable=scrollable,
+                withhold=withhold
+            )
         return impl
 
     def _close(self) -> None:
@@ -311,8 +972,10 @@ class Connection:
 
     # TPC
 
-    async def xid(self, format_id, gtrid, bqual):
-        return self._conn.xid(format_id, gtrid, bqual)
+    async def xid(
+        self, format_id: int, gtrid: str, bqual: str
+    ) -> Tuple[int, str, str]:
+        return self._conn.xid(format_id, gtrid, bqual)  # type: ignore
 
     async def tpc_begin(self, *args: Any, **kwargs: Any) -> None:
         raise psycopg2.ProgrammingError(
@@ -392,9 +1055,9 @@ class Connection:
         self._conn.set_client_encoding(val)
 
     @property
-    def notices(self):
+    def notices(self) -> List[str]:
         """A list of all db messages sent to the client during the session."""
-        return self._conn.notices
+        return self._conn.notices  # type: ignore
 
     @property
     def cursor_factory(self) -> Any:
@@ -407,7 +1070,7 @@ class Connection:
 
     async def get_parameter_status(self, parameter: str) -> Optional[str]:
         """Look up a current parameter setting of the server."""
-        return self._conn.get_parameter_status(parameter)
+        return self._conn.get_parameter_status(parameter)  # type: ignore
 
     async def get_transaction_status(self) -> int:
         """Return the current session transaction status as an integer."""
@@ -474,11 +1137,11 @@ class Connection:
             self._loop.call_exception_handler(context)
 
     @property
-    def notifies(self) -> asyncio.Queue[Any]:
+    def notifies(self) -> asyncio.Queue:  # type: ignore
         """Return notification queue."""
         return self._notifies
 
-    async def _get_oids(self):
+    async def _get_oids(self) -> Tuple[Any, Any]:
         cursor = await self.cursor()
         rv0, rv1 = [], []
         try:
@@ -511,18 +1174,16 @@ class Connection:
         if self._enable_uuid:
             psycopg2.extras.register_uuid(conn_or_curs=self._conn)
         if self._enable_hstore:
-            oids = await self._get_oids()
-            if oids is not None:
-                oid, array_oid = oids
-                psycopg2.extras.register_hstore(
-                    self._conn,
-                    oid=oid,
-                    array_oid=array_oid
-                )
+            oid, array_oid = await self._get_oids()
+            psycopg2.extras.register_hstore(
+                self._conn,
+                oid=oid,
+                array_oid=array_oid
+            )
 
         return self
 
-    def __await__(self):
+    def __await__(self) -> Generator[Any, None, 'Connection']:
         return self._connect().__await__()
 
     async def __aenter__(self) -> 'Connection':
@@ -535,3 +1196,7 @@ class Connection:
         tb: Optional[TracebackType],
     ) -> None:
         await self.close()
+
+    @staticmethod
+    async def _close_cursor(c: Cursor) -> None:
+        c.close()

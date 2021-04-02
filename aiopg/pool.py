@@ -2,20 +2,22 @@ import asyncio
 import collections
 import warnings
 from types import TracebackType
-from typing import Any, Awaitable, Callable, Deque, Optional, Set, Type
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Deque,
+    Generator,
+    Optional,
+    Set,
+    Type,
+)
 
 import async_timeout
 import psycopg2.extensions
 
-from .connection import TIMEOUT, Connection, connect
-from .utils import (
-    _PoolAcquireContextManager,
-    _PoolConnectionContextManager,
-    _PoolContextManager,
-    _PoolCursorContextManager,
-    create_completed_future,
-    get_running_loop,
-)
+from .connection import TIMEOUT, Connection, Cursor, connect
+from .utils import _ContextManager, create_completed_future, get_running_loop
 
 
 def create_pool(
@@ -31,17 +33,128 @@ def create_pool(
     echo: bool = False,
     on_connect: Optional[Callable[[Connection], Awaitable[None]]] = None,
     **kwargs: Any
-) -> _PoolContextManager:
+) -> _ContextManager['Pool']:
     coro = Pool.from_pool_fill(
         dsn, minsize, maxsize, timeout,
         enable_json=enable_json, enable_hstore=enable_hstore,
         enable_uuid=enable_uuid, echo=echo, on_connect=on_connect,
         pool_recycle=pool_recycle, **kwargs
     )
-    return _PoolContextManager(coro)
+    return _ContextManager[Pool](coro, _destroy_pool)
 
 
-class Pool(asyncio.AbstractServer):
+async def _destroy_pool(pool: 'Pool') -> None:
+    pool.close()
+    await pool.wait_closed()
+
+
+class _PoolConnectionContextManager:
+    """Context manager.
+
+    This enables the following idiom for acquiring and releasing a
+    connection around a block:
+
+        async with pool as conn:
+            cur = await conn.cursor()
+
+    while failing loudly when accidentally using:
+
+        with pool:
+            <block>
+    """
+
+    __slots__ = ('_pool', '_conn')
+
+    def __init__(self, pool: 'Pool', conn: Connection):
+        self._pool: Optional[Pool] = pool
+        self._conn: Optional[Connection] = conn
+
+    def __enter__(self) -> Connection:
+        assert self._conn
+        return self._conn
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        tb: Optional[TracebackType],
+    ) -> None:
+        if self._pool is None or self._conn is None:
+            return
+        try:
+            self._pool.release(self._conn)
+        finally:
+            self._pool = None
+            self._conn = None
+
+    async def __aenter__(self) -> Connection:
+        assert self._conn
+        return self._conn
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        tb: Optional[TracebackType],
+    ) -> None:
+        if self._pool is None or self._conn is None:
+            return
+        try:
+            await self._pool.release(self._conn)
+        finally:
+            self._pool = None
+            self._conn = None
+
+
+class _PoolCursorContextManager:
+    """Context manager.
+
+    This enables the following idiom for acquiring and releasing a
+    cursor around a block:
+
+        async with pool.cursor() as cur:
+            await cur.execute("SELECT 1")
+
+    while failing loudly when accidentally using:
+
+        with pool:
+            <block>
+    """
+
+    __slots__ = ('_pool', '_conn', '_cursor')
+
+    def __init__(self, pool: 'Pool', conn: Connection, cursor: Cursor):
+        self._pool = pool
+        self._conn = conn
+        self._cursor = cursor
+
+    def __enter__(self) -> Cursor:
+        return self._cursor
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        tb: Optional[TracebackType],
+    ) -> None:
+        try:
+            self._cursor.close()
+        except psycopg2.ProgrammingError:
+            # seen instances where the cursor fails to close:
+            #   https://github.com/aio-libs/aiopg/issues/364
+            # We close it here so we don't return a bad connection to the pool
+            self._conn.close()
+            raise
+        finally:
+            try:
+                self._pool.release(self._conn)
+            finally:
+                self._pool = None  # type: ignore
+                self._conn = None  # type: ignore
+                self._cursor = None  # type: ignore
+
+
+class Pool:
     """Connection pool"""
 
     def __init__(
@@ -163,10 +276,10 @@ class Pool(asyncio.AbstractServer):
 
         self._closed = True
 
-    def acquire(self) -> _PoolAcquireContextManager:
+    def acquire(self) -> _ContextManager[Connection]:
         """Acquire free connection from the pool."""
         coro = self._acquire()
-        return _PoolAcquireContextManager(coro, self)
+        return _ContextManager[Connection](coro, lambda x: self.release(x))
 
     @classmethod
     async def from_pool_fill(cls, *args: Any, **kwargs: Any) -> 'Pool':
@@ -284,23 +397,23 @@ class Pool(asyncio.AbstractServer):
     async def cursor(
         self,
         name: Optional[str] = None,
-        cursor_factory=Any,
+        cursor_factory: Any = None,
         scrollable: Optional[bool] = None,
         withhold: bool = False,
         *,
         timeout: Optional[float] = None
     ) -> _PoolCursorContextManager:
         conn = await self.acquire()
-        cur = await conn.cursor(
+        cursor = await conn.cursor(
             name=name,
             cursor_factory=cursor_factory,
             scrollable=scrollable,
             withhold=withhold,
             timeout=timeout
         )
-        return _PoolCursorContextManager(self, conn, cur)
+        return _PoolCursorContextManager(self, conn, cursor)
 
-    def __await__(self) -> _PoolConnectionContextManager:
+    def __await__(self) -> Generator[Any, Any, _PoolConnectionContextManager]:
         # This is not a coroutine.  It is meant to enable the idiom:
         #
         #     with (await pool) as conn:
@@ -321,7 +434,12 @@ class Pool(asyncio.AbstractServer):
             '"await" should be used as context manager expression'
         )
 
-    def __exit__(self, *args: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        tb: Optional[TracebackType]
+    ) -> None:
         # This must exist because __enter__ exists, even though that
         # always raises; that's how the with-statement works.
         pass  # pragma: nocover

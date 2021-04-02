@@ -11,8 +11,7 @@ import psycopg2.extras
 import pytest
 
 import aiopg
-from aiopg.connection import TIMEOUT, Connection
-from aiopg.cursor import Cursor
+from aiopg import DEFAULT_TIMEOUT, Connection, Cursor
 
 PY_341 = sys.version_info >= (3, 4, 1)
 
@@ -446,7 +445,7 @@ async def test_connection_timeout(connect):
 async def test_override_cursor_timeout(connect):
     timeout = 0.1
     conn = await connect()
-    assert TIMEOUT == conn.timeout
+    assert DEFAULT_TIMEOUT == conn.timeout
     cur = await conn.cursor(timeout=timeout)
     assert timeout == cur.timeout
 
