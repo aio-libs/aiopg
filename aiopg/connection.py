@@ -56,17 +56,16 @@ def connect(
     Returns instantiated Connection object.
 
     """
-    async def connect_() -> Connection:
-        return Connection(
-            dsn,
-            timeout,
-            bool(echo),
-            enable_hstore=enable_hstore,
-            enable_uuid=enable_uuid,
-            enable_json=enable_json,
-            **kwargs
-        )
-    return _ContextManager[Connection](connect_(), disconnect)
+    connection = Connection(
+        dsn,
+        timeout,
+        bool(echo),
+        enable_hstore=enable_hstore,
+        enable_uuid=enable_uuid,
+        enable_json=enable_json,
+        **kwargs
+    )
+    return _ContextManager[Connection](connection, disconnect)  # type: ignore
 
 
 async def disconnect(c: 'Connection') -> None:
@@ -732,14 +731,16 @@ class Connection:
 
         self._dsn = self._conn.dsn
         assert self._conn.isexecuting(), "Is conn an async at all???"
-        self._fileno: int = self._conn.fileno()
+        self._fileno: Optional[int] = self._conn.fileno()
         self._timeout = timeout
         self._last_usage = self._loop.time()
         self._writing = False
         self._echo = echo
         self._notifies = asyncio.Queue()  # type: ignore
         self._weakref = weakref.ref(self)
-        self._loop.add_reader(self._fileno, self._ready, self._weakref)
+        self._loop.add_reader(
+            self._fileno, self._ready, self._weakref  # type: ignore
+        )
 
         if self._loop.get_debug():
             self._source_traceback = traceback.extract_stack(sys._getframe(1))
@@ -767,7 +768,7 @@ class Connection:
                             self._loop.remove_reader(self._fileno)
                             # forget a bad file descriptor, don't try to
                             # touch it
-                            self._fileno = None  # type: ignore
+                            self._fileno = None
 
             try:
                 if self._writing:
@@ -790,17 +791,19 @@ class Connection:
                         psycopg2.OperationalError("Connection closed"))
             if state == psycopg2.extensions.POLL_OK:
                 if self._writing:
-                    self._loop.remove_writer(self._fileno)
+                    self._loop.remove_writer(self._fileno)  # type: ignore
                     self._writing = False
                 if waiter is not None and not waiter.done():
                     waiter.set_result(None)
             elif state == psycopg2.extensions.POLL_READ:
                 if self._writing:
-                    self._loop.remove_writer(self._fileno)
+                    self._loop.remove_writer(self._fileno)  # type: ignore
                     self._writing = False
             elif state == psycopg2.extensions.POLL_WRITE:
                 if not self._writing:
-                    self._loop.add_writer(self._fileno, self._ready, weak_self)
+                    self._loop.add_writer(
+                        self._fileno, self._ready, weak_self  # type: ignore
+                    )
                     self._writing = True
             elif state == psycopg2.extensions.POLL_ERROR:
                 self._fatal_error("Fatal error on aiopg connection: "

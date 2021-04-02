@@ -17,6 +17,19 @@ from .transaction import (
 )
 
 
+async def _commit_transaction_if_active(t: Transaction) -> None:
+    if t.is_active:
+        await t.commit()
+
+
+async def _rollback_transaction(t: Transaction) -> None:
+    await t.rollback()
+
+
+async def _close_result_proxy(c: 'ResultProxy') -> None:
+    c.close()
+
+
 class SAConnection:
     _QUERY_COMPILE_KWARGS = (
         ("render_postcompile", True),
@@ -79,7 +92,7 @@ class SAConnection:
 
         """
         coro = self._execute(query, *multiparams, **params)
-        return _ContextManager[SAConnection](coro, lambda x: x.close())
+        return _ContextManager[ResultProxy](coro, _close_result_proxy)
 
     async def _open_cursor(self):
         if self._connection is None:
@@ -205,7 +218,7 @@ class SAConnection:
         """
         coro = self._begin(isolation_level, readonly, deferrable)
         return _ContextManager[Transaction](
-            coro, self._commit_if_active, self._rollback
+            coro, _commit_transaction_if_active, _rollback_transaction
         )
 
     async def _begin(self, isolation_level, readonly, deferrable):
@@ -262,7 +275,9 @@ class SAConnection:
         transaction of a whole.
         """
         coro = self._begin_nested()
-        return _ContextManager(coro, self._commit_if_active, self._rollback)
+        return _ContextManager(
+            coro, _commit_transaction_if_active, _rollback_transaction
+        )
 
     async def _begin_nested(self):
         if self._transaction is None:
@@ -390,15 +405,6 @@ class SAConnection:
                 await self._engine.release(self)
             self._connection = None
             self._engine = None
-
-    @staticmethod
-    async def _commit_if_active(t: Transaction) -> None:
-        if t.is_active:
-            await t.commit()
-
-    @staticmethod
-    async def _rollback(t: Transaction) -> None:
-        await t.rollback()
 
 
 def _distill_params(multiparams, params):

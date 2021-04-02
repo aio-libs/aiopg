@@ -66,5 +66,19 @@ def _parse_version(ver: str) -> VersionInfo:
 version_info = _parse_version(__version__)
 
 # make pyflakes happy
-(connect, create_pool, Connection, Cursor, Pool, DEFAULT_TIMEOUT,
- IsolationLevel, Transaction, get_running_loop)
+(
+    connect,
+    create_pool,
+    Connection,
+    Cursor,
+    Pool,
+    DEFAULT_TIMEOUT,
+    IsolationLevel,
+    Transaction,
+    get_running_loop,
+    IsolationCompiler,
+    DefaultCompiler,
+    ReadCommittedCompiler,
+    RepeatableReadCompiler,
+    SerializableCompiler
+)

@@ -129,7 +129,7 @@ async def test_transaction_finalization_warning(engine, monkeypatch):
                 f'You have not closed savepoint {tr!r}'
             ]
 
-        monkeypatch.setattr('aiopg.transaction.warnings.warn', valid)
+        monkeypatch.setattr('aiopg.warnings.warn', valid)
         await tr.begin()
         await tr.savepoint()
 
