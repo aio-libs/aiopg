@@ -4,10 +4,19 @@ import warnings
 from collections import namedtuple
 
 from .connection import TIMEOUT as DEFAULT_TIMEOUT
-from .connection import Connection, connect
-from .cursor import Cursor
+from .connection import (
+    Connection,
+    Cursor,
+    DefaultCompiler,
+    IsolationCompiler,
+    IsolationLevel,
+    ReadCommittedCompiler,
+    RepeatableReadCompiler,
+    SerializableCompiler,
+    Transaction,
+    connect,
+)
 from .pool import Pool, create_pool
-from .transaction import IsolationLevel, Transaction
 from .utils import get_running_loop
 
 warnings.filterwarnings(
@@ -29,7 +38,7 @@ VersionInfo = namedtuple('VersionInfo',
                          'major minor micro releaselevel serial')
 
 
-def _parse_version(ver):
+def _parse_version(ver: str) -> VersionInfo:
     RE = (
         r'^'
         r'(?P<major>\d+)\.(?P<minor>\d+)\.(?P<micro>\d+)'
@@ -37,6 +46,8 @@ def _parse_version(ver):
         r'$'
     )
     match = re.match(RE, ver)
+    if not match:
+        raise ImportError(f"Invalid package version {ver}")
     try:
         major = int(match.group('major'))
         minor = int(match.group('minor'))
@@ -55,5 +66,19 @@ def _parse_version(ver):
 version_info = _parse_version(__version__)
 
 # make pyflakes happy
-(connect, create_pool, Connection, Cursor, Pool, DEFAULT_TIMEOUT,
- IsolationLevel, Transaction, get_running_loop)
+(
+    connect,
+    create_pool,
+    Connection,
+    Cursor,
+    Pool,
+    DEFAULT_TIMEOUT,
+    IsolationLevel,
+    Transaction,
+    get_running_loop,
+    IsolationCompiler,
+    DefaultCompiler,
+    ReadCommittedCompiler,
+    RepeatableReadCompiler,
+    SerializableCompiler
+)

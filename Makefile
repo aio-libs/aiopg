@@ -12,9 +12,9 @@ isort:
 	isort tests
 	isort examples
 
-flake: .flake
+lint: .lint
 
-.flake: $(shell find aiopg -type f) \
+.lint: $(shell find aiopg -type f) \
 	    $(shell find tests -type f) \
 	    $(shell find examples -type f)
 	flake8 aiopg tests examples
@@ -23,6 +23,9 @@ flake: .flake
             echo "Import sort errors, run 'make isort' to fix them!!!"; \
             isort --diff aiopg tests examples; \
             false; \
+	fi
+	@if ! mypy --strict --ignore-missing-imports --exclude sa aiopg; then \
+	    echo "Typing errors"; \
 	fi
 
 test: flake

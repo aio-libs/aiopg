@@ -5,9 +5,8 @@ import psycopg2
 import psycopg2.tz
 import pytest
 
-from aiopg import IsolationLevel
+from aiopg import IsolationLevel, ReadCommittedCompiler
 from aiopg.connection import TIMEOUT
-from aiopg.transaction import ReadCommittedCompiler
 
 
 @pytest.fixture

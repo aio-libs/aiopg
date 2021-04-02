@@ -344,8 +344,7 @@ class ResultProxy:
         ret = await self.fetchone()
         if ret is not None:
             return ret
-        else:
-            raise StopAsyncIteration
+        raise StopAsyncIteration
 
     def _non_result(self):
         if self._metadata is None:

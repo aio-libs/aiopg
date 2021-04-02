@@ -8,7 +8,7 @@ from aiopg import IsolationLevel, Transaction
 def engine(make_connection, loop):
     async def start():
         engine = await make_connection()
-        async with engine.cursor()as cur:
+        async with engine.cursor() as cur:
             await cur.execute("DROP TABLE IF EXISTS tbl")
             await cur.execute("CREATE TABLE tbl (id int, name varchar(255))")
             await cur.execute("insert into tbl values(22, 'read only')")

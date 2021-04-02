@@ -6,7 +6,7 @@ from sqlalchemy.sql import ClauseElement
 from sqlalchemy.sql.ddl import DDLElement
 from sqlalchemy.sql.dml import UpdateBase
 
-from ..utils import _SAConnectionContextManager, _TransactionContextManager
+from ..utils import _ContextManager, _IterableContextManager
 from . import exc
 from .result import ResultProxy
 from .transaction import (
@@ -15,6 +15,19 @@ from .transaction import (
     Transaction,
     TwoPhaseTransaction,
 )
+
+
+async def _commit_transaction_if_active(t: Transaction) -> None:
+    if t.is_active:
+        await t.commit()
+
+
+async def _rollback_transaction(t: Transaction) -> None:
+    await t.rollback()
+
+
+async def _close_result_proxy(c: 'ResultProxy') -> None:
+    c.close()
 
 
 class SAConnection:
@@ -79,7 +92,7 @@ class SAConnection:
 
         """
         coro = self._execute(query, *multiparams, **params)
-        return _SAConnectionContextManager(coro)
+        return _IterableContextManager[ResultProxy](coro, _close_result_proxy)
 
     async def _open_cursor(self):
         if self._connection is None:
@@ -204,15 +217,16 @@ class SAConnection:
 
         """
         coro = self._begin(isolation_level, readonly, deferrable)
-        return _TransactionContextManager(coro)
+        return _ContextManager[Transaction](
+            coro, _commit_transaction_if_active, _rollback_transaction
+        )
 
     async def _begin(self, isolation_level, readonly, deferrable):
         if self._transaction is None:
             self._transaction = RootTransaction(self)
             await self._begin_impl(isolation_level, readonly, deferrable)
             return self._transaction
-        else:
-            return Transaction(self, self._transaction)
+        return Transaction(self, self._transaction)
 
     async def _begin_impl(self, isolation_level, readonly, deferrable):
         stmt = 'BEGIN'
@@ -261,7 +275,9 @@ class SAConnection:
         transaction of a whole.
         """
         coro = self._begin_nested()
-        return _TransactionContextManager(coro)
+        return _ContextManager(
+            coro, _commit_transaction_if_active, _rollback_transaction
+        )
 
     async def _begin_nested(self):
         if self._transaction is None:

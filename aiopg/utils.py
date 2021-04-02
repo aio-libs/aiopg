@@ -1,8 +1,18 @@
 import asyncio
 import sys
-from collections.abc import Coroutine
-
-import psycopg2
+from types import TracebackType
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Coroutine,
+    Generator,
+    Generic,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+)
 
 if sys.version_info >= (3, 7, 0):
     __get_running_loop = asyncio.get_running_loop
@@ -20,224 +30,96 @@ def get_running_loop() -> asyncio.AbstractEventLoop:
 
 def create_completed_future(
     loop: asyncio.AbstractEventLoop
-) -> asyncio.Future:
+) -> 'asyncio.Future[Any]':
     future = loop.create_future()
     future.set_result(None)
     return future
 
 
-class _ContextManager(Coroutine):
-    __slots__ = ('_coro', '_obj')
+_TObj = TypeVar("_TObj")
+_Release = Callable[[_TObj], Awaitable[None]]
 
-    def __init__(self, coro):
+
+class _ContextManager(Coroutine[Any, None, _TObj], Generic[_TObj]):
+    __slots__ = ('_coro', '_obj', '_release', '_release_on_exception')
+
+    def __init__(
+        self,
+        coro: Coroutine[Any, None, _TObj],
+        release: _Release[_TObj],
+        release_on_exception: Optional[_Release[_TObj]] = None
+    ):
         self._coro = coro
-        self._obj = None
+        self._obj: Optional[_TObj] = None
+        self._release = release
+        self._release_on_exception = (
+            release
+            if release_on_exception is None
+            else release_on_exception
+        )
 
-    def send(self, value):
+    def send(self, value: Any) -> 'Any':
         return self._coro.send(value)
 
-    def throw(self, typ, val=None, tb=None):
+    def throw(  # type: ignore
+        self,
+        typ: Type[BaseException],
+        val: Optional[Union[BaseException, object]] = None,
+        tb: Optional[TracebackType] = None
+    ) -> Any:
         if val is None:
             return self._coro.throw(typ)
         if tb is None:
             return self._coro.throw(typ, val)
         return self._coro.throw(typ, val, tb)
 
-    def close(self):
-        return self._coro.close()
+    def close(self) -> None:
+        self._coro.close()
 
-    @property
-    def gi_frame(self):
-        return self._coro.gi_frame
+    def __await__(self) -> Generator[Any, None, _TObj]:
+        return self._coro.__await__()
 
-    @property
-    def gi_running(self):
-        return self._coro.gi_running
-
-    @property
-    def gi_code(self):
-        return self._coro.gi_code
-
-    def __next__(self):
-        return self.send(None)
-
-    def __await__(self):
-        resp = self._coro.__await__()
-        return resp
-
-    async def __aenter__(self):
+    async def __aenter__(self) -> _TObj:
         self._obj = await self._coro
+        assert self._obj
         return self._obj
 
-    async def __aexit__(self, exc_type, exc, tb):
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        tb: Optional[TracebackType],
+    ) -> None:
+        if self._obj is None:
+            return
+
         try:
-            if asyncio.iscoroutinefunction(self._obj.close):
-                await self._obj.close()
+            if exc_type is not None:
+                await self._release_on_exception(self._obj)
             else:
-                self._obj.close()
+                await self._release(self._obj)
         finally:
             self._obj = None
 
 
-class _SAConnectionContextManager(_ContextManager):
+class _IterableContextManager(_ContextManager[_TObj]):
     __slots__ = ()
 
-    def __aiter__(self):
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+
+    def __aiter__(self) -> '_IterableContextManager[_TObj]':
         return self
 
-    async def __anext__(self):
+    async def __anext__(self) -> _TObj:
         if self._obj is None:
             self._obj = await self._coro
 
         try:
-            return await self._obj.__anext__()
+            return await self._obj.__anext__()  # type: ignore
         except StopAsyncIteration:
-            self._obj.close()
-            self._obj = None
-            raise
-
-
-class _PoolContextManager(_ContextManager):
-    __slots__ = ()
-
-    async def __aexit__(self, exc_type, exc, tb):
-        self._obj.close()
-        await self._obj.wait_closed()
-        self._obj = None
-
-
-class _TransactionPointContextManager(_ContextManager):
-    __slots__ = ()
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if exc_type is not None:
-            await self._obj.rollback_savepoint()
-        else:
-            await self._obj.release_savepoint()
-
-        self._obj = None
-
-
-class _TransactionBeginContextManager(_ContextManager):
-    __slots__ = ()
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if exc_type is not None:
-            await self._obj.rollback()
-        else:
-            await self._obj.commit()
-
-        self._obj = None
-
-
-class _TransactionContextManager(_ContextManager):
-    __slots__ = ()
-
-    async def __aexit__(self, exc_type, exc, tb):
-        if exc_type:
-            await self._obj.rollback()
-        else:
-            if self._obj.is_active:
-                await self._obj.commit()
-        self._obj = None
-
-
-class _PoolAcquireContextManager(_ContextManager):
-    __slots__ = ('_coro', '_obj', '_pool')
-
-    def __init__(self, coro, pool):
-        super().__init__(coro)
-        self._pool = pool
-
-    async def __aexit__(self, exc_type, exc, tb):
-        await self._pool.release(self._obj)
-        self._pool = None
-        self._obj = None
-
-
-class _PoolConnectionContextManager:
-    """Context manager.
-
-    This enables the following idiom for acquiring and releasing a
-    connection around a block:
-
-        async with pool as conn:
-            cur = await conn.cursor()
-
-    while failing loudly when accidentally using:
-
-        with pool:
-            <block>
-    """
-
-    __slots__ = ('_pool', '_conn')
-
-    def __init__(self, pool, conn):
-        self._pool = pool
-        self._conn = conn
-
-    def __enter__(self):
-        assert self._conn
-        return self._conn
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        try:
-            self._pool.release(self._conn)
-        finally:
-            self._pool = None
-            self._conn = None
-
-    async def __aenter__(self):
-        assert not self._conn
-        self._conn = await self._pool.acquire()
-        return self._conn
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        try:
-            await self._pool.release(self._conn)
-        finally:
-            self._pool = None
-            self._conn = None
-
-
-class _PoolCursorContextManager:
-    """Context manager.
-
-    This enables the following idiom for acquiring and releasing a
-    cursor around a block:
-
-        async with pool.cursor() as cur:
-            await cur.execute("SELECT 1")
-
-    while failing loudly when accidentally using:
-
-        with pool:
-            <block>
-    """
-
-    __slots__ = ('_pool', '_conn', '_cur')
-
-    def __init__(self, pool, conn, cur):
-        self._pool = pool
-        self._conn = conn
-        self._cur = cur
-
-    def __enter__(self):
-        return self._cur
-
-    def __exit__(self, *args):
-        try:
-            self._cur.close()
-        except psycopg2.ProgrammingError:
-            # seen instances where the cursor fails to close:
-            #   https://github.com/aio-libs/aiopg/issues/364
-            # We close it here so we don't return a bad connection to the pool
-            self._conn.close()
-            raise
-        finally:
             try:
-                self._pool.release(self._conn)
+                await self._release(self._obj)
             finally:
-                self._pool = None
-                self._conn = None
-                self._cur = None
+                self._obj = None
+            raise
