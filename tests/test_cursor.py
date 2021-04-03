@@ -16,19 +16,23 @@ def connect(make_connection):
         async with conn.cursor() as cur:
             await cur.execute("DROP TABLE IF EXISTS tbl")
             await cur.execute("CREATE TABLE tbl (id int, name varchar(255))")
-            for i in [(1, 'a'), (2, 'b'), (3, 'c')]:
+            for i in [(1, "a"), (2, "b"), (3, "c")]:
                 await cur.execute("INSERT INTO tbl VALUES(%s, %s)", i)
             await cur.execute("DROP TABLE IF EXISTS tbl2")
-            await cur.execute("""CREATE TABLE tbl2
+            await cur.execute(
+                """CREATE TABLE tbl2
                                       (id int, name varchar(255))
-                                      WITH OIDS""")
+                                      WITH OIDS"""
+            )
             await cur.execute("DROP FUNCTION IF EXISTS inc(val integer)")
-            await cur.execute("""CREATE FUNCTION inc(val integer)
+            await cur.execute(
+                """CREATE FUNCTION inc(val integer)
                                       RETURNS integer AS $$
                                       BEGIN
                                       RETURN val + 1;
                                       END; $$
-                                      LANGUAGE PLPGSQL;""")
+                                      LANGUAGE PLPGSQL;"""
+            )
         return conn
 
     return go
@@ -47,23 +51,27 @@ def cursor(connect, loop):
 async def test_description(cursor):
     async with cursor as cur:
         assert cur.description is None
-        await cur.execute('SELECT * from tbl;')
+        await cur.execute("SELECT * from tbl;")
 
-        assert len(cur.description) == 2, \
-            'cursor.description describes too many columns'
+        assert (
+            len(cur.description) == 2
+        ), "cursor.description describes too many columns"
 
-        assert len(cur.description[0]) == 7, \
-            'cursor.description[x] tuples must have 7 elements'
+        assert (
+            len(cur.description[0]) == 7
+        ), "cursor.description[x] tuples must have 7 elements"
 
-        assert cur.description[0][0].lower() == 'id', \
-            'cursor.description[x][0] must return column name'
+        assert (
+            cur.description[0][0].lower() == "id"
+        ), "cursor.description[x][0] must return column name"
 
-        assert cur.description[1][0].lower() == 'name', \
-            'cursor.description[x][0] must return column name'
+        assert (
+            cur.description[1][0].lower() == "name"
+        ), "cursor.description[x][0] must return column name"
 
         # Make sure self.description gets reset, cursor should be
         # set to None in case of none resulting queries like DDL
-        await cur.execute('DROP TABLE IF EXISTS foobar;')
+        await cur.execute("DROP TABLE IF EXISTS foobar;")
         assert cur.description is None
 
 
@@ -75,7 +83,7 @@ async def test_close(cursor):
     cursor.close()
     assert cursor.closed
     with pytest.raises(psycopg2.InterfaceError):
-        await cursor.execute('SELECT 1')
+        await cursor.execute("SELECT 1")
 
 
 async def test_close_twice(connect):
@@ -85,7 +93,7 @@ async def test_close_twice(connect):
     cur.close()
     assert cur.closed
     with pytest.raises(psycopg2.InterfaceError):
-        await cur.execute('SELECT 1')
+        await cur.execute("SELECT 1")
     assert conn._waiter is None
 
 
@@ -113,18 +121,18 @@ async def test_withhold(cursor):
 
 
 async def test_execute(cursor):
-    await cursor.execute('SELECT 1')
+    await cursor.execute("SELECT 1")
     ret = await cursor.fetchone()
     assert (1,) == ret
 
 
 async def test_executemany(cursor):
     with pytest.raises(psycopg2.ProgrammingError):
-        await cursor.executemany('SELECT %s', ['1', '2'])
+        await cursor.executemany("SELECT %s", ["1", "2"])
 
 
 def test_mogrify(cursor):
-    ret = cursor.mogrify('SELECT %s', ['1'])
+    ret = cursor.mogrify("SELECT %s", ["1"])
     assert b"SELECT '1'" == ret
 
 
@@ -133,26 +141,26 @@ async def test_setinputsizes(cursor):
 
 
 async def test_fetchmany(cursor):
-    await cursor.execute('SELECT * from tbl;')
+    await cursor.execute("SELECT * from tbl;")
     ret = await cursor.fetchmany()
-    assert [(1, 'a')] == ret
+    assert [(1, "a")] == ret
 
-    await cursor.execute('SELECT * from tbl;')
+    await cursor.execute("SELECT * from tbl;")
     ret = await cursor.fetchmany(2)
-    assert [(1, 'a'), (2, 'b')] == ret
+    assert [(1, "a"), (2, "b")] == ret
 
 
 async def test_fetchall(cursor):
-    await cursor.execute('SELECT * from tbl;')
+    await cursor.execute("SELECT * from tbl;")
     ret = await cursor.fetchall()
-    assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
+    assert [(1, "a"), (2, "b"), (3, "c")] == ret
 
 
 async def test_scroll(cursor):
-    await cursor.execute('SELECT * from tbl;')
+    await cursor.execute("SELECT * from tbl;")
     await cursor.scroll(1)
     ret = await cursor.fetchone()
-    assert (2, 'b') == ret
+    assert (2, "b") == ret
 
 
 async def test_arraysize(cursor):
@@ -170,28 +178,25 @@ async def test_itersize(cursor):
 
 
 async def test_rows(cursor):
-    await cursor.execute('SELECT * from tbl')
+    await cursor.execute("SELECT * from tbl")
     assert 3 == cursor.rowcount
     assert 0 == cursor.rownumber
     await cursor.fetchone()
     assert 1 == cursor.rownumber
 
     assert 0 == cursor.lastrowid
-    await cursor.execute(
-        'INSERT INTO tbl2 VALUES (%s, %s)',
-        (4, 'd')
-    )
+    await cursor.execute("INSERT INTO tbl2 VALUES (%s, %s)", (4, "d"))
     assert 0 != cursor.lastrowid
 
 
 async def test_query(cursor):
-    await cursor.execute('SELECT 1')
-    assert b'SELECT 1' == cursor.query
+    await cursor.execute("SELECT 1")
+    assert b"SELECT 1" == cursor.query
 
 
 async def test_statusmessage(cursor):
-    await cursor.execute('SELECT 1')
-    assert 'SELECT 1' == cursor.statusmessage
+    await cursor.execute("SELECT 1")
+    assert "SELECT 1" == cursor.statusmessage
 
 
 async def test_tzinfo_factory(cursor):
@@ -215,25 +220,25 @@ async def test_copy_family(connect):
     cur = await conn.cursor()
 
     with pytest.raises(psycopg2.ProgrammingError):
-        await cur.copy_from('file', 'table')
+        await cur.copy_from("file", "table")
 
     with pytest.raises(psycopg2.ProgrammingError):
-        await cur.copy_to('file', 'table')
+        await cur.copy_to("file", "table")
 
     with pytest.raises(psycopg2.ProgrammingError):
-        await cur.copy_expert('sql', 'table')
+        await cur.copy_expert("sql", "table")
 
 
 async def test_callproc(connect):
     conn = await connect()
     cur = await conn.cursor()
-    await cur.callproc('inc', [1])
+    await cur.callproc("inc", [1])
     ret = await cur.fetchone()
     assert (2,) == ret
 
     cur.close()
     with pytest.raises(psycopg2.InterfaceError):
-        await cur.callproc('inc', [1])
+        await cur.callproc("inc", [1])
     assert conn._waiter is None
 
 
@@ -319,7 +324,7 @@ async def test_iter(connect):
     async for r in cur:
         rows.append(r)
 
-    data = [(1, 'a'), (2, 'b'), (3, 'c')]
+    data = [(1, "a"), (2, "b"), (3, "c")]
     for item, tst in zip(rows, data):
         assert item == tst
 
@@ -329,7 +334,7 @@ async def test_echo_callproc(connect):
     cur = await conn.cursor()
 
     # TODO: check log records
-    await cur.callproc('inc', [1])
+    await cur.callproc("inc", [1])
     ret = await cur.fetchone()
     assert (2,) == ret
     cur.close()

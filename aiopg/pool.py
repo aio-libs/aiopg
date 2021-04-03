@@ -32,18 +32,25 @@ def create_pool(
     enable_uuid: bool = True,
     echo: bool = False,
     on_connect: Optional[Callable[[Connection], Awaitable[None]]] = None,
-    **kwargs: Any
-) -> _ContextManager['Pool']:
+    **kwargs: Any,
+) -> _ContextManager["Pool"]:
     coro = Pool.from_pool_fill(
-        dsn, minsize, maxsize, timeout,
-        enable_json=enable_json, enable_hstore=enable_hstore,
-        enable_uuid=enable_uuid, echo=echo, on_connect=on_connect,
-        pool_recycle=pool_recycle, **kwargs
+        dsn,
+        minsize,
+        maxsize,
+        timeout,
+        enable_json=enable_json,
+        enable_hstore=enable_hstore,
+        enable_uuid=enable_uuid,
+        echo=echo,
+        on_connect=on_connect,
+        pool_recycle=pool_recycle,
+        **kwargs,
     )
     return _ContextManager[Pool](coro, _destroy_pool)
 
 
-async def _destroy_pool(pool: 'Pool') -> None:
+async def _destroy_pool(pool: "Pool") -> None:
     pool.close()
     await pool.wait_closed()
 
@@ -63,9 +70,9 @@ class _PoolConnectionContextManager:
             <block>
     """
 
-    __slots__ = ('_pool', '_conn')
+    __slots__ = ("_pool", "_conn")
 
-    def __init__(self, pool: 'Pool', conn: Connection):
+    def __init__(self, pool: "Pool", conn: Connection):
         self._pool: Optional[Pool] = pool
         self._conn: Optional[Connection] = conn
 
@@ -121,9 +128,9 @@ class _PoolCursorContextManager:
             <block>
     """
 
-    __slots__ = ('_pool', '_conn', '_cursor')
+    __slots__ = ("_pool", "_conn", "_cursor")
 
-    def __init__(self, pool: 'Pool', conn: Connection, cursor: Cursor):
+    def __init__(self, pool: "Pool", conn: Connection, cursor: Cursor):
         self._pool = pool
         self._conn = conn
         self._cursor = cursor
@@ -158,19 +165,19 @@ class Pool:
     """Connection pool"""
 
     def __init__(
-            self,
-            dsn: str,
-            minsize: int,
-            maxsize: int,
-            timeout: float,
-            *,
-            enable_json: bool,
-            enable_hstore: bool,
-            enable_uuid: bool,
-            echo: bool,
-            on_connect: Optional[Callable[[Connection], Awaitable[None]]],
-            pool_recycle: float,
-            **kwargs: Any
+        self,
+        dsn: str,
+        minsize: int,
+        maxsize: int,
+        timeout: float,
+        *,
+        enable_json: bool,
+        enable_hstore: bool,
+        enable_uuid: bool,
+        echo: bool,
+        on_connect: Optional[Callable[[Connection], Awaitable[None]]],
+        pool_recycle: float,
+        **kwargs: Any,
     ):
         if minsize < 0:
             raise ValueError("minsize should be zero or greater")
@@ -188,8 +195,8 @@ class Pool:
         self._on_connect = on_connect
         self._conn_kwargs = kwargs
         self._acquiring = 0
-        self._free: Deque[Connection] = (
-            collections.deque(maxlen=maxsize or None)
+        self._free: Deque[Connection] = collections.deque(
+            maxlen=maxsize or None
         )
         self._cond = asyncio.Condition()
         self._used: Set[Connection] = set()
@@ -263,8 +270,9 @@ class Pool:
         if self._closed:
             return
         if not self._closing:
-            raise RuntimeError(".wait_closed() should be called "
-                               "after .close()")
+            raise RuntimeError(
+                ".wait_closed() should be called " "after .close()"
+            )
 
         while self._free:
             conn = self._free.popleft()
@@ -282,7 +290,7 @@ class Pool:
         return _ContextManager[Connection](coro, self.release)
 
     @classmethod
-    async def from_pool_fill(cls, *args: Any, **kwargs: Any) -> 'Pool':
+    async def from_pool_fill(cls, *args: Any, **kwargs: Any) -> "Pool":
         """constructor for filling the free pool with connections,
         the number is controlled by the minsize parameter
         """
@@ -326,12 +334,13 @@ class Pool:
             self._acquiring += 1
             try:
                 conn = await connect(
-                    self._dsn, timeout=self._timeout,
+                    self._dsn,
+                    timeout=self._timeout,
                     enable_json=self._enable_json,
                     enable_hstore=self._enable_hstore,
                     enable_uuid=self._enable_uuid,
                     echo=self._echo,
-                    **self._conn_kwargs
+                    **self._conn_kwargs,
                 )
                 if self._on_connect is not None:
                     await self._on_connect(conn)
@@ -353,7 +362,7 @@ class Pool:
                     enable_hstore=self._enable_hstore,
                     enable_uuid=self._enable_uuid,
                     echo=self._echo,
-                    **self._conn_kwargs
+                    **self._conn_kwargs,
                 )
                 if self._on_connect is not None:
                     await self._on_connect(conn)
@@ -367,9 +376,8 @@ class Pool:
         async with self._cond:
             self._cond.notify()
 
-    def release(self, conn: Connection) -> 'asyncio.Future[None]':
-        """Release free connection back to the connection pool.
-        """
+    def release(self, conn: Connection) -> "asyncio.Future[None]":
+        """Release free connection back to the connection pool."""
         future = create_completed_future(self._loop)
         if conn in self._terminated:
             assert conn.closed, conn
@@ -384,7 +392,7 @@ class Pool:
             warnings.warn(
                 f"Invalid transaction status on "
                 f"released connection: {transaction_status}",
-                ResourceWarning
+                ResourceWarning,
             )
             conn.close()
             return future
@@ -401,7 +409,7 @@ class Pool:
         scrollable: Optional[bool] = None,
         withhold: bool = False,
         *,
-        timeout: Optional[float] = None
+        timeout: Optional[float] = None,
     ) -> _PoolCursorContextManager:
         conn = await self.acquire()
         cursor = await conn.cursor(
@@ -409,7 +417,7 @@ class Pool:
             cursor_factory=cursor_factory,
             scrollable=scrollable,
             withhold=withhold,
-            timeout=timeout
+            timeout=timeout,
         )
         return _PoolCursorContextManager(self, conn, cursor)
 
@@ -429,7 +437,7 @@ class Pool:
         conn = yield from self._acquire().__await__()
         return _PoolConnectionContextManager(self, conn)
 
-    def __enter__(self) -> 'Pool':
+    def __enter__(self) -> "Pool":
         raise RuntimeError(
             '"await" should be used as context manager expression'
         )
@@ -438,13 +446,13 @@ class Pool:
         self,
         exc_type: Optional[Type[BaseException]],
         exc: Optional[BaseException],
-        tb: Optional[TracebackType]
+        tb: Optional[TracebackType],
     ) -> None:
         # This must exist because __enter__ exists, even though that
         # always raises; that's how the with-statement works.
         pass  # pragma: nocover
 
-    async def __aenter__(self) -> 'Pool':
+    async def __aenter__(self) -> "Pool":
         return self
 
     async def __aexit__(
@@ -468,6 +476,5 @@ class Pool:
                 conn.close()
                 left += 1
             warnings.warn(
-                f"Unclosed {left} connections in {self!r}",
-                ResourceWarning
+                f"Unclosed {left} connections in {self!r}", ResourceWarning
             )

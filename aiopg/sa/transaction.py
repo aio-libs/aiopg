@@ -121,13 +121,15 @@ class NestedTransaction(Transaction):
         assert self._savepoint is not None, "Broken transaction logic"
         if self._is_active:
             await self._connection._rollback_to_savepoint_impl(
-                self._savepoint, self._parent)
+                self._savepoint, self._parent
+            )
 
     async def _do_commit(self):
         assert self._savepoint is not None, "Broken transaction logic"
         if self._is_active:
             await self._connection._release_savepoint_impl(
-                self._savepoint, self._parent)
+                self._savepoint, self._parent
+            )
 
 
 class TwoPhaseTransaction(Transaction):
@@ -165,8 +167,10 @@ class TwoPhaseTransaction(Transaction):
 
     async def _do_rollback(self):
         await self._connection._rollback_twophase_impl(
-            self._xid, is_prepared=self._is_prepared)
+            self._xid, is_prepared=self._is_prepared
+        )
 
     async def _do_commit(self):
         await self._connection._commit_twophase_impl(
-            self._xid, is_prepared=self._is_prepared)
+            self._xid, is_prepared=self._is_prepared
+        )

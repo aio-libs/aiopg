@@ -10,8 +10,7 @@ async def test_uuid(make_connection):
     try:
         await cur.execute("DROP TABLE IF EXISTS tbl")
         await cur.execute("""CREATE TABLE tbl (id UUID)""")
-        await cur.execute(
-            "INSERT INTO tbl (id) VALUES (%s)", [_id])
+        await cur.execute("INSERT INTO tbl (id) VALUES (%s)", [_id])
         await cur.execute("SELECT * FROM tbl")
         item = await cur.fetchone()
         assert (_id,) == item
@@ -21,17 +20,18 @@ async def test_uuid(make_connection):
 
 async def test_json(make_connection):
     conn = await make_connection()
-    data = {'a': 1, 'b': 'str'}
+    data = {"a": 1, "b": "str"}
     cur = await conn.cursor()
     try:
         await cur.execute("DROP TABLE IF EXISTS tbl")
-        await cur.execute("""CREATE TABLE tbl (
-                              id SERIAL,
-                              val JSON)""")
         await cur.execute(
-            "INSERT INTO tbl (val) VALUES (%s)", [Json(data)])
+            """CREATE TABLE tbl (
+                              id SERIAL,
+                              val JSON)"""
+        )
+        await cur.execute("INSERT INTO tbl (val) VALUES (%s)", [Json(data)])
         await cur.execute("SELECT * FROM tbl")
         item = await cur.fetchone()
-        assert (1, {'b': 'str', 'a': 1}) == item
+        assert (1, {"b": "str", "a": 1}) == item
     finally:
         cur.close()

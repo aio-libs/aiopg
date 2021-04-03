@@ -13,7 +13,7 @@ try:
         PGDialect_psycopg2,
     )
 except ImportError:  # pragma: no cover
-    raise ImportError('aiopg.sa requires sqlalchemy')
+    raise ImportError("aiopg.sa requires sqlalchemy")
 
 
 class APGCompiler_psycopg2(PGCompiler_psycopg2):
@@ -33,8 +33,9 @@ class APGCompiler_psycopg2(PGCompiler_psycopg2):
 
 
 def get_dialect(json_serializer=json.dumps, json_deserializer=lambda x: x):
-    dialect = PGDialect_psycopg2(json_serializer=json_serializer,
-                                 json_deserializer=json_deserializer)
+    dialect = PGDialect_psycopg2(
+        json_serializer=json_serializer, json_deserializer=json_deserializer
+    )
 
     dialect.statement_compiler = APGCompiler_psycopg2
     dialect.implicit_returning = True
@@ -50,8 +51,16 @@ def get_dialect(json_serializer=json.dumps, json_deserializer=lambda x: x):
 _dialect = get_dialect()
 
 
-def create_engine(dsn=None, *, minsize=1, maxsize=10, dialect=_dialect,
-                  timeout=TIMEOUT, pool_recycle=-1, **kwargs):
+def create_engine(
+    dsn=None,
+    *,
+    minsize=1,
+    maxsize=10,
+    dialect=_dialect,
+    timeout=TIMEOUT,
+    pool_recycle=-1,
+    **kwargs
+):
     """A coroutine for Engine creation.
 
     Returns Engine instance with embedded connection pool.
@@ -59,18 +68,36 @@ def create_engine(dsn=None, *, minsize=1, maxsize=10, dialect=_dialect,
     The pool has *minsize* opened connections to PostgreSQL server.
     """
 
-    coro = _create_engine(dsn=dsn, minsize=minsize, maxsize=maxsize,
-                          dialect=dialect, timeout=timeout,
-                          pool_recycle=pool_recycle, **kwargs)
+    coro = _create_engine(
+        dsn=dsn,
+        minsize=minsize,
+        maxsize=maxsize,
+        dialect=dialect,
+        timeout=timeout,
+        pool_recycle=pool_recycle,
+        **kwargs
+    )
     return _ContextManager(coro, _close_engine)
 
 
-async def _create_engine(dsn=None, *, minsize=1, maxsize=10, dialect=_dialect,
-                         timeout=TIMEOUT, pool_recycle=-1, **kwargs):
+async def _create_engine(
+    dsn=None,
+    *,
+    minsize=1,
+    maxsize=10,
+    dialect=_dialect,
+    timeout=TIMEOUT,
+    pool_recycle=-1,
+    **kwargs
+):
 
     pool = await aiopg.create_pool(
-        dsn, minsize=minsize, maxsize=maxsize,
-        timeout=timeout, pool_recycle=pool_recycle, **kwargs
+        dsn,
+        minsize=minsize,
+        maxsize=maxsize,
+        timeout=timeout,
+        pool_recycle=pool_recycle,
+        **kwargs
     )
     conn = await pool.acquire()
     try:
@@ -80,7 +107,7 @@ async def _create_engine(dsn=None, *, minsize=1, maxsize=10, dialect=_dialect,
         await pool.release(conn)
 
 
-async def _close_engine(engine: 'Engine') -> None:
+async def _close_engine(engine: "Engine") -> None:
     engine.close()
     await engine.wait_closed()
 
@@ -184,7 +211,8 @@ class Engine:
 
     def __enter__(self):
         raise RuntimeError(
-            '"await" should be used as context manager expression')
+            '"await" should be used as context manager expression'
+        )
 
     def __exit__(self, *args):
         # This must exist because __enter__ exists, even though that
@@ -230,7 +258,7 @@ class _ConnectionContextManager:
             <block>
     """
 
-    __slots__ = ('_conn', '_loop')
+    __slots__ = ("_conn", "_loop")
 
     def __init__(self, conn: SAConnection, loop: asyncio.AbstractEventLoop):
         self._conn = conn

@@ -11,7 +11,7 @@ async def test_cursor_await(make_connection):
     conn = await make_connection()
 
     cursor = await conn.cursor()
-    await cursor.execute('SELECT 42;')
+    await cursor.execute("SELECT 42;")
     resp = await cursor.fetchone()
     assert resp == (42,)
     cursor.close()
@@ -20,7 +20,7 @@ async def test_cursor_await(make_connection):
 async def test_connect_context_manager(pg_params):
     async with aiopg.connect(**pg_params) as conn:
         cursor = await conn.cursor()
-        await cursor.execute('SELECT 42')
+        await cursor.execute("SELECT 42")
         resp = await cursor.fetchone()
         assert resp == (42,)
         cursor.close()
@@ -32,7 +32,7 @@ async def test_connection_context_manager(make_connection):
     assert not conn.closed
     async with conn:
         cursor = await conn.cursor()
-        await cursor.execute('SELECT 42;')
+        await cursor.execute("SELECT 42;")
         resp = await cursor.fetchone()
         assert resp == (42,)
         cursor.close()
@@ -43,7 +43,7 @@ async def test_cursor_create_with_context_manager(make_connection):
     conn = await make_connection()
 
     async with conn.cursor() as cursor:
-        await cursor.execute('SELECT 42;')
+        await cursor.execute("SELECT 42;")
         resp = await cursor.fetchone()
         assert resp == (42,)
         assert not cursor.closed
@@ -52,12 +52,11 @@ async def test_cursor_create_with_context_manager(make_connection):
 
 
 async def test_pool_context_manager_timeout(pg_params, loop):
-    async with aiopg.create_pool(**pg_params, minsize=1,
-                                 maxsize=1) as pool:
+    async with aiopg.create_pool(**pg_params, minsize=1, maxsize=1) as pool:
         cursor_ctx = await pool.cursor()
-        with pytest.warns(ResourceWarning, match='Invalid transaction status'):
+        with pytest.warns(ResourceWarning, match="Invalid transaction status"):
             with cursor_ctx as cursor:
-                hung_task = cursor.execute('SELECT pg_sleep(10000);')
+                hung_task = cursor.execute("SELECT pg_sleep(10000);")
                 # start task
                 loop.create_task(hung_task)
                 # sleep for a bit so it gets going
@@ -65,7 +64,7 @@ async def test_pool_context_manager_timeout(pg_params, loop):
 
         cursor_ctx = await pool.cursor()
         with cursor_ctx as cursor:
-            resp = await cursor.execute('SELECT 42;')
+            resp = await cursor.execute("SELECT 42;")
             resp = await cursor.fetchone()
             assert resp == (42,)
 
@@ -76,7 +75,7 @@ async def test_pool_context_manager_timeout(pg_params, loop):
 async def test_cursor_with_context_manager(make_connection):
     conn = await make_connection()
     cursor = await conn.cursor()
-    await cursor.execute('SELECT 42;')
+    await cursor.execute("SELECT 42;")
 
     assert not cursor.closed
     async with cursor:
@@ -88,7 +87,7 @@ async def test_cursor_with_context_manager(make_connection):
 async def test_cursor_lightweight(make_connection):
     conn = await make_connection()
     cursor = await conn.cursor()
-    await cursor.execute('SELECT 42;')
+    await cursor.execute("SELECT 42;")
 
     assert not cursor.closed
     async with cursor:
@@ -102,7 +101,7 @@ async def test_pool_context_manager(pg_params):
     async with pool:
         conn = await pool.acquire()
         async with conn.cursor() as cursor:
-            await cursor.execute('SELECT 42;')
+            await cursor.execute("SELECT 42;")
             resp = await cursor.fetchone()
             assert resp == (42,)
         pool.release(conn)
@@ -114,7 +113,7 @@ async def test_create_pool_context_manager(pg_params):
     async with aiopg.create_pool(**pg_params) as pool:
         async with pool.acquire() as conn:
             async with conn.cursor() as cursor:
-                await cursor.execute('SELECT 42;')
+                await cursor.execute("SELECT 42;")
                 resp = await cursor.fetchone()
                 assert resp == (42,)
 
@@ -129,7 +128,7 @@ async def test_cursor_aiter(make_connection):
     assert not conn.closed
     async with conn:
         cursor = await conn.cursor()
-        await cursor.execute('SELECT generate_series(1, 5);')
+        await cursor.execute("SELECT generate_series(1, 5);")
         async for v in cursor:
             result.append(v)
         assert result == [(1,), (2,), (3,), (4,), (5,)]
@@ -154,7 +153,7 @@ async def test_create_engine_context_manager(pg_params):
 
 
 async def test_result_proxy_aiter(pg_params):
-    sql = 'SELECT generate_series(1, 5);'
+    sql = "SELECT generate_series(1, 5);"
     result = []
     async with aiopg.sa.create_engine(**pg_params) as engine:
         async with engine.acquire() as conn:
@@ -167,7 +166,7 @@ async def test_result_proxy_aiter(pg_params):
 
 
 async def test_transaction_context_manager(pg_params):
-    sql = 'SELECT generate_series(1, 5);'
+    sql = "SELECT generate_series(1, 5);"
     result = []
     async with aiopg.sa.create_engine(**pg_params) as engine:
         async with engine.acquire() as conn:
@@ -183,7 +182,7 @@ async def test_transaction_context_manager(pg_params):
             tr2 = await conn.begin()
             async with tr2:
                 assert tr2.is_active
-                async with conn.execute('SELECT 1;') as cursor:
+                async with conn.execute("SELECT 1;") as cursor:
                     rec = await cursor.scalar()
                     assert rec == 1
                     cursor.close()
@@ -198,8 +197,8 @@ async def test_transaction_context_manager_error(pg_params):
             with pytest.raises(RuntimeError) as ctx:
                 async with conn.begin() as tr:
                     assert tr.is_active
-                    raise RuntimeError('boom')
-            assert str(ctx.value) == 'boom'
+                    raise RuntimeError("boom")
+            assert str(ctx.value) == "boom"
             assert not tr.is_active
     assert conn.closed
 
@@ -224,7 +223,7 @@ async def test_transaction_context_manager_commit_once(pg_params):
 
 
 async def test_transaction_context_manager_nested_commit(pg_params):
-    sql = 'SELECT generate_series(1, 5);'
+    sql = "SELECT generate_series(1, 5);"
     result = []
     async with aiopg.sa.create_engine(**pg_params) as engine:
         async with engine.acquire() as conn:
@@ -242,7 +241,7 @@ async def test_transaction_context_manager_nested_commit(pg_params):
                 tr2 = await conn.begin_nested()
                 async with tr2:
                     assert tr2.is_active
-                    async with conn.execute('SELECT 1;') as cursor:
+                    async with conn.execute("SELECT 1;") as cursor:
                         rec = await cursor.scalar()
                         assert rec == 1
                         cursor.close()
@@ -253,7 +252,7 @@ async def test_transaction_context_manager_nested_commit(pg_params):
 
 
 async def test_sa_connection_execute(pg_params):
-    sql = 'SELECT generate_series(1, 5);'
+    sql = "SELECT generate_series(1, 5);"
     result = []
     async with aiopg.sa.create_engine(**pg_params) as engine:
         async with engine.acquire() as conn:

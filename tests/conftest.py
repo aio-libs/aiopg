@@ -18,18 +18,19 @@ import aiopg
 from aiopg import sa
 
 warnings.filterwarnings(
-    'error', '.*',
+    "error",
+    ".*",
     category=ResourceWarning,
-    module=r'aiopg(\.\w+)+',
-    append=False
+    module=r"aiopg(\.\w+)+",
+    append=False,
 )
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def unused_port():
     def f():
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind(('127.0.0.1', 0))
+            s.bind(("127.0.0.1", 0))
             return s.getsockname()[1]
 
     return f
@@ -82,10 +83,12 @@ def pytest_pyfunc_call(pyfuncitem):
     function call.
     """
     if asyncio.iscoroutinefunction(pyfuncitem.function):
-        existing_loop = pyfuncitem.funcargs.get('loop', None)
+        existing_loop = pyfuncitem.funcargs.get("loop", None)
         with _passthrough_loop_context(existing_loop) as _loop:
-            testargs = {arg: pyfuncitem.funcargs[arg]
-                        for arg in pyfuncitem._fixtureinfo.argnames}
+            testargs = {
+                arg: pyfuncitem.funcargs[arg]
+                for arg in pyfuncitem._fixtureinfo.argnames
+            }
 
             task = _loop.create_task(pyfuncitem.obj(**testargs))
             _loop.run_until_complete(task)
@@ -93,46 +96,56 @@ def pytest_pyfunc_call(pyfuncitem):
         return True
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def session_id():
-    '''Unique session identifier, random string.'''
+    """Unique session identifier, random string."""
     return str(uuid.uuid4())
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def docker():
-    return APIClient(version='auto')
+    return APIClient(version="auto")
 
 
 def pytest_addoption(parser):
-    parser.addoption("--pg_tag", action="append", default=[],
-                     help=("Postgres server versions. "
-                           "May be used several times. "
-                           "Available values: 9.3, 9.4, 9.5, all"))
-    parser.addoption("--no-pull", action="store_true", default=False,
-                     help="Don't perform docker images pulling")
+    parser.addoption(
+        "--pg_tag",
+        action="append",
+        default=[],
+        help=(
+            "Postgres server versions. "
+            "May be used several times. "
+            "Available values: 9.3, 9.4, 9.5, all"
+        ),
+    )
+    parser.addoption(
+        "--no-pull",
+        action="store_true",
+        default=False,
+        help="Don't perform docker images pulling",
+    )
 
 
 def pytest_generate_tests(metafunc):
-    if 'pg_tag' in metafunc.fixturenames:
+    if "pg_tag" in metafunc.fixturenames:
         tags = set(metafunc.config.option.pg_tag)
         if not tags:
-            tags = ['9.5']
-        elif 'all' in tags:
-            tags = ['9.3', '9.4', '9.5']
+            tags = ["9.5"]
+        elif "all" in tags:
+            tags = ["9.3", "9.4", "9.5"]
         else:
             tags = list(tags)
-        metafunc.parametrize("pg_tag", tags, scope='session')
+        metafunc.parametrize("pg_tag", tags, scope="session")
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def pg_server(unused_port, docker, session_id, pg_tag, request):
     if not request.config.option.no_pull:
-        docker.pull(f'postgres:{pg_tag}')
+        docker.pull(f"postgres:{pg_tag}")
 
     container_args = dict(
-        image=f'postgres:{pg_tag}',
-        name=f'aiopg-test-server-{pg_tag}-{session_id}',
+        image=f"postgres:{pg_tag}",
+        name=f"aiopg-test-server-{pg_tag}-{session_id}",
         ports=[5432],
         detach=True,
     )
@@ -140,20 +153,22 @@ def pg_server(unused_port, docker, session_id, pg_tag, request):
     # bound IPs do not work on OSX
     host = "127.0.0.1"
     host_port = unused_port()
-    container_args['host_config'] = docker.create_host_config(
+    container_args["host_config"] = docker.create_host_config(
         port_bindings={5432: (host, host_port)}
     )
-    container_args['environment'] = {'POSTGRES_HOST_AUTH_METHOD': 'trust'}
+    container_args["environment"] = {"POSTGRES_HOST_AUTH_METHOD": "trust"}
 
     container = docker.create_container(**container_args)
 
     try:
-        docker.start(container=container['Id'])
-        server_params = dict(database='postgres',
-                             user='postgres',
-                             password='mysecretpassword',
-                             host=host,
-                             port=host_port)
+        docker.start(container=container["Id"])
+        server_params = dict(
+            database="postgres",
+            user="postgres",
+            password="mysecretpassword",
+            host=host,
+            port=host_port,
+        )
         delay = 0.001
         for i in range(100):
             try:
@@ -169,19 +184,19 @@ def pg_server(unused_port, docker, session_id, pg_tag, request):
         else:
             pytest.fail("Cannot start postgres server")
 
-        container['host'] = host
-        container['port'] = host_port
-        container['pg_params'] = server_params
+        container["host"] = host
+        container["port"] = host_port
+        container["pg_params"] = server_params
 
         yield container
     finally:
-        docker.kill(container=container['Id'])
-        docker.remove_container(container['Id'])
+        docker.kill(container=container["Id"])
+        docker.remove_container(container["Id"])
 
 
 @pytest.fixture
 def pg_params(pg_server):
-    return dict(**pg_server['pg_params'])
+    return dict(**pg_server["pg_params"])
 
 
 @pytest.fixture
@@ -272,7 +287,7 @@ class _AssertWarnsContext:
         # The __warningregistry__'s need to be in a pristine state for tests
         # to work properly.
         for v in sys.modules.values():
-            if getattr(v, '__warningregistry__', None):
+            if getattr(v, "__warningregistry__", None):
                 v.__warningregistry__ = {}
         self.warnings_manager = warnings.catch_warnings(record=True)
         self.warnings = self.warnings_manager.__enter__()
@@ -295,8 +310,10 @@ class _AssertWarnsContext:
                 continue
             if first_matching is None:
                 first_matching = w
-            if (self.expected_regex is not None and
-                    not self.expected_regex.search(str(w))):
+            if (
+                self.expected_regex is not None
+                and not self.expected_regex.search(str(w))
+            ):
                 continue
             # store warning for later retrieval
             self.warning = w
@@ -306,8 +323,10 @@ class _AssertWarnsContext:
         # Now we simply try to choose a helpful failure message
         if first_matching is not None:
             __tracebackhide__ = True
-            assert 0, (f'"{self.expected_regex.pattern}" '
-                       f'does not match "{first_matching}"')
+            assert 0, (
+                f'"{self.expected_regex.pattern}" '
+                f'does not match "{first_matching}"'
+            )
         if self.obj_name:
             __tracebackhide__ = True
             assert 0, f"{exc_name} not triggered by {self.obj_name}"
@@ -316,8 +335,9 @@ class _AssertWarnsContext:
             assert 0, f"{exc_name} not triggered"
 
 
-_LoggingWatcher = collections.namedtuple("_LoggingWatcher",
-                                         ["records", "output"])
+_LoggingWatcher = collections.namedtuple(
+    "_LoggingWatcher", ["records", "output"]
+)
 
 
 class _CapturingHandler(logging.Handler):
@@ -377,8 +397,10 @@ class _AssertLogsContext:
             return False
         if len(self.watcher.records) == 0:
             __tracebackhide__ = True
-            assert 0, (f"no logs of level {logging.getLevelName(self.level)} "
-                       f"or higher triggered on {self.logger.name}")
+            assert 0, (
+                f"no logs of level {logging.getLevelName(self.level)} "
+                f"or higher triggered on {self.logger.name}"
+            )
 
 
 @pytest.fixture
@@ -403,6 +425,7 @@ def tcp_proxy(loop):
         )
         await proxy.start()
         return proxy
+
     yield go
     if proxy is not None:
         loop.run_until_complete(proxy.disconnect())
@@ -412,12 +435,13 @@ class TcpProxy:
     """
     TCP proxy. Allows simulating connection breaks in tests.
     """
+
     MAX_BYTES = 1024
 
     def __init__(self, *, src_port, dst_port):
-        self.src_host = '127.0.0.1'
+        self.src_host = "127.0.0.1"
         self.src_port = src_port
-        self.dst_host = '127.0.0.1'
+        self.dst_host = "127.0.0.1"
         self.dst_port = dst_port
         self.connections = set()
 
@@ -453,14 +477,19 @@ class TcpProxy:
         client_writer: asyncio.StreamWriter,
     ):
         server_reader, server_writer = await asyncio.open_connection(
-            host=self.dst_host,
-            port=self.dst_port
+            host=self.dst_host, port=self.dst_port
         )
 
         self.connections.add(server_writer)
         self.connections.add(client_writer)
 
-        await asyncio.wait([
-            asyncio.ensure_future(self._pipe(server_reader, client_writer)),
-            asyncio.ensure_future(self._pipe(client_reader, server_writer)),
-        ])
+        await asyncio.wait(
+            [
+                asyncio.ensure_future(
+                    self._pipe(server_reader, client_writer)
+                ),
+                asyncio.ensure_future(
+                    self._pipe(client_reader, server_writer)
+                ),
+            ]
+        )

@@ -17,67 +17,88 @@ def engine(make_connection, loop):
     return loop.run_until_complete(start())
 
 
-@pytest.mark.parametrize('isolation_level', [
-    IsolationLevel.default,
-    IsolationLevel.read_committed,
-    IsolationLevel.repeatable_read,
-    IsolationLevel.serializable,
-])
-@pytest.mark.parametrize('deferrable', [
-    False,
-    True,
-])
+@pytest.mark.parametrize(
+    "isolation_level",
+    [
+        IsolationLevel.default,
+        IsolationLevel.read_committed,
+        IsolationLevel.repeatable_read,
+        IsolationLevel.serializable,
+    ],
+)
+@pytest.mark.parametrize(
+    "deferrable",
+    [
+        False,
+        True,
+    ],
+)
 async def test_transaction(engine, isolation_level, deferrable):
     async with engine.cursor() as cur:
-        async with Transaction(cur, isolation_level,
-                               readonly=False, deferrable=deferrable):
+        async with Transaction(
+            cur, isolation_level, readonly=False, deferrable=deferrable
+        ):
             await cur.execute("insert into tbl values(1, 'data')")
-            await cur.execute('select * from tbl where id = 1')
+            await cur.execute("select * from tbl where id = 1")
             row = await cur.fetchone()
 
             assert row[0] == 1
-            assert row[1] == 'data'
+            assert row[1] == "data"
 
 
-@pytest.mark.parametrize('isolation_level', [
-    IsolationLevel.default,
-    IsolationLevel.read_committed,
-    IsolationLevel.repeatable_read,
-    IsolationLevel.serializable,
-])
-@pytest.mark.parametrize('deferrable', [
-    False,
-    True,
-])
+@pytest.mark.parametrize(
+    "isolation_level",
+    [
+        IsolationLevel.default,
+        IsolationLevel.read_committed,
+        IsolationLevel.repeatable_read,
+        IsolationLevel.serializable,
+    ],
+)
+@pytest.mark.parametrize(
+    "deferrable",
+    [
+        False,
+        True,
+    ],
+)
 async def test_transaction_readonly_insert(
     engine, isolation_level, deferrable
 ):
     async with engine.cursor() as cur:
-        async with Transaction(cur, isolation_level,
-                               readonly=True, deferrable=deferrable):
+        async with Transaction(
+            cur, isolation_level, readonly=True, deferrable=deferrable
+        ):
             with pytest.raises(psycopg2.InternalError):
                 await cur.execute("insert into tbl values(1, 'data')")
 
 
-@pytest.mark.parametrize('isolation_level', [
-    IsolationLevel.default,
-    IsolationLevel.read_committed,
-    IsolationLevel.repeatable_read,
-    IsolationLevel.serializable,
-])
-@pytest.mark.parametrize('deferrable', [
-    False,
-    True,
-])
+@pytest.mark.parametrize(
+    "isolation_level",
+    [
+        IsolationLevel.default,
+        IsolationLevel.read_committed,
+        IsolationLevel.repeatable_read,
+        IsolationLevel.serializable,
+    ],
+)
+@pytest.mark.parametrize(
+    "deferrable",
+    [
+        False,
+        True,
+    ],
+)
 async def test_transaction_readonly(engine, isolation_level, deferrable):
     async with engine.cursor() as cur:
-        async with Transaction(cur, isolation_level,
-                               readonly=True, deferrable=deferrable):
-            await cur.execute('select * from tbl where id = 22')
+        async with Transaction(
+            cur, isolation_level, readonly=True, deferrable=deferrable
+        ):
+            await cur.execute("select * from tbl where id = 22")
             row = await cur.fetchone()
 
             assert row[0] == 22
-            assert row[1] == 'read only'
+            assert row[1] == "read only"
 
 
 async def test_transaction_rollback(engine):
@@ -86,9 +107,11 @@ async def test_transaction_rollback(engine):
             async with Transaction(cur, IsolationLevel.read_committed):
                 await cur.execute("insert into tbl values(1/0, 'no data')")
 
-        await cur.execute('select * from tbl')
+        await cur.execute("select * from tbl")
         row = await cur.fetchall()
-        assert row == [(22, 'read only'), ]
+        assert row == [
+            (22, "read only"),
+        ]
 
 
 async def test_transaction_point(engine):
@@ -105,10 +128,14 @@ async def test_transaction_point(engine):
 
             await cur.execute("insert into tbl values(3, 'data')")
 
-            await cur.execute('select * from tbl')
+            await cur.execute("select * from tbl")
             row = await cur.fetchall()
-            assert row == [(22, 'read only'), (1, 'data'),
-                           (2, 'data point'), (3, 'data')]
+            assert row == [
+                (22, "read only"),
+                (1, "data"),
+                (2, "data point"),
+                (3, "data"),
+            ]
 
 
 async def test_begin(engine):
@@ -117,9 +144,12 @@ async def test_begin(engine):
             await cur.execute("insert into tbl values(1, 'data')")
 
         async with cur.begin():
-            await cur.execute('select * from tbl')
+            await cur.execute("select * from tbl")
             row = await cur.fetchall()
-            assert row == [(22, 'read only'), (1, 'data'), ]
+            assert row == [
+                (22, "read only"),
+                (1, "data"),
+            ]
 
 
 async def test_begin_nested(engine):
@@ -135,10 +165,13 @@ async def test_begin_nested(engine):
                 await cur.execute("insert into tbl values(2, 'data')")
 
         async with cur.begin_nested():
-            await cur.execute('select * from tbl')
+            await cur.execute("select * from tbl")
             row = await cur.fetchall()
-            assert row == [(22, 'read only'), (1, 'data'),
-                           (2, 'data'), ]
+            assert row == [
+                (22, "read only"),
+                (1, "data"),
+                (2, "data"),
+            ]
 
 
 async def test_begin_nested_fail(engine):
@@ -148,6 +181,6 @@ async def test_begin_nested_fail(engine):
                 await cur.execute("insert into tbl values(1/0, 'data')")
 
         async with cur.begin_nested():
-            await cur.execute('select * from tbl')
+            await cur.execute("select * from tbl")
             row = await cur.fetchall()
-            assert row == [(22, 'read only')]
+            assert row == [(22, "read only")]

@@ -7,10 +7,12 @@ from sqlalchemy import Column, Integer, MetaData, String, Table, func, select
 from aiopg import sa
 
 meta = MetaData()
-tbl = Table('sa_tbl2', meta,
-            Column('id', Integer, nullable=False,
-                   primary_key=True),
-            Column('name', String(255)))
+tbl = Table(
+    "sa_tbl2",
+    meta,
+    Column("id", Integer, nullable=False, primary_key=True),
+    Column("name", String(255)),
+)
 
 
 @pytest.fixture
@@ -19,10 +21,10 @@ def connect(make_connection):
         conn = await make_connection(**kwargs)
         cur = await conn.cursor()
         await cur.execute("DROP TABLE IF EXISTS sa_tbl2")
-        await cur.execute("CREATE TABLE sa_tbl2 "
-                          "(id serial, name varchar(255))")
-        await cur.execute("INSERT INTO sa_tbl2 (name)"
-                          "VALUES ('first')")
+        await cur.execute(
+            "CREATE TABLE sa_tbl2 " "(id serial, name varchar(255))"
+        )
+        await cur.execute("INSERT INTO sa_tbl2 (name)" "VALUES ('first')")
         cur.close()
 
         engine = mock.Mock(from_spec=sa.engine.Engine)
@@ -36,11 +38,13 @@ def connect(make_connection):
 def xa_connect(connect):
     async def go(**kwargs):
         conn = await connect(**kwargs)
-        val = await conn.scalar('show max_prepared_transactions')
+        val = await conn.scalar("show max_prepared_transactions")
         if not int(val):
-            raise pytest.skip('Twophase transacions are not supported. '
-                              'Set max_prepared_transactions to '
-                              'a nonzero value')
+            raise pytest.skip(
+                "Twophase transacions are not supported. "
+                "Set max_prepared_transactions to "
+                "a nonzero value"
+            )
         return conn
 
     yield go
@@ -186,7 +190,7 @@ async def test_inner_transaction_rollback(connect):
     tr1 = await conn.begin()
     tr2 = await conn.begin()
     assert tr2.is_active
-    await conn.execute(tbl.insert().values(name='aaaa'))
+    await conn.execute(tbl.insert().values(name="aaaa"))
 
     await tr2.rollback()
     assert not tr2.is_active
@@ -201,7 +205,7 @@ async def test_inner_transaction_close(connect):
     tr1 = await conn.begin()
     tr2 = await conn.begin()
     assert tr2.is_active
-    await conn.execute(tbl.insert().values(name='aaaa'))
+    await conn.execute(tbl.insert().values(name="aaaa"))
 
     await tr2.close()
     assert not tr2.is_active
@@ -219,7 +223,7 @@ async def test_nested_transaction_commit(connect):
     assert tr1.is_active
     assert tr2.is_active
 
-    await conn.execute(tbl.insert().values(name='aaaa'))
+    await conn.execute(tbl.insert().values(name="aaaa"))
     await tr2.commit()
     assert not tr2.is_active
     assert tr1.is_active
@@ -240,7 +244,7 @@ async def test_nested_transaction_commit_twice(connect):
     tr1 = await conn.begin_nested()
     tr2 = await conn.begin_nested()
 
-    await conn.execute(tbl.insert().values(name='aaaa'))
+    await conn.execute(tbl.insert().values(name="aaaa"))
     await tr2.commit()
     assert not tr2.is_active
     assert tr1.is_active
@@ -262,7 +266,7 @@ async def test_nested_transaction_rollback(connect):
     assert tr1.is_active
     assert tr2.is_active
 
-    await conn.execute(tbl.insert().values(name='aaaa'))
+    await conn.execute(tbl.insert().values(name="aaaa"))
     await tr2.rollback()
     assert not tr2.is_active
     assert tr1.is_active
@@ -283,7 +287,7 @@ async def test_nested_transaction_rollback_twice(connect):
     tr1 = await conn.begin_nested()
     tr2 = await conn.begin_nested()
 
-    await conn.execute(tbl.insert().values(name='aaaa'))
+    await conn.execute(tbl.insert().values(name="aaaa"))
     await tr2.rollback()
     assert not tr2.is_active
     assert tr1.is_active
@@ -300,7 +304,7 @@ async def test_nested_transaction_rollback_twice(connect):
 async def test_twophase_transaction_commit(xa_connect):
     conn = await xa_connect()
     tr = await conn.begin_twophase()
-    await conn.execute(tbl.insert().values(name='aaaa'))
+    await conn.execute(tbl.insert().values(name="aaaa"))
 
     await tr.prepare()
     assert tr.is_active
@@ -332,7 +336,7 @@ async def test_transactions_sequence(xa_connect):
 
     tr1 = await conn.begin()
     assert tr1 is conn._transaction
-    await conn.execute(tbl.insert().values(name='a'))
+    await conn.execute(tbl.insert().values(name="a"))
     res1 = await conn.scalar(select([func.count()]).select_from(tbl))
     assert 1 == res1
 
@@ -341,7 +345,7 @@ async def test_transactions_sequence(xa_connect):
 
     tr2 = await conn.begin()
     assert tr2 is conn._transaction
-    await conn.execute(tbl.insert().values(name='b'))
+    await conn.execute(tbl.insert().values(name="b"))
     res2 = await conn.scalar(select([func.count()]).select_from(tbl))
     assert 2 == res2
 
@@ -350,7 +354,7 @@ async def test_transactions_sequence(xa_connect):
 
     tr3 = await conn.begin()
     assert tr3 is conn._transaction
-    await conn.execute(tbl.insert().values(name='b'))
+    await conn.execute(tbl.insert().values(name="b"))
     res3 = await conn.scalar(select([func.count()]).select_from(tbl))
     assert 2 == res3
 
@@ -363,20 +367,20 @@ async def test_transaction_mode(connect):
 
     await conn.execute(tbl.delete())
 
-    tr1 = await conn.begin(isolation_level='SERIALIZABLE')
-    await conn.execute(tbl.insert().values(name='a'))
+    tr1 = await conn.begin(isolation_level="SERIALIZABLE")
+    await conn.execute(tbl.insert().values(name="a"))
     res1 = await conn.scalar(select([func.count()]).select_from(tbl))
     assert 1 == res1
     await tr1.commit()
 
-    tr2 = await conn.begin(isolation_level='REPEATABLE READ')
-    await conn.execute(tbl.insert().values(name='b'))
+    tr2 = await conn.begin(isolation_level="REPEATABLE READ")
+    await conn.execute(tbl.insert().values(name="b"))
     res2 = await conn.scalar(select([func.count()]).select_from(tbl))
     assert 2 == res2
     await tr2.commit()
 
-    tr3 = await conn.begin(isolation_level='READ UNCOMMITTED')
-    await conn.execute(tbl.insert().values(name='c'))
+    tr3 = await conn.begin(isolation_level="READ UNCOMMITTED")
+    await conn.execute(tbl.insert().values(name="c"))
     res3 = await conn.scalar(select([func.count()]).select_from(tbl))
     assert 3 == res3
     await tr3.commit()
@@ -387,27 +391,26 @@ async def test_transaction_mode(connect):
     assert 3 == res1
     await tr4.commit()
 
-    tr5 = await conn.begin(isolation_level='READ UNCOMMITTED',
-                           readonly=True)
+    tr5 = await conn.begin(isolation_level="READ UNCOMMITTED", readonly=True)
     res1 = await conn.scalar(select([func.count()]).select_from(tbl))
     assert 3 == res1
     await tr5.commit()
 
     tr6 = await conn.begin(deferrable=True)
-    await conn.execute(tbl.insert().values(name='f'))
+    await conn.execute(tbl.insert().values(name="f"))
     res1 = await conn.scalar(select([func.count()]).select_from(tbl))
     assert 4 == res1
     await tr6.commit()
 
-    tr7 = await conn.begin(isolation_level='REPEATABLE READ',
-                           deferrable=True)
-    await conn.execute(tbl.insert().values(name='g'))
+    tr7 = await conn.begin(isolation_level="REPEATABLE READ", deferrable=True)
+    await conn.execute(tbl.insert().values(name="g"))
     res1 = await conn.scalar(select([func.count()]).select_from(tbl))
     assert 5 == res1
     await tr7.commit()
 
-    tr8 = await conn.begin(isolation_level='SERIALIZABLE',
-                           readonly=True, deferrable=True)
+    tr8 = await conn.begin(
+        isolation_level="SERIALIZABLE", readonly=True, deferrable=True
+    )
     assert tr8 is conn._transaction
     res1 = await conn.scalar(select([func.count()]).select_from(tbl))
     assert 5 == res1
@@ -444,7 +447,8 @@ async def test_cancel_in_transaction_context_manager(make_engine, loop):
         async with engine.acquire() as connection:
             async with connection.begin():
                 task = loop.create_task(
-                    connection.execute("SELECT pg_sleep(10)"))
+                    connection.execute("SELECT pg_sleep(10)")
+                )
 
                 async def cancel_soon():
                     await asyncio.sleep(1)
@@ -465,7 +469,8 @@ async def test_cancel_in_savepoint_context_manager(make_engine, loop):
             async with connection.begin():
                 async with connection.begin_nested():
                     task = loop.create_task(
-                        connection.execute("SELECT pg_sleep(10)"))
+                        connection.execute("SELECT pg_sleep(10)")
+                    )
 
                     async def cancel_soon():
                         await asyncio.sleep(1)

@@ -9,10 +9,25 @@ from .exc import (
     ResourceClosedError,
 )
 
-__all__ = ('create_engine', 'SAConnection', 'Error',
-           'ArgumentError', 'InvalidRequestError', 'NoSuchColumnError',
-           'ResourceClosedError', 'Engine')
+__all__ = (
+    "create_engine",
+    "SAConnection",
+    "Error",
+    "ArgumentError",
+    "InvalidRequestError",
+    "NoSuchColumnError",
+    "ResourceClosedError",
+    "Engine",
+)
 
 
-(SAConnection, Error, ArgumentError, InvalidRequestError,
- NoSuchColumnError, ResourceClosedError, create_engine, Engine)
+(
+    SAConnection,
+    Error,
+    ArgumentError,
+    InvalidRequestError,
+    NoSuchColumnError,
+    ResourceClosedError,
+    create_engine,
+    Engine,
+)

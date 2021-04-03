@@ -36,7 +36,7 @@ async def test_acquire(create_pool):
     assert isinstance(conn, Connection)
     assert not conn.closed
     cur = await conn.cursor()
-    await cur.execute('SELECT 1')
+    await cur.execute("SELECT 1")
     val = await cur.fetchone()
     assert (1,) == val
     pool.release(conn)
@@ -71,7 +71,8 @@ async def test_release_closed(create_pool):
 async def test_bad_context_manager_usage(create_pool):
     pool = await create_pool()
     with pytest.raises(RuntimeError):
-        with pool: pass  # noqa
+        with pool:
+            pass  # noqa
 
 
 async def test_context_manager(create_pool):
@@ -193,7 +194,7 @@ async def test_release_with_invalid_status(create_pool):
     assert 9 == pool.freesize
     assert {conn} == pool._used
     cur = await conn.cursor()
-    await cur.execute('BEGIN')
+    await cur.execute("BEGIN")
     cur.close()
 
     with mock.patch("aiopg.pool.warnings") as m_log:
@@ -204,7 +205,7 @@ async def test_release_with_invalid_status(create_pool):
     m_log.warn.assert_called_with(
         f"Invalid transaction status on "
         f"released connection: {TRANSACTION_STATUS_INTRANS}",
-        ResourceWarning
+        ResourceWarning,
     )
 
 
@@ -218,7 +219,7 @@ async def test_default_event_loop(create_pool, loop):
 async def test_cursor(create_pool):
     pool = await create_pool()
     with (await pool.cursor()) as cur:
-        await cur.execute('SELECT 1')
+        await cur.execute("SELECT 1")
         ret = await cur.fetchone()
         assert (1,) == ret
     assert cur.closed
@@ -230,7 +231,7 @@ async def test_release_with_invalid_status_wait_release(create_pool):
     assert 9 == pool.freesize
     assert {conn} == pool._used
     cur = await conn.cursor()
-    await cur.execute('BEGIN')
+    await cur.execute("BEGIN")
     cur.close()
 
     with mock.patch("aiopg.pool.warnings") as m_log:
@@ -241,7 +242,7 @@ async def test_release_with_invalid_status_wait_release(create_pool):
     m_log.warn.assert_called_with(
         f"Invalid transaction status on "
         f"released connection: {TRANSACTION_STATUS_INTRANS}",
-        ResourceWarning
+        ResourceWarning,
     )
 
 
@@ -251,8 +252,7 @@ async def test_fill_free(create_pool):
         assert 0 == pool.freesize
         assert 1 == pool.size
 
-        conn = await asyncio.wait_for(pool.acquire(),
-                                      timeout=0.5)
+        conn = await asyncio.wait_for(pool.acquire(), timeout=0.5)
         assert 0 == pool.freesize
         assert 2 == pool.size
         pool.release(conn)
@@ -350,17 +350,15 @@ async def test_wait_closed(create_pool):
     async def do_release(conn):
         await asyncio.sleep(0)
         pool.release(conn)
-        ops.append('release')
+        ops.append("release")
 
     async def wait_closed():
         await pool.wait_closed()
-        ops.append('wait_closed')
+        ops.append("wait_closed")
 
     pool.close()
-    await asyncio.gather(wait_closed(),
-                         do_release(c1),
-                         do_release(c2))
-    assert ['release', 'release', 'wait_closed'] == ops
+    await asyncio.gather(wait_closed(), do_release(c1), do_release(c2))
+    assert ["release", "release", "wait_closed"] == ops
     assert 0 == pool.freesize
 
 
@@ -446,11 +444,9 @@ async def test_unlimited_size(create_pool):
 async def test_connection_closed_after_timeout(create_pool):
     async def sleep(conn):
         cur = await conn.cursor()
-        await cur.execute('SELECT pg_sleep(10);')
+        await cur.execute("SELECT pg_sleep(10);")
 
-    pool = await create_pool(minsize=1,
-                             maxsize=1,
-                             timeout=0.1)
+    pool = await create_pool(minsize=1, maxsize=1, timeout=0.1)
     with (await pool) as conn:
         with pytest.raises(asyncio.TimeoutError):
             await sleep(conn)
@@ -459,18 +455,16 @@ async def test_connection_closed_after_timeout(create_pool):
 
     with (await pool) as conn:
         cur = await conn.cursor()
-        await cur.execute('SELECT 1;')
+        await cur.execute("SELECT 1;")
         val = await cur.fetchone()
         assert (1,) == val
 
 
 async def test_pool_with_connection_recycling(create_pool):
-    pool = await create_pool(minsize=1,
-                             maxsize=1,
-                             pool_recycle=3)
+    pool = await create_pool(minsize=1, maxsize=1, pool_recycle=3)
     with (await pool) as conn:
         cur = await conn.cursor()
-        await cur.execute('SELECT 1;')
+        await cur.execute("SELECT 1;")
         val = await cur.fetchone()
         assert (1,) == val
 
@@ -479,21 +473,20 @@ async def test_pool_with_connection_recycling(create_pool):
     assert 1 == pool.freesize
     with (await pool) as conn:
         cur = await conn.cursor()
-        await cur.execute('SELECT 1;')
+        await cur.execute("SELECT 1;")
         val = await cur.fetchone()
         assert (1,) == val
 
 
 async def test_connection_in_good_state_after_timeout_in_transaction(
-        create_pool):
+    create_pool,
+):
     async def sleep(conn):
         cur = await conn.cursor()
-        await cur.execute('BEGIN;')
-        await cur.execute('SELECT pg_sleep(10);')
+        await cur.execute("BEGIN;")
+        await cur.execute("SELECT pg_sleep(10);")
 
-    pool = await create_pool(minsize=1,
-                             maxsize=1,
-                             timeout=0.1)
+    pool = await create_pool(minsize=1, maxsize=1, timeout=0.1)
     with (await pool) as conn:
         with pytest.raises(asyncio.TimeoutError):
             await sleep(conn)
@@ -503,20 +496,21 @@ async def test_connection_in_good_state_after_timeout_in_transaction(
     assert 0 == pool.size
     with (await pool) as conn:
         async with conn.cursor() as cur:
-            await cur.execute('SELECT 1;')
+            await cur.execute("SELECT 1;")
             val = await cur.fetchone()
             assert (1,) == val
 
 
-async def test_drop_connection_if_timedout(make_connection,
-                                           create_pool):
+async def test_drop_connection_if_timedout(make_connection, create_pool):
     async def _kill_connections():
         # Drop all connections on server
         conn = await make_connection()
         cur = await conn.cursor()
-        await cur.execute("""WITH inactive_connections_list AS (
+        await cur.execute(
+            """WITH inactive_connections_list AS (
         SELECT pid FROM  pg_stat_activity WHERE pid <> pg_backend_pid())
-        SELECT pg_terminate_backend(pid) FROM inactive_connections_list""")
+        SELECT pg_terminate_backend(pid) FROM inactive_connections_list"""
+        )
         cur.close()
         conn.close()
 
@@ -529,7 +523,7 @@ async def test_drop_connection_if_timedout(make_connection,
 
     conn = await pool.acquire()
     cur = await conn.cursor()
-    await cur.execute('SELECT 1;')
+    await cur.execute("SELECT 1;")
     pool.release(conn)
     conn.close()
     pool.close()
@@ -541,32 +535,28 @@ async def test_close_running_cursor(create_pool):
 
     with pytest.raises(asyncio.TimeoutError):
         with (await pool.cursor(timeout=0.1)) as cur:
-            await cur.execute('SELECT pg_sleep(10)')
+            await cur.execute("SELECT pg_sleep(10)")
 
 
-@pytest.mark.parametrize('pool_minsize', [0, 1])
+@pytest.mark.parametrize("pool_minsize", [0, 1])
 async def test_pool_on_connect(create_pool, pool_minsize):
     cb_called_times = 0
 
     async def cb(connection):
         nonlocal cb_called_times
         async with connection.cursor() as cur:
-            await cur.execute('SELECT 1')
+            await cur.execute("SELECT 1")
             data = await cur.fetchall()
             assert [(1,)] == data
             cb_called_times += 1
 
-    pool = await create_pool(
-        minsize=pool_minsize,
-        maxsize=1,
-        on_connect=cb
-    )
+    pool = await create_pool(minsize=pool_minsize, maxsize=1, on_connect=cb)
 
     with (await pool.cursor()) as cur:
-        await cur.execute('SELECT 1')
+        await cur.execute("SELECT 1")
 
     with (await pool.cursor()) as cur:
-        await cur.execute('SELECT 1')
+        await cur.execute("SELECT 1")
 
     assert cb_called_times == 1
 

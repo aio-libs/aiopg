@@ -2,7 +2,7 @@ import asyncio
 
 import aiopg
 
-dsn = 'dbname=aiopg user=aiopg password=passwd host=127.0.0.1'
+dsn = "dbname=aiopg user=aiopg password=passwd host=127.0.0.1"
 
 
 async def test_select():

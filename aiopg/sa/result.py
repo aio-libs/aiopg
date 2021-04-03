@@ -7,7 +7,7 @@ from . import exc
 
 
 class RowProxy(Mapping):
-    __slots__ = ('_result_proxy', '_row', '_processors', '_keymap')
+    __slots__ = ("_result_proxy", "_row", "_processors", "_keymap")
 
     def __init__(self, result_proxy, row, processors, keymap):
         """RowProxy objects are constructed by ResultProxy objects."""
@@ -43,7 +43,8 @@ class RowProxy(Mapping):
         if index is None:
             raise exc.InvalidRequestError(
                 f"Ambiguous column name {key!r} in result set! "
-                f"try 'use_labels' option on select statement.")
+                f"try 'use_labels' option on select statement."
+            )
         if processor is not None:
             return processor(self._row[index])
         else:
@@ -97,16 +98,18 @@ class ResultMetaData:
         # `dbapi_type_map` property removed in SQLAlchemy 1.2+.
         # Usage of `getattr` only needed for backward compatibility with
         # older versions of SQLAlchemy.
-        typemap = getattr(dialect, 'dbapi_type_map', {})
+        typemap = getattr(dialect, "dbapi_type_map", {})
 
-        assert dialect.case_sensitive, \
-            "Doesn't support case insensitive database connection"
+        assert (
+            dialect.case_sensitive
+        ), "Doesn't support case insensitive database connection"
 
         # high precedence key values.
         primary_keymap = {}
 
-        assert not dialect.description_encoding, \
-            "psycopg in py3k should not use this"
+        assert (
+            not dialect.description_encoding
+        ), "psycopg in py3k should not use this"
 
         for i, rec in enumerate(cursor_description):
             colname = rec[0]
@@ -119,7 +122,7 @@ class ResultMetaData:
             name, obj, type_ = (
                 map_column_name.get(colname, colname),
                 None,
-                map_type.get(colname, typemap.get(coltype, sqltypes.NULLTYPE))
+                map_type.get(colname, typemap.get(coltype, sqltypes.NULLTYPE)),
             )
 
             processor = type_._cached_result_processor(dialect, coltype)
@@ -160,7 +163,7 @@ class ResultMetaData:
         map_column_name = {}
         for elem in data_map:
             name = elem[0]
-            priority_name = getattr(elem[2][0], 'key', name)
+            priority_name = getattr(elem[2][0], "key", name)
             map_type[name] = elem[3]  # type column
             map_column_name[name] = priority_name
 
@@ -178,7 +181,7 @@ class ResultMetaData:
         elif isinstance(key, expression.ColumnElement):
             if key._label and key._label in map:
                 result = map[key._label]
-            elif hasattr(key, 'key') and key.key in map:
+            elif hasattr(key, "key") and key.key in map:
                 # match is only on name.
                 result = map[key.key]
             # search extra hard to make sure this
@@ -195,7 +198,8 @@ class ResultMetaData:
             if raiseerr:
                 raise exc.NoSuchColumnError(
                     f"Could not locate column in row for column "
-                    f"{expression._string_or_unprintable(key)!r}")
+                    f"{expression._string_or_unprintable(key)!r}"
+                )
             else:
                 return None
         else:
@@ -350,7 +354,8 @@ class ResultProxy:
         if self._metadata is None:
             raise exc.ResourceClosedError(
                 "This result object does not return rows. "
-                "It has been closed automatically.")
+                "It has been closed automatically."
+            )
         else:
             raise exc.ResourceClosedError("This result object is closed.")
 
@@ -359,8 +364,7 @@ class ResultProxy:
         metadata = self._metadata
         keymap = metadata._keymap
         processors = metadata._processors
-        return [process_row(metadata, row, processors, keymap)
-                for row in rows]
+        return [process_row(metadata, row, processors, keymap) for row in rows]
 
     async def fetchall(self):
         """Fetch all rows, just like DB-API cursor.fetchall()."""

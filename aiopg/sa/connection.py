@@ -26,14 +26,12 @@ async def _rollback_transaction(t: Transaction) -> None:
     await t.rollback()
 
 
-async def _close_result_proxy(c: 'ResultProxy') -> None:
+async def _close_result_proxy(c: "ResultProxy") -> None:
     c.close()
 
 
 class SAConnection:
-    _QUERY_COMPILE_KWARGS = (
-        ("render_postcompile", True),
-    )
+    _QUERY_COMPILE_KWARGS = (("render_postcompile", True),)
 
     __slots__ = (
         "_connection",
@@ -42,7 +40,7 @@ class SAConnection:
         "_engine",
         "_dialect",
         "_cursors",
-        "_query_compile_kwargs"
+        "_query_compile_kwargs",
     )
 
     def __init__(self, connection, engine):
@@ -126,24 +124,32 @@ class SAConnection:
                 )
                 if dp and isinstance(dp, (list, tuple)):
                     if isinstance(query, UpdateBase):
-                        dp = {c.key: pval
-                              for c, pval in zip(query.table.c, dp)}
+                        dp = {
+                            c.key: pval for c, pval in zip(query.table.c, dp)
+                        }
                     else:
-                        raise exc.ArgumentError("Don't mix sqlalchemy SELECT "
-                                                "clause with positional "
-                                                "parameters")
+                        raise exc.ArgumentError(
+                            "Don't mix sqlalchemy SELECT "
+                            "clause with positional "
+                            "parameters"
+                        )
 
                 compiled_parameters = [compiled.construct_params(dp)]
                 processed_parameters = []
                 processors = compiled._bind_processors
                 for compiled_params in compiled_parameters:
-                    params = {key: (processors[key](compiled_params[key])
-                                    if key in processors
-                                    else compiled_params[key])
-                              for key in compiled_params}
+                    params = {
+                        key: (
+                            processors[key](compiled_params[key])
+                            if key in processors
+                            else compiled_params[key]
+                        )
+                        for key in compiled_params
+                    }
                     processed_parameters.append(params)
                 post_processed_params = self._dialect.execute_sequence_format(
-                    processed_parameters)
+                    processed_parameters
+                )
 
                 # _result_columns is a private API of Compiled,
                 # but I couldn't find any public API exposing this data.
@@ -152,16 +158,20 @@ class SAConnection:
             else:
                 compiled = query.compile(dialect=self._dialect)
                 if dp:
-                    raise exc.ArgumentError("Don't mix sqlalchemy DDL clause "
-                                            "and execution with parameters")
+                    raise exc.ArgumentError(
+                        "Don't mix sqlalchemy DDL clause "
+                        "and execution with parameters"
+                    )
                 post_processed_params = [compiled.construct_params()]
                 result_map = None
 
             await cursor.execute(str(compiled), post_processed_params[0])
         else:
-            raise exc.ArgumentError("sql statement should be str or "
-                                    "SQLAlchemy data "
-                                    "selection/modification clause")
+            raise exc.ArgumentError(
+                "sql statement should be str or "
+                "SQLAlchemy data "
+                "selection/modification clause"
+            )
 
         return ResultProxy(self, cursor, self._dialect, result_map)
 
@@ -229,13 +239,13 @@ class SAConnection:
         return Transaction(self, self._transaction)
 
     async def _begin_impl(self, isolation_level, readonly, deferrable):
-        stmt = 'BEGIN'
+        stmt = "BEGIN"
         if isolation_level is not None:
-            stmt += f' ISOLATION LEVEL {isolation_level}'
+            stmt += f" ISOLATION LEVEL {isolation_level}"
         if readonly:
-            stmt += ' READ ONLY'
+            stmt += " READ ONLY"
         if deferrable:
-            stmt += ' DEFERRABLE'
+            stmt += " DEFERRABLE"
 
         cursor = await self._open_cursor()
         try:
@@ -246,7 +256,7 @@ class SAConnection:
     async def _commit_impl(self):
         cursor = await self._open_cursor()
         try:
-            await cursor.execute('COMMIT')
+            await cursor.execute("COMMIT")
         finally:
             self._close_cursor(cursor)
             self._transaction = None
@@ -257,7 +267,7 @@ class SAConnection:
                 return
             cursor = await self._open_cursor()
             try:
-                await cursor.execute('ROLLBACK')
+                await cursor.execute("ROLLBACK")
             finally:
                 self._close_cursor(cursor)
         finally:
@@ -290,11 +300,11 @@ class SAConnection:
 
     async def _savepoint_impl(self):
         self._savepoint_seq += 1
-        name = f'aiopg_sa_savepoint_{self._savepoint_seq}'
+        name = f"aiopg_sa_savepoint_{self._savepoint_seq}"
 
         cursor = await self._open_cursor()
         try:
-            await cursor.execute(f'SAVEPOINT {name}')
+            await cursor.execute(f"SAVEPOINT {name}")
             return name
         finally:
             self._close_cursor(cursor)
@@ -305,7 +315,7 @@ class SAConnection:
                 return
             cursor = await self._open_cursor()
             try:
-                await cursor.execute(f'ROLLBACK TO SAVEPOINT {name}')
+                await cursor.execute(f"ROLLBACK TO SAVEPOINT {name}")
             finally:
                 self._close_cursor(cursor)
         finally:
@@ -314,7 +324,7 @@ class SAConnection:
     async def _release_savepoint_impl(self, name, parent):
         cursor = await self._open_cursor()
         try:
-            await cursor.execute(f'RELEASE SAVEPOINT {name}')
+            await cursor.execute(f"RELEASE SAVEPOINT {name}")
         finally:
             self._close_cursor(cursor)
 
@@ -336,7 +346,8 @@ class SAConnection:
         if self._transaction is not None:
             raise exc.InvalidRequestError(
                 "Cannot start a two phase transaction when a transaction "
-                "is already in progress.")
+                "is already in progress."
+            )
         if xid is None:
             xid = self._dialect.create_xid()
         self._transaction = TwoPhaseTransaction(self, xid)
@@ -427,8 +438,8 @@ def _distill_params(multiparams, params):
         if isinstance(zero, (list, tuple)):
             if (
                 not zero
-                or hasattr(zero[0], '__iter__')
-                and not hasattr(zero[0], 'strip')
+                or hasattr(zero[0], "__iter__")
+                and not hasattr(zero[0], "strip")
             ):
                 # execute(stmt, [{}, {}, {}, ...])
                 # execute(stmt, [(), (), (), ...])
@@ -436,16 +447,15 @@ def _distill_params(multiparams, params):
             else:
                 # execute(stmt, ("value", "value"))
                 return [zero]
-        elif hasattr(zero, 'keys'):
+        elif hasattr(zero, "keys"):
             # execute(stmt, {"key":"value"})
             return [zero]
         else:
             # execute(stmt, "value")
             return [[zero]]
     else:
-        if (
-            hasattr(multiparams[0], '__iter__') and
-            not hasattr(multiparams[0], 'strip')
+        if hasattr(multiparams[0], "__iter__") and not hasattr(
+            multiparams[0], "strip"
         ):
             return multiparams
         else:
