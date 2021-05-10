@@ -1,6 +1,6 @@
 coverage==5.5
 docker==5.0.0
-flake8==3.9.1
+flake8==3.9.2
 isort==5.8.0
 -e .[sa]
 sphinx==3.5.4
