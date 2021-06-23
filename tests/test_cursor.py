@@ -1,5 +1,6 @@
 import asyncio
 import time
+import datetime
 
 import psycopg2
 import psycopg2.tz
@@ -200,7 +201,7 @@ async def test_statusmessage(cursor):
 
 
 async def test_tzinfo_factory(cursor):
-    assert psycopg2.tz.FixedOffsetTimezone is cursor.tzinfo_factory
+    assert datetime.timezone is cursor.tzinfo_factory
 
     cursor.tzinfo_factory = psycopg2.tz.LocalTimezone
     assert psycopg2.tz.LocalTimezone is cursor.tzinfo_factory
