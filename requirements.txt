@@ -9,7 +9,7 @@ pytest-cov==2.12.1
 pytest-sugar==0.9.4
 pytest-timeout==1.4.2
 sphinxcontrib-asyncio==0.3.0
-psycopg2-binary==2.8.6
+psycopg2-binary==2.9.1
 sqlalchemy[postgresql_psycopg2binary]==1.4.19
 async-timeout==3.0.1
 mypy==0.910
