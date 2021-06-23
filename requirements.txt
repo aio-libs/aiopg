@@ -5,7 +5,7 @@ isort==5.8.0
 -e .[sa]
 sphinx==4.0.1
 pytest==6.2.4
-pytest-cov==2.12.0
+pytest-cov==2.12.1
 pytest-sugar==0.9.4
 pytest-timeout==1.4.2
 sphinxcontrib-asyncio==0.3.0
