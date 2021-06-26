@@ -593,3 +593,25 @@ async def test_connection_on_server_restart(connect, pg_server, docker):
             delay *= 2
     else:
         pytest.fail("Cannot connect to the restarted server")
+
+
+async def test_no_poll_error_on_high_fd(connect):
+    # The connection file descriptor when higher than 1024 should not raise any
+    # further exception when OperationalError is raised
+    conn = await connect()
+    high_fd = 1025
+
+    impl = mock.Mock()
+    exc = psycopg2.OperationalError('Test')
+    impl.poll.side_effect = exc
+    conn._conn = impl
+    conn._fileno = high_fd
+
+    m_remove_reader = mock.Mock()
+    conn._loop.remove_reader = m_remove_reader
+
+    conn._ready(conn._weakref)
+    assert not m_remove_reader.called
+
+    conn.close()
+    assert m_remove_reader.called_with(high_fd)
