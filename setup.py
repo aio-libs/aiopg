@@ -73,7 +73,6 @@ setup(
     download_url="https://pypi.python.org/pypi/aiopg",
     license="BSD",
     packages=find_packages(),
-    package_data={"aiopg": ["py.typed"]},
     install_requires=install_requires,
     extras_require=extras_require,
     include_package_data=True,
