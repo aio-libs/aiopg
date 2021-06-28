@@ -26,7 +26,7 @@ async def listen(conn):
             except psycopg2.Error as ex:
                 print("ERROR: ", ex)
                 return
-            if msg.payload == 'finish':
+            if msg.payload == "finish":
                 return
             else:
                 print("Receive <-", msg.payload)

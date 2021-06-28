@@ -595,8 +595,9 @@ async def test_connection_on_server_restart(connect, pg_server, docker):
         pytest.fail("Cannot connect to the restarted server")
 
 
-async def test_connection_notify_on_server_restart(connect, pg_server, docker,
-                                                   loop):
+async def test_connection_notify_on_server_restart(
+    connect, pg_server, docker, loop
+):
     conn = await connect()
 
     async def read_notifies():
@@ -606,7 +607,7 @@ async def test_connection_notify_on_server_restart(connect, pg_server, docker,
     reader = loop.create_task(read_notifies())
     await asyncio.sleep(0.1)
 
-    docker.restart(container=pg_server['Id'])
+    docker.restart(container=pg_server["Id"])
 
     try:
         with pytest.raises(psycopg2.OperationalError):
