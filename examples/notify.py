@@ -1,5 +1,7 @@
 import asyncio
 
+import psycopg2
+
 import aiopg
 
 dsn = "dbname=aiopg user=aiopg password=passwd host=127.0.0.1"
@@ -19,8 +21,12 @@ async def listen(conn):
     async with conn.cursor() as cur:
         await cur.execute("LISTEN channel")
         while True:
-            msg = await conn.notifies.get()
-            if msg.payload == "finish":
+            try:
+                msg = await conn.notifies.get()
+            except psycopg2.Error as ex:
+                print("ERROR: ", ex)
+                return
+            if msg.payload == 'finish':
                 return
             else:
                 print("Receive <-", msg.payload)

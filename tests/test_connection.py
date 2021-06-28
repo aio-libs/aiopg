@@ -593,3 +593,38 @@ async def test_connection_on_server_restart(connect, pg_server, docker):
             delay *= 2
     else:
         pytest.fail("Cannot connect to the restarted server")
+
+
+async def test_connection_notify_on_server_restart(connect, pg_server, docker,
+                                                   loop):
+    conn = await connect()
+
+    async def read_notifies():
+        while True:
+            await conn.notifies.get()
+
+    reader = loop.create_task(read_notifies())
+    await asyncio.sleep(0.1)
+
+    docker.restart(container=pg_server['Id'])
+
+    try:
+        with pytest.raises(psycopg2.OperationalError):
+            await asyncio.wait_for(reader, 10)
+    finally:
+        conn.close()
+        reader.cancel()
+
+        # Wait for postgres to be up and running again before moving on
+        # so as the restart won't affect other tests
+        delay = 0.001
+        for i in range(100):
+            try:
+                conn = await connect()
+                conn.close()
+                break
+            except psycopg2.Error:
+                time.sleep(delay)
+                delay *= 2
+        else:
+            pytest.fail("Cannot connect to the restarted server")

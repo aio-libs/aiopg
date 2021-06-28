@@ -122,3 +122,53 @@ class _IterableContextManager(_ContextManager[_TObj]):
             finally:
                 self._obj = None
             raise
+
+
+class ClosableQueue:
+    """
+    Proxy object for an asyncio.Queue that is "closable"
+
+    When the ClosableQueue is closed, with an exception object as parameter,
+    subsequent or ongoing attempts to read from the queue will result in that
+    exception being result in that exception being raised.
+
+    Note: closing a queue with exception will still allow to read any items
+    pending in the queue.  The close exception is raised only once all items
+    are consumed.
+    """
+
+    def __init__(self, queue: asyncio.Queue):
+        self._queue = queue
+        self._close_exception = asyncio.Future()  # type: asyncio.Future[None]
+
+    def close(self, exception: Exception) -> None:
+        if not self._close_exception.done():
+            self._close_exception.set_exception(exception)
+
+    async def get(self) -> Any:
+        loop = get_running_loop()
+        get = loop.create_task(self._queue.get())
+
+        _, pending = await asyncio.wait(
+            [get, self._close_exception],
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+
+        if get.done():
+            return get.result()
+        get.cancel()
+        self._close_exception.result()
+
+    def empty(self) -> bool:
+        return self._queue.empty()
+
+    def qsize(self) -> int:
+        return self._queue.qsize()
+
+    def get_nowait(self) -> Any:
+        try:
+            return self._queue.get_nowait()
+        except asyncio.QueueEmpty:
+            if self._close_exception.done():
+                self._close_exception.result()
+            raise
