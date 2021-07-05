@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import gc
 import socket
 import sys
@@ -595,37 +596,38 @@ async def test_connection_on_server_restart(connect, pg_server, docker):
         pytest.fail("Cannot connect to the restarted server")
 
 
-async def test_connection_notify_on_server_restart(
-    connect, pg_server, docker, loop
+async def test_connection_notify_on_disconnect(
+    connect, pg_params, tcp_proxy, unused_port, loop
 ):
-    conn = await connect()
+    server_port = pg_params["port"]
+    proxy_port = unused_port()
+    tcp_proxy = await tcp_proxy(proxy_port, server_port)
 
-    async def read_notifies():
-        while True:
-            await conn.notifies.get()
+    async with await connect(port=proxy_port) as connection:
 
-    reader = loop.create_task(read_notifies())
-    await asyncio.sleep(0.1)
+        async def read_notifies(c):
+            while True:
+                await c.notifies.get()
 
-    docker.restart(container=pg_server["Id"])
+        reader_task = loop.create_task(read_notifies(connection))
+        await asyncio.sleep(0.1)
 
-    try:
-        with pytest.raises(psycopg2.OperationalError):
-            await asyncio.wait_for(reader, 10)
-    finally:
-        conn.close()
-        reader.cancel()
+        await tcp_proxy.disconnect()
 
-        # Wait for postgres to be up and running again before moving on
-        # so as the restart won't affect other tests
-        delay = 0.001
-        for i in range(100):
-            try:
-                conn = await connect()
-                conn.close()
-                break
-            except psycopg2.Error:
-                time.sleep(delay)
-                delay *= 2
-        else:
-            pytest.fail("Cannot connect to the restarted server")
+        try:
+            with pytest.raises(psycopg2.OperationalError):
+                await asyncio.wait_for(reader_task, 10)
+        finally:
+            reader_task.cancel()
+
+
+async def test_connection_notify_cancellation(connect, loop):
+    async with await connect() as connection:
+        get_task = loop.create_task(connection.notifies.get())
+        await asyncio.sleep(0.1)
+        get_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await get_task
+
+    with pytest.raises(psycopg2.OperationalError):
+        await connection.notifies.get()

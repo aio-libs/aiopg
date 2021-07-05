@@ -767,7 +767,7 @@ class Connection:
         self._writing = False
         self._echo = echo
         self._notifies = asyncio.Queue()  # type: ignore
-        self._notifies_proxy = ClosableQueue(self._notifies)
+        self._notifies_proxy = ClosableQueue(self._notifies, self._loop)
         self._weakref = weakref.ref(self)
         self._loop.add_reader(
             self._fileno, self._ready, self._weakref  # type: ignore
@@ -985,6 +985,10 @@ class Connection:
             self._waiter.set_exception(
                 psycopg2.OperationalError("Connection closed")
             )
+
+        self._notifies_proxy.close(
+            psycopg2.OperationalError("Connection closed")
+        )
 
     def close(self) -> "asyncio.Future[None]":
         self._close()
