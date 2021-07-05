@@ -5,9 +5,9 @@ import pytest
 from aiopg.utils import ClosableQueue
 
 
-async def test_closable_queue_noclose():
+async def test_closable_queue_noclose(loop):
     the_queue = asyncio.Queue()
-    queue = ClosableQueue(the_queue)
+    queue = ClosableQueue(the_queue, loop)
     assert queue.empty()
     assert queue.qsize() == 0
 
@@ -24,7 +24,7 @@ async def test_closable_queue_noclose():
 
 async def test_closable_queue_close(loop):
     the_queue = asyncio.Queue()
-    queue = ClosableQueue(the_queue)
+    queue = ClosableQueue(the_queue, loop)
     v1 = None
 
     async def read():
@@ -45,7 +45,7 @@ async def test_closable_queue_close(loop):
 
 async def test_closable_queue_close_get_nowait(loop):
     the_queue = asyncio.Queue()
-    queue = ClosableQueue(the_queue)
+    queue = ClosableQueue(the_queue, loop)
 
     await the_queue.put(1)
     queue.close(RuntimeError("connection closed"))
@@ -63,8 +63,17 @@ async def test_closable_queue_close_get_nowait(loop):
 
 async def test_closable_queue_get_nowait_noclose(loop):
     the_queue = asyncio.Queue()
-    queue = ClosableQueue(the_queue)
+    queue = ClosableQueue(the_queue, loop)
     await the_queue.put(1)
     assert queue.get_nowait() == 1
     with pytest.raises(asyncio.QueueEmpty):
         queue.get_nowait()
+
+
+async def test_closable_queue_get_cancellation(loop):
+    queue = ClosableQueue(asyncio.Queue(), loop)
+    get_task = loop.create_task(queue.get())
+    await asyncio.sleep(0.1)
+    get_task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await get_task

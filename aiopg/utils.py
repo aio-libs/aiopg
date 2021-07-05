@@ -137,27 +137,41 @@ class ClosableQueue:
     are consumed.
     """
 
-    def __init__(self, queue: asyncio.Queue):
+    __slots__ = ("_loop", "_queue", "_close_event")
+
+    def __init__(self, queue: asyncio.Queue, loop: asyncio.AbstractEventLoop):
+        self._loop = loop
         self._queue = queue
-        self._close_exception = asyncio.Future()  # type: asyncio.Future[None]
+        self._close_event = loop.create_future()
 
     def close(self, exception: Exception) -> None:
-        if not self._close_exception.done():
-            self._close_exception.set_exception(exception)
+        if self._close_event.done():
+            return
+        self._close_event.set_exception(exception)
 
     async def get(self) -> Any:
-        loop = get_running_loop()
-        get = loop.create_task(self._queue.get())
+        if self._close_event.done():
+            try:
+                return self._queue.get_nowait()
+            except asyncio.QueueEmpty:
+                return self._close_event.result()
 
-        _, pending = await asyncio.wait(
-            [get, self._close_exception],
-            return_when=asyncio.FIRST_COMPLETED,
-        )
+        get = asyncio.ensure_future(self._queue.get(), loop=self._loop)
+        try:
+            await asyncio.wait(
+                [get, self._close_event], return_when=asyncio.FIRST_COMPLETED
+            )
+        except asyncio.CancelledError:
+            get.cancel()
+            raise
 
         if get.done():
             return get.result()
-        get.cancel()
-        self._close_exception.result()
+
+        try:
+            return self._close_event.result()
+        finally:
+            get.cancel()
 
     def empty(self) -> bool:
         return self._queue.empty()
@@ -166,9 +180,10 @@ class ClosableQueue:
         return self._queue.qsize()
 
     def get_nowait(self) -> Any:
-        try:
-            return self._queue.get_nowait()
-        except asyncio.QueueEmpty:
-            if self._close_exception.done():
-                self._close_exception.result()
-            raise
+        if self._close_event.done():
+            try:
+                return self._queue.get_nowait()
+            except asyncio.QueueEmpty:
+                return self._close_event.result()
+
+        return self._queue.get_nowait()

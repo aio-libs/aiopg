@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import gc
 import socket
 import sys
@@ -489,18 +490,19 @@ async def test___del__(loop, pg_params, warning):
 
 async def test_notifies(connect):
     conn1 = await connect()
-    cur1 = await conn1.cursor()
     conn2 = await connect()
-    cur2 = await conn2.cursor()
-    await cur1.execute("LISTEN test")
-    assert conn2.notifies.empty()
-    await cur2.execute("NOTIFY test, 'hello'")
-    val = await conn1.notifies.get()
-    assert "test" == val.channel
-    assert "hello" == val.payload
 
-    cur2.close()
-    cur1.close()
+    async with await conn1.cursor() as cur1, await conn2.cursor() as cur2:
+        await cur1.execute("LISTEN test")
+        assert conn2.notifies.empty()
+        await cur2.execute("NOTIFY test, 'hello'")
+        val = await conn1.notifies.get()
+        assert "test" == val.channel
+        assert "hello" == val.payload
+
+    await conn1.close()
+    with pytest.raises(psycopg2.OperationalError):
+        await conn1.notifies.get()
 
 
 async def test_close_connection_on_timeout_error(connect):
@@ -595,37 +597,25 @@ async def test_connection_on_server_restart(connect, pg_server, docker):
         pytest.fail("Cannot connect to the restarted server")
 
 
-async def test_connection_notify_on_server_restart(
-    connect, pg_server, docker, loop
+async def test_connection_notify_on_disconnect(
+    connect, pg_params, tcp_proxy, unused_port, loop
 ):
-    conn = await connect()
+    server_port = pg_params["port"]
+    proxy_port = unused_port()
+    tcp_proxy = await tcp_proxy(proxy_port, server_port)
 
-    async def read_notifies():
-        while True:
-            await conn.notifies.get()
+    async with await connect(port=proxy_port) as connection:
 
-    reader = loop.create_task(read_notifies())
-    await asyncio.sleep(0.1)
+        async def read_notifies(c):
+            while True:
+                await c.notifies.get()
 
-    docker.restart(container=pg_server["Id"])
+        reader_task = loop.create_task(read_notifies(connection))
+        await asyncio.sleep(0.1)
 
-    try:
-        with pytest.raises(psycopg2.OperationalError):
-            await asyncio.wait_for(reader, 10)
-    finally:
-        conn.close()
-        reader.cancel()
-
-        # Wait for postgres to be up and running again before moving on
-        # so as the restart won't affect other tests
-        delay = 0.001
-        for i in range(100):
-            try:
-                conn = await connect()
-                conn.close()
-                break
-            except psycopg2.Error:
-                time.sleep(delay)
-                delay *= 2
-        else:
-            pytest.fail("Cannot connect to the restarted server")
+        await tcp_proxy.disconnect()
+        try:
+            with pytest.raises(psycopg2.OperationalError):
+                await asyncio.wait_for(reader_task, 10)
+        finally:
+            reader_task.cancel()
