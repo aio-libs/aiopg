@@ -490,18 +490,19 @@ async def test___del__(loop, pg_params, warning):
 
 async def test_notifies(connect):
     conn1 = await connect()
-    cur1 = await conn1.cursor()
     conn2 = await connect()
-    cur2 = await conn2.cursor()
-    await cur1.execute("LISTEN test")
-    assert conn2.notifies.empty()
-    await cur2.execute("NOTIFY test, 'hello'")
-    val = await conn1.notifies.get()
-    assert "test" == val.channel
-    assert "hello" == val.payload
 
-    cur2.close()
-    cur1.close()
+    async with await conn1.cursor() as cur1, await conn2.cursor() as cur2:
+        await cur1.execute("LISTEN test")
+        assert conn2.notifies.empty()
+        await cur2.execute("NOTIFY test, 'hello'")
+        val = await conn1.notifies.get()
+        assert "test" == val.channel
+        assert "hello" == val.payload
+
+    await conn1.close()
+    with pytest.raises(psycopg2.OperationalError):
+        await conn1.notifies.get()
 
 
 async def test_close_connection_on_timeout_error(connect):
@@ -613,21 +614,8 @@ async def test_connection_notify_on_disconnect(
         await asyncio.sleep(0.1)
 
         await tcp_proxy.disconnect()
-
         try:
             with pytest.raises(psycopg2.OperationalError):
                 await asyncio.wait_for(reader_task, 10)
         finally:
             reader_task.cancel()
-
-
-async def test_connection_notify_cancellation(connect, loop):
-    async with await connect() as connection:
-        get_task = loop.create_task(connection.notifies.get())
-        await asyncio.sleep(0.1)
-        get_task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await get_task
-
-    with pytest.raises(psycopg2.OperationalError):
-        await connection.notifies.get()

@@ -68,3 +68,12 @@ async def test_closable_queue_get_nowait_noclose(loop):
     assert queue.get_nowait() == 1
     with pytest.raises(asyncio.QueueEmpty):
         queue.get_nowait()
+
+
+async def test_closable_queue_get_cancellation(loop):
+    queue = ClosableQueue(asyncio.Queue(), loop)
+    get_task = loop.create_task(queue.get())
+    await asyncio.sleep(0.1)
+    get_task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await get_task
