@@ -74,7 +74,7 @@ Example of SQLAlchemy optional integration
    loop.run_until_complete(go())
 
 .. _PostgreSQL: http://www.postgresql.org/
-.. _asyncio: http://docs.python.org/3.4/library/asyncio.html
+.. _asyncio: https://docs.python.org/3/library/asyncio.html
 
 Please use::
 
