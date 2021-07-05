@@ -812,7 +812,7 @@ class Connection:
                     # chain exception otherwise
                     exc2.__cause__ = exc
                     exc = exc2
-            self.notifies.close(exc)
+            self._notifies_proxy.close(exc)
             if waiter is not None and not waiter.done():
                 waiter.set_exception(exc)
         else:
