@@ -143,6 +143,8 @@ class ClosableQueue:
         self._loop = loop
         self._queue = queue
         self._close_event = loop.create_future()
+        # suppress Future exception was never retrieved
+        self._close_event.add_done_callback(lambda f: f.exception())
 
     def close(self, exception: Exception) -> None:
         if self._close_event.done():
