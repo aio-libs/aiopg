@@ -981,14 +981,15 @@ class Connection:
 
         self._conn.close()
 
-        if self._waiter is not None and not self._waiter.done():
-            self._waiter.set_exception(
+        if not self._loop.is_closed():
+            if self._waiter is not None and not self._waiter.done():
+                self._waiter.set_exception(
+                    psycopg2.OperationalError("Connection closed")
+                )
+
+            self._notifies_proxy.close(
                 psycopg2.OperationalError("Connection closed")
             )
-
-        self._notifies_proxy.close(
-            psycopg2.OperationalError("Connection closed")
-        )
 
     def close(self) -> "asyncio.Future[None]":
         self._close()
