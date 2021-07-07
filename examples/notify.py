@@ -33,14 +33,13 @@ async def listen(conn):
 
 
 async def main():
-    async with aiopg.create_pool(dsn) as pool:
-        async with pool.acquire() as conn1:
-            listener = listen(conn1)
-            async with pool.acquire() as conn2:
-                notifier = notify(conn2)
+    async with aiopg.connect(dsn) as listenConn:
+        async with aiopg.create_pool(dsn) as notifyPool:
+            async with notifyPool.acquire() as notifyConn:
+                listener = listen(listenConn)
+                notifier = notify(notifyConn)
                 await asyncio.gather(listener, notifier)
     print("ALL DONE")
 
 
-loop = asyncio.get_event_loop()
-loop.run_until_complete(main())
+asyncio.run(main())

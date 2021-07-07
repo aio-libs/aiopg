@@ -141,5 +141,4 @@ async def go():
             await fail_first_nested_transaction(conn)
 
 
-loop = asyncio.get_event_loop()
-loop.run_until_complete(go())
+asyncio.run(go())

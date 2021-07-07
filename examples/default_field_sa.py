@@ -52,5 +52,4 @@ async def go():
             await insert_tbl(conn, 2, name="test", is_active=False, date=now())
 
 
-loop = asyncio.get_event_loop()
-loop.run_until_complete(go())
+asyncio.run(go())

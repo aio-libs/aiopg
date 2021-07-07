@@ -165,5 +165,4 @@ async def go():
             await ave_age(conn)
 
 
-loop = asyncio.get_event_loop()
-loop.run_until_complete(go())
+asyncio.run(go())
