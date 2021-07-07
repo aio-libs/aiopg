@@ -75,5 +75,4 @@ async def go():
             await insert_tbl(conn, 5, custom_list=["1", "test", "4"])
 
 
-loop = asyncio.get_event_loop()
-loop.run_until_complete(go())
+asyncio.run(go())

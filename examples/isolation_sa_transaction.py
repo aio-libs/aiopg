@@ -155,5 +155,4 @@ async def go():
                 await isolation_read_sa_transaction(conn, conn2)
 
 
-loop = asyncio.get_event_loop()
-loop.run_until_complete(go())
+asyncio.run(go())

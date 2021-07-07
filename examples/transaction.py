@@ -1,7 +1,6 @@
 import asyncio
 
-import aiopg
-from aiopg.transaction import IsolationLevel, Transaction
+from aiopg import IsolationLevel, create_pool, Transaction
 
 dsn = "dbname=aiopg user=aiopg password=passwd host=127.0.0.1"
 
@@ -19,7 +18,7 @@ async def transaction(cur, isolation_level, readonly=False, deferrable=False):
 
 
 async def main():
-    async with aiopg.create_pool(dsn) as pool:
+    async with create_pool(dsn) as pool:
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute("CREATE TABLE tbl (id int)")
@@ -30,5 +29,4 @@ async def main():
                 await cur.execute("select * from tbl")
 
 
-loop = asyncio.get_event_loop()
-loop.run_until_complete(main())
+asyncio.run(main())

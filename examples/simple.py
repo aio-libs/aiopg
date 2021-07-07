@@ -17,5 +17,4 @@ async def test_select():
     print("ALL DONE")
 
 
-loop = asyncio.get_event_loop()
-loop.run_until_complete(test_select())
+asyncio.run(test_select())
