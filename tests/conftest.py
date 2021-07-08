@@ -115,7 +115,7 @@ def pytest_addoption(parser):
         help=(
             "Postgres server versions. "
             "May be used several times. "
-            "Available values: 9.3, 9.4, 9.5, all"
+            "Available values: 9.6, 10, 11, 12, 13, all"
         ),
     )
     parser.addoption(
@@ -130,9 +130,9 @@ def pytest_generate_tests(metafunc):
     if "pg_tag" in metafunc.fixturenames:
         tags = set(metafunc.config.option.pg_tag)
         if not tags:
-            tags = ["9.5"]
+            tags = ["13"]
         elif "all" in tags:
-            tags = ["9.3", "9.4", "9.5"]
+            tags = ["9.6", "10", "11", "12", "13"]
         else:
             tags = list(tags)
         metafunc.parametrize("pg_tag", tags, scope="session")
