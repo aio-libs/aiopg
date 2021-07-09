@@ -1,5 +1,4 @@
 import asyncio
-import contextlib
 import gc
 import socket
 import sys
