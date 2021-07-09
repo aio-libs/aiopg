@@ -1,6 +1,6 @@
 import asyncio
-import time
 import datetime
+import time
 
 import psycopg2
 import psycopg2.tz

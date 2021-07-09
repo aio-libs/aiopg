@@ -139,7 +139,11 @@ class ClosableQueue:
 
     __slots__ = ("_loop", "_queue", "_close_event")
 
-    def __init__(self, queue: asyncio.Queue, loop: asyncio.AbstractEventLoop):
+    def __init__(
+        self,
+        queue: asyncio.Queue,  # type: ignore
+        loop: asyncio.AbstractEventLoop,
+    ):
         self._loop = loop
         self._queue = queue
         self._close_event = loop.create_future()
