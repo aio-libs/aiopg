@@ -22,8 +22,7 @@ def connect(make_connection):
             await cur.execute("DROP TABLE IF EXISTS tbl2")
             await cur.execute(
                 """CREATE TABLE tbl2
-                                      (id int, name varchar(255))
-                                      WITH OIDS"""
+                                      (id int, name varchar(255))"""
             )
             await cur.execute("DROP FUNCTION IF EXISTS inc(val integer)")
             await cur.execute(
@@ -184,10 +183,6 @@ async def test_rows(cursor):
     assert 0 == cursor.rownumber
     await cursor.fetchone()
     assert 1 == cursor.rownumber
-
-    assert 0 == cursor.lastrowid
-    await cursor.execute("INSERT INTO tbl2 VALUES (%s, %s)", (4, "d"))
-    assert 0 != cursor.lastrowid
 
 
 async def test_query(cursor):
