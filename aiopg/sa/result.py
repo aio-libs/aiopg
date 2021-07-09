@@ -4,6 +4,14 @@ from collections.abc import Mapping, Sequence
 from sqlalchemy.sql import expression, sqltypes
 
 from . import exc
+from .utils import SQLALCHEMY_VERSION
+
+if SQLALCHEMY_VERSION >= ["1", "4"]:
+    from sqlalchemy.util import string_or_unprintable
+else:
+    from sqlalchemy.sql.expression import (
+        _string_or_unprintable as string_or_unprintable,
+    )
 
 
 class RowProxy(Mapping):
@@ -198,7 +206,7 @@ class ResultMetaData:
             if raiseerr:
                 raise exc.NoSuchColumnError(
                     f"Could not locate column in row for column "
-                    f"{expression._string_or_unprintable(key)!r}"
+                    f"{string_or_unprintable(key)!r}"
                 )
             else:
                 return None
