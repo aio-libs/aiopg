@@ -18,7 +18,7 @@ from pathlib import Path
 
 
 def get_release():
-    regexp = re.compile(r"^__version__\W*=\W*'([\d.abrc]+)'")
+    regexp = re.compile(r"^__version__\W*=\W*\"([\d.abrc]+)\"")
     init_py = Path(__file__).resolve().parent.parent / 'aiopg' / '__init__.py'
     with init_py.open() as f:
         for line in f:
