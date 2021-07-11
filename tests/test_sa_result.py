@@ -1,7 +1,6 @@
 import pytest
 from sqlalchemy import Column, Integer, MetaData, String, Table
 
-from aiopg import sa
 
 meta = MetaData()
 tbl = Table(
@@ -17,7 +16,9 @@ def connect(make_sa_connection, loop):
     async def start():
         conn = await make_sa_connection()
         await conn.execute("DROP TABLE IF EXISTS sa_tbl")
-        await conn.execute("CREATE TABLE sa_tbl (id serial, name varchar(255))")
+        await conn.execute(
+            "CREATE TABLE sa_tbl (id serial, name varchar(255))"
+        )
 
         await conn.execute(tbl.insert().values(name="test_name"))
 
