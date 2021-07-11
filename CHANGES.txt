@@ -1,3 +1,9 @@
+1.3.2b1 (2021-07-11)
+^^^^^^^^^^^^^^^^^^^^
+
+* Fix compatibility with SQLAlchemy >= 1.4 `#870 <https://github.com/aio-libs/aiopg/pull/870>`_
+
+
 1.3.1 (2021-07-08)
 ^^^^^^^^^^^^^^^^^^
 
