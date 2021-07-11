@@ -1,7 +1,6 @@
 import pytest
 from sqlalchemy import Column, Integer, MetaData, String, Table
 
-
 meta = MetaData()
 tbl = Table(
     "sa_tbl",
