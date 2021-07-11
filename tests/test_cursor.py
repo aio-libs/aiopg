@@ -38,7 +38,7 @@ def connect(make_connection):
     return go
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def cursor(connect, loop):
     async def go():
         return await (await connect()).cursor()
