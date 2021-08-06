@@ -481,10 +481,10 @@ class Cursor:
             _rollback_transaction,
         )
 
-    def mogrify(self, operation: str, parameters: Any = None) -> str:
+    def mogrify(self, operation: str, parameters: Any = None) -> bytes:
         """Return a query string after arguments binding.
 
-        The string returned is exactly the one that would be sent to
+        The byte string returned is exactly the one that would be sent to
         the database running the .execute() method or similar.
 
         """
