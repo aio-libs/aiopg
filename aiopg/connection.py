@@ -4,24 +4,32 @@ import contextlib
 import datetime
 import enum
 import errno
+import functools
 import platform
 import select
+import selectors
 import sys
 import traceback
 import uuid
 import warnings
 import weakref
 from collections.abc import Mapping
-from types import TracebackType
+from types import MappingProxyType, TracebackType
 from typing import (
     Any,
+    AsyncGenerator,
     Callable,
+    Coroutine,
+    Dict,
     Generator,
+    Hashable,
     List,
+    Literal,
     Optional,
     Sequence,
     Tuple,
     Type,
+    Union,
     cast,
 )
 
@@ -34,8 +42,11 @@ from .utils import (
     ClosableQueue,
     _ContextManager,
     create_completed_future,
+    execute_or_await,
     get_running_loop,
 )
+
+ReplicationSlotType = Union[Literal[87654321], Literal[12345678]]
 
 TIMEOUT = 60.0
 
@@ -688,10 +699,255 @@ class Cursor:
             "copy_expert cannot be used in asynchronous mode"
         )
 
+    async def create_replication_slot(
+        self,
+        slot_name: str,
+        slot_type: Optional[ReplicationSlotType] = None,
+        output_plugin: Optional[str] = None,
+        timeout: Optional[float] = None,
+    ) -> None:
+        """Create a streaming replication slot.
+
+        NOTE: only available with psycopg2's logical or
+        physical replication connection factories.
+
+        """
+        raise psycopg2.ProgrammingError(
+            "create_replication_slot cannot be used "
+            "with a non-replication cursor"
+        )
+
+    async def drop_replication_slot(
+        self,
+        slot_name: str,
+        timeout: Optional[float] = None,
+    ) -> None:
+        """Drop a streaming replication slot.
+
+        NOTE: only available with psycopg2's logical or
+        physical replication connection factories.
+
+        """
+        raise psycopg2.ProgrammingError(
+            "drop_replication_slot cannot be used "
+            "with a non-replication cursor"
+        )
+
+    async def start_replication(
+        self,
+        slot_name: Optional[str] = None,
+        slot_type: Optional[ReplicationSlotType] = None,
+        start_lsn: Union[int, str] = 0,
+        timeline: int = 0,
+        options: Optional[Dict[Hashable, Any]] = None,
+        decode: bool = False,
+        status_interval: float = 10,
+        timeout: Optional[float] = None,
+    ) -> None:
+        """Start replication on the replication connection.
+        After this, no other commands can be performed on the cursor except
+        receiving replication messages and sending feedback packets.
+
+        NOTE: only available with psycopg2's logical or
+        physical replication connection factories.
+
+        """
+        raise psycopg2.ProgrammingError(
+            "start_replication cannot be used with a non-replication cursor"
+        )
+
+    async def start_replication_expert(
+        self,
+        command: str,
+        decode: bool = False,
+        status_interval: float = 10,
+        timeout: Optional[float] = None,
+    ) -> None:
+        """Start replication on the replication connection using the
+        raw START_REPLICATION command provided by PostgreSQL.
+        After this, no other commands can be performed on the cursor except
+        receiving replication messages and sending feedback packets.
+
+        For advanced usage only, in most cases, `start_replication()`
+        will be sufficient.
+
+        NOTE: only available with psycopg2's logical or
+        physical replication connection factories.
+
+        """
+        raise psycopg2.ProgrammingError(
+            "start_replication_expert cannot be used with "
+            "a non-replication cursor"
+        )
+
+    async def send_feedback(
+        self,
+        write_lsn: int = 0,
+        flush_lsn: int = 0,
+        apply_lsn: int = 0,
+        reply: bool = False,
+        force: bool = False,
+        timeout: Optional[float] = None,
+    ) -> None:
+        """Report to the server that all messages up to a certain LSN
+        position have been processed on the client and may be discarded on
+        the server.
+
+        If the `reply` or `force` parameters are not set, this method
+        will only update internal psycopg2 structures without sending
+        the feedback message to the server.
+
+        The feedback message will be automatically sent the next time
+        `read_message()` is called if `status_interval` timeout is reached
+        by then. Methods such as `message_stream()` and `consume_stream()`
+        handle this transparently under the hood without requiring any client
+        interference.
+
+        NOTE: only available with psycopg2's logical or
+        physical replication connection factories.
+
+        """
+        raise psycopg2.ProgrammingError(
+            "send_feedback cannot be used with a non-replication cursor"
+        )
+
+    async def message_stream(
+        self,
+    ) -> AsyncGenerator["ReplicationMessage", None]:
+        """Keep yielding replication messages received from the server
+        and also send feedback packets in a timely manner when
+        the `status_interval` timeout is reached.
+
+        The client must also confirm every yielded and processed message
+        by calling the `send_feedback()` method on the corresponding
+        replication cursor (every `ReplicationMessage` instance has a
+        reference to it).
+
+        NOTE: only available with psycopg2's logical or
+        physical replication connection factories.
+
+        """
+        raise psycopg2.ProgrammingError(
+            "message_stream cannot be used with a non-replication cursor"
+        )
+        # noinspection PyUnreachableCode
+        yield
+
+    async def consume_stream(
+        self,
+        consumer: Union[
+            Callable[["ReplicationMessage"], Coroutine[Any, Any, Any]],
+            Callable[["ReplicationMessage"], Any],
+        ],
+    ) -> None:
+        """Enter an endless loop reading messages from the server and
+        passing them to a client-provided `consumer` callback one at a time.
+        The `consumer` callback can be either a coroutine function
+        or a callable receiving only one parameter -
+        a `ReplicationMessage` instance.
+        Also, send feedback packets in a timely manner when
+        the `status_interval` timeout is reached.
+
+        The client must also confirm every received and processed message
+        withinthe callback by calling the `send_feedback()` method
+        on the corresponding replication cursor (every `ReplicationMessage`
+        instance has a reference to it).
+
+        In order to make this method break out of the loop and return,
+        the provided `consumer` callback can throw a
+        psycopg2.extras.StopReplication exception.
+        Any unhandled exception will make it break out of the loop as well.
+
+        NOTE: only available with psycopg2's logical or
+        physical replication connection factories.
+
+        """
+        raise psycopg2.ProgrammingError(
+            "consume_stream cannot be used with a non-replication cursor"
+        )
+
+    async def read_message(
+        self,
+        timeout: Optional[float] = None,
+    ) -> Optional["ReplicationMessage"]:
+        """Try to read the next replication message from the server.
+        When called, also automatically send feedback packets to the server if
+        `status_interval` timeout is reached.
+
+        Block until either a message from the server is received,
+        the feedback status interval is reached, or an optionally provided
+        timeout has elapsed. In the latter case, return None, otherwise,
+        return the received message wrapped in a `ReplicationMessage` instance.
+
+        The client must confirm every processed message by calling the
+        `send_feedback()` method on the corresponding replication cursor
+        (every `ReplicationMessage` instance has a reference to it).
+
+        Basically, this method has to be called in a loop to keep up with the
+        flow of messages coming from the server and also to periodically
+        send feedback packets, especially if there are no messages to be
+        received.
+
+        This is why methods such as `message_stream()` or `consume_stream()`
+        are preferred over this one because they will keep up with the flow
+        of messages without explicitly requiring the client to call them over
+        and over again. They will also automatically handle sending feedback
+        packets in a timely manner each time the `status_interval` timeout
+        is reached.
+
+        NOTE: only available with psycopg2's logical or
+        physical replication connection factories.
+
+        """
+        raise psycopg2.ProgrammingError(
+            "read_message cannot be used with a non-replication cursor"
+        )
+
     @property
     def timeout(self) -> float:
         """Return default timeout for cursor operations."""
         return self._timeout
+
+    @property
+    def wal_end(self) -> int:
+        """Return the LSN position of the current end of WAL on the server
+        at the moment when last data or keepalive message was received
+        from the server.
+
+        NOTE: only available with psycopg2's logical or
+        physical replication connection factories.
+
+        """
+        raise psycopg2.ProgrammingError(
+            "wal_end is not available on non-replication cursors"
+        )
+
+    @property
+    def feedback_timestamp(self) -> datetime.datetime:
+        """Return a datetime object representing the timestamp at the moment
+        when the last feedback message was sent to the server.
+
+        NOTE: only available with psycopg2's logical or
+        physical replication connection factories.
+
+        """
+        raise psycopg2.ProgrammingError(
+            "feedback_timestamp is not available on non-replication cursors"
+        )
+
+    @property
+    def io_timestamp(self) -> datetime.datetime:
+        """Return a datetime object representing the timestamp at the moment
+        of last communication with the server
+        (a data or keepalive message in either direction).
+
+        NOTE: only available with psycopg2's logical or
+        physical replication connection factories.
+
+        """
+        raise psycopg2.ProgrammingError(
+            "io_timestamp is not available on non-replication cursors"
+        )
 
     def __aiter__(self) -> "Cursor":
         return self
@@ -723,6 +979,560 @@ class Cursor:
         )
 
 
+class ReplicationMessage:
+    """A streaming replication protocol message.
+
+    This is just a wrapper around psycopg2's `ReplicationMessage` class
+    modified to expose the asynchronous `_ReplicationCursor` implementation
+    through the `cursor` property.
+
+    As the attributes of the original psycopg2 message class are defined
+    as read-only at the C level API, we keep them as such by proxying
+    them through properties and not instance attributes.
+
+    """
+
+    __slots__ = ("_impl", "_cursor")
+
+    def __init__(
+        self,
+        impl: psycopg2.extras.ReplicationMessage,
+        cursor: "_ReplicationCursor",
+    ) -> None:
+        self._impl = impl
+        self._cursor = cursor
+
+    @property
+    def payload(self) -> Any:
+        """Return the actual data received from the server.
+
+        The data type depends on the replication mode used,
+        the `decode` option passed in to `start_replication()` or the logical
+        decoding output plugin used in case of logical replication.
+        """
+        return self._impl.payload
+
+    @property
+    def data_size(self) -> int:
+        """Return the raw size of the message payload.
+
+        When physical replication is used, this number corresponds
+        to the actual WAL segment size in bytes stored within
+        the server's write-ahead log.
+
+        When using logical replication, this number represents the WAL entry
+        size in bytes after it has been transformed by any sort of logical
+        decoding plugin (before possible unicode conversion) and usually
+        differs from the raw WAL entry size stored on disk.
+
+        """
+        return cast(int, self._impl.data_size)
+
+    @property
+    def data_start(self) -> int:
+        """Return the LSN position of the start of the message."""
+        return cast(int, self._impl.data_start)
+
+    @property
+    def wal_end(self) -> int:
+        """Return the LSN position of the current end of WAL on the server."""
+        return cast(int, self._impl.wal_end)
+
+    @property
+    def send_time(self) -> datetime.datetime:
+        """Return a datetime object representing the server timestamp
+        at the moment when the message was sent.
+        """
+        return cast(datetime.datetime, self._impl.send_time)
+
+    @property
+    def cursor(self) -> "_ReplicationCursor":
+        """Return a reference to the corresponding asynchronous
+        `_ReplicationCursor` object.
+        """
+        return self._cursor
+
+    def _xlog_fmt(self, xlog: int) -> str:
+        return "{:x}/{:x}".format(xlog >> 32, xlog & 0xFFFFFFFF)
+
+    def __repr__(self) -> str:
+        return (
+            f"<"
+            f"{type(self).__module__}::{type(self).__name__} "
+            f"data_size={self.data_size}, "
+            f"data_start={self._xlog_fmt(self.data_start)}, "
+            f"wal_end={self._xlog_fmt(self.wal_end)}, "
+            f"send_time={self._impl.__repr__().split(':')[-1][1:-1]}"
+            f">"
+        )
+
+
+class _ReplicationCursor(Cursor):
+    """A cursor used for communication on replication connections.
+
+    To use it, you have to provide a `connection_factory` option when
+    establishing a new connection to the server and optionally a
+    psycopg2.extras.ReplicationCursor `cursor_factory` when creating a cursor
+    on this connection.
+    There are two connection factories available provided by psycopg2, each one
+    corresponding to a specific replication mode:
+        - psycopg2.extras.LogicalReplicationConnection to open a special type
+          of connection that is used for logical replication;
+        - psycopg2.extras.PhysicalReplicationConnection to open a special type
+          of connection that is used for physical replication.
+
+    """
+
+    # a mapping of streaming replication protocol-specific commands
+    # to methods that are used to log these commands when 'echo' mode
+    # is enabled on the cursor
+    _repl_command_to_repr_method = MappingProxyType(
+        {
+            "create_replication_slot": "_create_replication_slot_repr",
+            "drop_replication_slot": "_drop_replication_slot_repr",
+            "start_replication": "_start_replication_repr",
+            "start_replication_expert": "_start_replication_expert_repr",
+        }
+    )
+
+    def __init__(
+        self,
+        conn: "Connection",
+        impl: psycopg2.extras.ReplicationCursor,
+        timeout: float,
+        echo: bool,
+        isolation_level: Optional[IsolationLevel] = None,
+    ) -> None:
+        super().__init__(conn, impl, timeout, echo, isolation_level)
+        # time between feedback packets sent to the server
+        # set after either `start_replication()`
+        # or `start_replication_expert()` methods get called
+        self._status_interval: Optional[float] = None
+
+    async def create_replication_slot(
+        self,
+        slot_name: str,
+        slot_type: Optional[ReplicationSlotType] = None,
+        output_plugin: Optional[str] = None,
+        timeout: Optional[float] = None,
+    ) -> None:
+        """Create a streaming replication slot."""
+        await self._execute_replication_command(
+            "create_replication_slot",
+            timeout,
+            slot_name=slot_name,
+            slot_type=slot_type,
+            output_plugin=output_plugin,
+        )
+
+    async def drop_replication_slot(
+        self,
+        slot_name: str,
+        timeout: Optional[float] = None,
+    ) -> None:
+        """Drop a streaming replication slot."""
+        await self._execute_replication_command(
+            "drop_replication_slot",
+            timeout,
+            slot_name=slot_name,
+        )
+
+    async def start_replication(
+        self,
+        slot_name: Optional[str] = None,
+        slot_type: Optional[ReplicationSlotType] = None,
+        start_lsn: Union[int, str] = 0,
+        timeline: int = 0,
+        options: Optional[Dict[Hashable, Any]] = None,
+        decode: bool = False,
+        status_interval: float = 10,
+        timeout: Optional[float] = None,
+    ) -> None:
+        """Start replication on the replication connection.
+        After this, no other commands can be performed on the cursor except
+        receiving replication messages and sending feedback packets.
+        """
+        if status_interval < 1:
+            raise psycopg2.ProgrammingError(
+                "status_interval must be >= 1 (sec)"
+            )
+
+        self._status_interval = status_interval
+        await self._execute_replication_command(
+            "start_replication",
+            timeout,
+            slot_name=slot_name,
+            slot_type=slot_type,
+            start_lsn=start_lsn,
+            timeline=timeline,
+            options=options,
+            decode=decode,
+            status_interval=status_interval,
+        )
+
+    async def start_replication_expert(
+        self,
+        command: str,
+        decode: bool = False,
+        status_interval: float = 10,
+        timeout: Optional[float] = None,
+    ) -> None:
+        """Start replication on the replication connection using the
+        START_REPLICATION command provided by postgres.
+        After this, no other commands can be performed on the cursor except
+        receiving replication messages and sending feedback packets.
+
+        For advanced usage only, in most cases, `start_replication()`
+        will be sufficient.
+
+        """
+        if status_interval < 1:
+            raise psycopg2.ProgrammingError(
+                "status_interval must be >= 1 (sec)"
+            )
+
+        self._status_interval = status_interval
+        await self._execute_replication_command(
+            "start_replication_expert",
+            timeout,
+            command=command,
+            decode=decode,
+            status_interval=status_interval,
+        )
+
+    async def send_feedback(
+        self,
+        write_lsn: int = 0,
+        flush_lsn: int = 0,
+        apply_lsn: int = 0,
+        reply: bool = False,
+        force: bool = False,
+        timeout: Optional[float] = None,
+    ) -> None:
+        """Report to the server that all messages up to a certain LSN
+        position have been processed on the client and may be discarded
+        on the server.
+
+        If the `reply` or `force` parameters are not set, this method
+        will only update internal psycopg2 structures without sending
+        the feedback message to the server.
+
+        The feedback message will be sent automatically the next time
+        `read_message()` is called if `status_interval` timeout is reached
+        by then. Methods such as `message_stream()` and `consume_stream()`
+        handle this transparently under the hood without requiring any client
+        interference.
+
+        """
+        await self._execute_replication_command(
+            "send_feedback",
+            timeout,
+            write_lsn=write_lsn,
+            flush_lsn=flush_lsn,
+            apply_lsn=apply_lsn,
+            reply=reply,
+            force=force,
+        )
+
+    async def message_stream(self) -> AsyncGenerator[ReplicationMessage, None]:
+        """Keep yielding replication messages received from the server
+        and also send feedback packets in a timely manner when
+        the `status_interval` timeout is reached.
+
+        The client must also confirm every yielded and processed message
+        by calling the `send_feedback()` method on the corresponding
+        replication cursor (every `ReplicationMessage` instance has a
+        reference to it).
+
+        """
+        while True:
+            msg = await self.read_message()
+            if msg:
+                yield msg
+
+    async def consume_stream(
+        self,
+        consumer: Union[
+            Callable[[ReplicationMessage], Coroutine[Any, Any, Any]],
+            Callable[[ReplicationMessage], Any],
+        ],
+    ) -> None:
+        """Enter an endless loop reading messages from the server and
+        passing them to a client-provided `consumer` callback one at a time.
+        The `consumer` callback can be either a coroutine function
+        or a callable receiving only one parameter -
+        a `ReplicationMessage` instance.
+        Also, send feedback packets in a timely manner when
+        the `status_interval` timeout is reached.
+
+        The client must also confirm every received and processed message
+        within the callback by calling the `send_feedback()` method
+        on the corresponding replication cursor (every `ReplicationMessage`
+        instance has a reference to it).
+
+        In order to make this method break out of the loop and return,
+        the provided `consumer` callback can throw a
+        psycopg2.extras.StopReplication exception.
+        Any unhandled exception will make it break out of the loop as well.
+
+        """
+        while True:
+            msg = await self.read_message()
+            if msg is not None:
+                try:
+                    await execute_or_await(consumer, msg)
+                except psycopg2.extras.StopReplication:
+                    return
+
+    async def read_message(
+        self,
+        timeout: Optional[float] = None,
+    ) -> Optional[ReplicationMessage]:
+        """Try to read the next replication message from the server.
+        When called, also automatically send feedback packets to the server if
+        `status_interval` timeout is reached.
+
+        Block until either a message from the server is received,
+        the feedback status interval is reached, or an optionally provided
+        timeout has elapsed. In the latter case, return None, otherwise,
+        return the received message wrapped in a `ReplicationMessage` instance.
+
+        The client must confirm every processed message by calling the
+        `send_feedback()` method on the corresponding replication cursor
+        (every `ReplicationMessage` instance has a reference to it).
+
+        Basically, this method has to be called in a loop to keep up with the
+        flow of messages coming from the server and also to periodically
+        send feedback packets, especially if there are no messages to be
+        received.
+
+        This is why methods such as `message_stream()` or `consume_stream()`
+        are preferred over this one because they will keep up with the flow
+        of messages without explicitly requiring the client to call them over
+        and over again. They will also automatically handle sending feedback
+        packets in a timely manner.
+
+        """
+        # try to receive a replication message immediately
+        # and also send a feedback packet to the server if
+        # `status_interval` timeout is reached
+        msg = self._impl.read_message()
+        if msg is not None:
+            return ReplicationMessage(msg, self)
+
+        # otherwise, let the event loop poll the connection for incoming
+        # replication messages
+        fut = self._conn._loop.create_future()
+        fd = cast(int, self._impl.fileno())
+
+        self._conn._loop.add_reader(fd, self._read_message, fut)
+        fut.add_done_callback(functools.partial(self._read_message_done, fd))
+
+        try:
+            return await asyncio.wait_for(
+                fut,
+                timeout or self._status_interval,
+            )
+        except asyncio.TimeoutError:
+            return None
+
+    def _read_message(self, fut: "asyncio.Future[ReplicationMessage]") -> None:
+        # is added as an I/O callback if `read_message()` cannot return a
+        # replication message immediately
+        # replaces the connection's original `_ready()` callback
+        # while the client is waiting for an incoming message
+        # the connection's original `_ready()` callback will be restored after
+        # this I/O operation either completes or times out
+        if fut.done():
+            return
+        try:
+            msg = self._impl.read_message()
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as exc:
+            fut.set_exception(exc)
+        else:
+            # read-event might have been triggered by a server keepalive
+            # message
+            # if no replication message was received,
+            # try again next time
+            if msg is not None:
+                fut.set_result(ReplicationMessage(msg, self))
+
+    def _read_message_done(
+        self,
+        fd: int,
+        fut: "asyncio.Future[ReplicationMessage]",
+    ) -> None:
+        # is called after `read_message()` either completes successfully by
+        # returning a replication message or times out,
+        # restores the connection's original `_ready()` I/O callback instead of
+        # instructing the event loop to completely stop polling the fd
+        # for read-events. This is done not only for the sake of aesthetics
+        # and completeness (queries and such are not supported on the cursor
+        # after replication streaming has been started) but also to check that
+        # the connection's fd is still valid by modifying its I/O callback
+        # which requires a syscall on behalf of the poll/epoll/kqueue
+        # OS resource under the hood.
+        loop = fut.get_loop()
+        # safety measure - uvloop has very different low-level APIs
+        # and doesn't use the selectors module
+        selector = getattr(loop, "_selector", None)
+        try:
+            # special case for systems that do not support modern I/O polling
+            # mechanisms and only have the 'select' system call at
+            # their disposal, in which case, no syscall will be performed
+            # by the selectors module when modifying its key (mainly keeping
+            # asyncio's `_WindowsSelectorEventLoop` in mind because IOCP
+            # low-level event loop APIs are not supported by this library).
+            if selector and isinstance(selector, selectors.SelectSelector):
+                select.select([fd], [], [], 0)
+            loop.add_reader(fd, self._conn._ready, self._conn._weakref)
+        except OSError as os_exc:
+            if _is_bad_descriptor_error(os_exc):
+                with contextlib.suppress(OSError):
+                    loop.remove_reader(fd)
+                    # forget a bad file descriptor, don't try to
+                    # touch it
+                    self._conn._fileno = None
+
+    @property
+    def wal_end(self) -> int:
+        """Return the LSN position of the current end of WAL on the server
+        at the moment when last data or keepalive message was received
+        from the server.
+        """
+        return cast(int, self._impl.wal_end)
+
+    @property
+    def feedback_timestamp(self) -> datetime.datetime:
+        """Return a datetime object representing the timestamp at the moment
+        when the last feedback message was sent to the server.
+        """
+        return cast(datetime.datetime, self._impl.feedback_timestamp)
+
+    @property
+    def io_timestamp(self) -> datetime.datetime:
+        """Return a datetime object representing the timestamp at the moment
+        of last communication with the server
+        (a data or keepalive message in either direction).
+        """
+        return cast(datetime.datetime, self._impl.io_timestamp)
+
+    async def _execute_replication_command(
+        self,
+        command_name: str,
+        timeout: Optional[float],
+        **kwargs: Any,
+    ) -> None:
+        if timeout is None:
+            timeout = self._timeout
+
+        waiter = self._conn._create_waiter(f"cursor.{command_name}")
+
+        if self._echo:
+            # get the appropriate logging method for
+            # a specific replication command
+            repr_method = self._repl_command_to_repr_method.get(command_name)
+            if repr_method:
+                logger.info(getattr(self, repr_method)(**kwargs))
+
+        try:
+            # execute psycopg2's original method
+            # for the specified replication command
+            getattr(self._impl, command_name)(**kwargs)
+        except BaseException:
+            self._conn._waiter = None
+            raise
+
+        try:
+            await self._conn._poll(waiter, timeout)
+        except asyncio.TimeoutError:
+            self._impl.close()
+            raise
+
+    def _create_replication_slot_repr(
+        self,
+        slot_name: str,
+        slot_type: Optional[ReplicationSlotType],
+        output_plugin: Optional[str],
+    ) -> str:
+        command = f"CREATE_REPLICATION_SLOT {slot_name} "
+
+        # determine the replication slot type
+        if slot_type is None:
+            slot_type = self._conn.raw.replication_type
+
+        if slot_type == psycopg2.extras.REPLICATION_LOGICAL:
+            command += f"LOGICAL {output_plugin or ''}"
+        elif slot_type == psycopg2.extras.REPLICATION_PHYSICAL:
+            command += "PHYSICAL"
+
+        return command
+
+    def _drop_replication_slot_repr(self, slot_name: str) -> str:
+        return f"DROP_REPLICATION_SLOT {slot_name}"
+
+    def _start_replication_repr(
+        self,
+        slot_name: Optional[str],
+        slot_type: Optional[ReplicationSlotType],
+        start_lsn: Union[int, str],
+        timeline: int,
+        options: Optional[Dict[Hashable, Any]],
+        decode: bool,
+        status_interval: float,
+    ) -> str:
+        command = "START_REPLICATION "
+
+        # determine the replication slot type and name
+        if slot_type is None:
+            slot_type = self._conn.raw.replication_type
+
+        if slot_type == psycopg2.extras.REPLICATION_LOGICAL:
+            command += f"SLOT {slot_name or ''} LOGICAL "
+        elif slot_type == psycopg2.extras.REPLICATION_PHYSICAL:
+            if slot_name:
+                command += f"SLOT {slot_name or ''} "
+
+        # tweak the LSN format so it shows up in the correct
+        # form within the logs
+        if type(start_lsn) is str:
+            lsn_lst = start_lsn.split("/")
+            lsn = f"{int(lsn_lst[0], 16):X}/{int(lsn_lst[1], 16):08X}"
+        else:
+            lsn = (
+                f"{cast(int, start_lsn) >> 32 & 4294967295:X}/"
+                f"{cast(int, start_lsn) & 4294967295:08X}"
+            )
+
+        command += lsn
+
+        if timeline != 0:
+            command += f" TIMELINE {timeline}"
+
+        # extract logical decoding plugin options from a dict and format them
+        # according to the format in which they would appear in a raw
+        # START_REPLICATION command
+        if options:
+            command += " ("
+            for k, v in options.items():
+                if not command.endswith("("):
+                    command += ", "
+                command += f"{k} {v}"
+            command += ")"
+
+        return command
+
+    def _start_replication_expert_repr(
+        self,
+        command: str,
+        decode: bool,
+        status_interval: float,
+    ) -> str:
+        return command
+
+
 async def _close_cursor(c: Cursor) -> None:
     c.close()
 
@@ -736,6 +1546,21 @@ class Connection:
     """
 
     _source_traceback = None
+
+    # mapping of psycopg2 miscellaneous connection factories to library cursors
+    # that provide some additional support for those connection types
+    _conn_impl_to_library_cursor = MappingProxyType(
+        {
+            psycopg2.extras.PhysicalReplicationConnection: _ReplicationCursor,
+            psycopg2.extras.LogicalReplicationConnection: _ReplicationCursor,
+        }
+    )
+    # same as the above mapping but for psycopg2 cursor factories
+    _cursor_impl_to_library_cursor = MappingProxyType(
+        {
+            psycopg2.extras.ReplicationCursor: _ReplicationCursor,
+        }
+    )
 
     def __init__(
         self,
@@ -946,8 +1771,31 @@ class Connection:
             scrollable=scrollable,
             withhold=withhold,
         )
-        cursor = Cursor(self, impl, timeout, self._echo, isolation_level)
-        return cursor
+
+        # check if there are any library cursor types that provide
+        # additional support for the underlying psycopg2 connection,
+        # otherwise, use the default `Cursor` implementation
+        lib_cursor_type = self._conn_impl_to_library_cursor.get(
+            type(self._conn),
+            Cursor,
+        )
+        # same as the previous check but for psycopg2 cursor factories,
+        # the result of this statement may also override the above step to
+        # prevent any undefined behavior when combining conflicting psycopg2
+        # connection and cursor types
+        if cursor_factory is not None:
+            lib_cursor_type = self._cursor_impl_to_library_cursor.get(
+                type(impl),
+                Cursor,
+            )
+
+        return lib_cursor_type(
+            self,
+            impl,
+            timeout,
+            self._echo,
+            isolation_level,
+        )
 
     async def _cursor_impl(
         self,

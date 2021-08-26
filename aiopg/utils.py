@@ -14,6 +14,8 @@ from typing import (
     Union,
 )
 
+Corofunc = Callable[..., Coroutine[Any, Any, Any]]
+
 if sys.version_info >= (3, 7, 0):
     __get_running_loop = asyncio.get_running_loop
 else:
@@ -35,6 +37,16 @@ def create_completed_future(
     future = loop.create_future()
     future.set_result(None)
     return future
+
+
+async def execute_or_await(
+    maybe_corofunc: Union[Corofunc, Callable[..., Any]],
+    *args: Any,
+    **kwargs: Any
+) -> Any:
+    if asyncio.iscoroutinefunction(maybe_corofunc):
+        return await maybe_corofunc(*args, **kwargs)
+    return maybe_corofunc(*args, **kwargs)
 
 
 _TObj = TypeVar("_TObj")

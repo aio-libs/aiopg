@@ -12,6 +12,7 @@ import pytest
 
 import aiopg
 from aiopg import DEFAULT_TIMEOUT, Connection, Cursor
+from aiopg.connection import _ReplicationCursor
 
 PY_341 = sys.version_info >= (3, 4, 1)
 
@@ -88,12 +89,34 @@ async def test_close_twice(connect):
     assert conn.closed
 
 
+async def test_with_default_connection(connect):
+    conn = await connect()
+    cur = await conn.cursor()
+    assert isinstance(cur, Cursor)
+
+
+async def test_with_connection_factory(make_replication_connection):
+    conn = await make_replication_connection(
+        connection_factory=psycopg2.extras.LogicalReplicationConnection,
+    )
+    cur = await conn.cursor()
+    assert isinstance(cur, _ReplicationCursor)
+
+
 async def test_with_cursor_factory(connect):
     conn = await connect()
     cur = await conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     await cur.execute("SELECT 1 AS a")
     ret = await cur.fetchone()
     assert 1 == ret["a"]
+
+
+async def test_with_ambiguous_cursor_factory(make_replication_connection):
+    conn = await make_replication_connection(
+        connection_factory=psycopg2.extras.LogicalReplicationConnection,
+    )
+    cur = await conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    assert isinstance(cur, Cursor)
 
 
 async def test_closed(connect):
