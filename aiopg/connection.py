@@ -24,7 +24,6 @@ from typing import (
     Generator,
     Hashable,
     List,
-    Literal,
     Optional,
     Sequence,
     Tuple,
@@ -45,8 +44,6 @@ from .utils import (
     execute_or_await,
     get_running_loop,
 )
-
-ReplicationSlotType = Union[Literal[87654321], Literal[12345678]]
 
 TIMEOUT = 60.0
 
@@ -702,7 +699,7 @@ class Cursor:
     async def create_replication_slot(
         self,
         slot_name: str,
-        slot_type: Optional[ReplicationSlotType] = None,
+        slot_type: Optional[int] = None,
         output_plugin: Optional[str] = None,
         timeout: Optional[float] = None,
     ) -> None:
@@ -736,7 +733,7 @@ class Cursor:
     async def start_replication(
         self,
         slot_name: Optional[str] = None,
-        slot_type: Optional[ReplicationSlotType] = None,
+        slot_type: Optional[int] = None,
         start_lsn: Union[int, str] = 0,
         timeline: int = 0,
         options: Optional[Dict[Hashable, Any]] = None,
@@ -1112,7 +1109,7 @@ class _ReplicationCursor(Cursor):
     async def create_replication_slot(
         self,
         slot_name: str,
-        slot_type: Optional[ReplicationSlotType] = None,
+        slot_type: Optional[int] = None,
         output_plugin: Optional[str] = None,
         timeout: Optional[float] = None,
     ) -> None:
@@ -1140,7 +1137,7 @@ class _ReplicationCursor(Cursor):
     async def start_replication(
         self,
         slot_name: Optional[str] = None,
-        slot_type: Optional[ReplicationSlotType] = None,
+        slot_type: Optional[int] = None,
         start_lsn: Union[int, str] = 0,
         timeline: int = 0,
         options: Optional[Dict[Hashable, Any]] = None,
@@ -1374,7 +1371,7 @@ class _ReplicationCursor(Cursor):
         # the connection's fd is still valid by modifying its I/O callback
         # which requires a syscall on behalf of the poll/epoll/kqueue
         # OS resource under the hood.
-        loop = fut.get_loop()
+        loop = self._conn._loop
         # safety measure - uvloop has very different low-level APIs
         # and doesn't use the selectors module
         selector = getattr(loop, "_selector", None)
@@ -1454,7 +1451,7 @@ class _ReplicationCursor(Cursor):
     def _create_replication_slot_repr(
         self,
         slot_name: str,
-        slot_type: Optional[ReplicationSlotType],
+        slot_type: Optional[int],
         output_plugin: Optional[str],
     ) -> str:
         command = f"CREATE_REPLICATION_SLOT {slot_name} "
@@ -1476,7 +1473,7 @@ class _ReplicationCursor(Cursor):
     def _start_replication_repr(
         self,
         slot_name: Optional[str],
-        slot_type: Optional[ReplicationSlotType],
+        slot_type: Optional[int],
         start_lsn: Union[int, str],
         timeline: int,
         options: Optional[Dict[Hashable, Any]],

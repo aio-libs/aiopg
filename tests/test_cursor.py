@@ -2139,6 +2139,9 @@ async def test_read_message_done_callback_bad_descriptor(
     async with async_timeout.timeout(timeout=1.1, loop=loop):
         await repl_cur.read_message()
 
+    # skip one loop iteration, so that `read_message()`'s
+    # `_read_message_done()` done callback gets called
+    await asyncio.sleep(0)
     with pytest.raises(KeyError):
         loop._selector.get_key(repl_conn_fd)
     assert repl_cur._conn._fileno is None

@@ -45,8 +45,11 @@ def unused_port():
 
 @pytest.fixture
 def loop(request):
-    # support running unittests on Windows
-    if sys.platform == "win32":
+    # support running unit tests on Windows
+    asyncio_supports_iocp = (
+        float(f"{sys.version_info.major}.{sys.version_info.minor}") > 3.6
+    )
+    if sys.platform == "win32" and asyncio_supports_iocp:
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     loop = asyncio.new_event_loop()
