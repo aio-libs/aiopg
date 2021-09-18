@@ -3,7 +3,9 @@ import collections
 import datetime
 import json
 import math
+import sys
 import time
+from unittest.mock import Mock, patch
 
 import async_timeout
 import psycopg2
@@ -1323,6 +1325,33 @@ async def test_echo_start_replication_expert(
     assert watcher.output[0] == log_str.format(xlogpos=xlogpos)
 
 
+@pytest.mark.parametrize(
+    "conn_factory,output_plugin",
+    [
+        (psycopg2.extras.LogicalReplicationConnection, "test_decoding"),
+        (psycopg2.extras.PhysicalReplicationConnection, None),
+    ],
+)
+async def test_execute_replication_command_timeout(
+    make_replication_connection,
+    conn_factory,
+    output_plugin,
+):
+    repl_conn = await make_replication_connection(
+        connection_factory=conn_factory
+    )
+    repl_cur = await repl_conn.cursor()
+
+    with pytest.raises(asyncio.TimeoutError):
+        await repl_cur._execute_replication_command(
+            command_name="create_replication_slot",
+            timeout=0,
+            slot_name="test_slot",
+            output_plugin=output_plugin,
+        )
+    assert repl_cur._impl.closed
+
+
 @pytest.mark.parametrize("conn_factory", REPLICATION_CONN_FACTORIES)
 async def test_read_message(
     loop,
@@ -1386,6 +1415,73 @@ async def test_read_message_timeout(
     assert round_func(dt) == 1, dt
     assert msg is None
     task.cancel()
+
+
+@pytest.mark.parametrize("conn_factory", REPLICATION_CONN_FACTORIES)
+async def test_read_message_poll_callback_done_future(
+    loop,
+    connect_replication,
+    get_xlogpos,
+    conn_factory,
+):
+    repl_conn = await connect_replication(connection_factory=conn_factory)
+    repl_cur = await repl_conn.cursor()
+    await repl_cur.start_replication(
+        slot_name="test_slot",
+        status_interval=1,
+        start_lsn=await get_xlogpos(repl_cur),
+    )
+    dummy_fut = loop.create_future()
+    dummy_fut.set_result(None)
+
+    assert repl_cur._read_message(dummy_fut) is None
+
+
+@pytest.mark.parametrize("conn_factory", REPLICATION_CONN_FACTORIES)
+async def test_read_message_poll_callback_exception(
+    loop,
+    connect_replication,
+    get_xlogpos,
+    conn_factory,
+):
+    repl_conn = await connect_replication(connection_factory=conn_factory)
+    repl_cur = await repl_conn.cursor()
+    await repl_cur.start_replication(
+        slot_name="test_slot",
+        status_interval=1,
+        start_lsn=await get_xlogpos(repl_cur),
+    )
+    repl_cur._impl.close()
+    dummy_fut = loop.create_future()
+
+    repl_cur._read_message(dummy_fut)
+
+    assert isinstance(dummy_fut.exception(), psycopg2.InterfaceError)
+
+
+@pytest.mark.parametrize("conn_factory", REPLICATION_CONN_FACTORIES)
+async def test_read_message_poll_callback_sysexit_exception(
+    loop,
+    connect_replication,
+    get_xlogpos,
+    conn_factory,
+):
+    repl_conn = await connect_replication(connection_factory=conn_factory)
+    repl_cur = await repl_conn.cursor()
+    await repl_cur.start_replication(
+        slot_name="test_slot",
+        status_interval=1,
+        start_lsn=await get_xlogpos(repl_cur),
+    )
+    dummy_fut = loop.create_future()
+
+    repl_cur._impl.read_message = Mock(side_effect=SystemExit)
+    with pytest.raises(SystemExit):
+        repl_cur._read_message(dummy_fut)
+
+    repl_cur._impl.read_message = Mock(side_effect=KeyboardInterrupt)
+    with pytest.raises(KeyboardInterrupt):
+        repl_cur._read_message(dummy_fut)
 
 
 @pytest.mark.parametrize("conn_factory", REPLICATION_CONN_FACTORIES)
@@ -2145,6 +2241,34 @@ async def test_read_message_done_callback_bad_descriptor(
     with pytest.raises(KeyError):
         loop._selector.get_key(repl_conn_fd)
     assert repl_cur._conn._fileno is None
+
+
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="No need to do a 'select' syscall on platforms except Windows",
+)
+@pytest.mark.parametrize("conn_factory", REPLICATION_CONN_FACTORIES)
+async def test_read_message_done_callback_verify_fd_via_select(
+    loop,
+    connect_replication,
+    get_xlogpos,
+    conn_factory,
+):
+    repl_conn = await connect_replication(connection_factory=conn_factory)
+    repl_cur = await repl_conn.cursor()
+    repl_conn_fd = repl_cur._impl.fileno()
+    dummy_fut = loop.create_future()
+    dummy_fut.set_result(None)
+    await repl_cur.start_replication(
+        slot_name="test_slot",
+        status_interval=1,
+        start_lsn=await get_xlogpos(repl_cur),
+    )
+
+    with patch("select.select") as mocked_select:
+        repl_cur._read_message_done(repl_conn_fd, dummy_fut)
+
+    mocked_select.assert_called_once_with([repl_conn_fd], [], [], 0)
 
 
 # postgres doesn't support SQL queries on logical replication connections
