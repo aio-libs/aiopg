@@ -14,10 +14,25 @@ from typing import (
     Union,
 )
 
-if sys.version_info >= (3, 8, 0) and sys.platform == 'win32':
+
+def is_win_os() -> bool:
+    return sys.platform == 'win32'
+
+
+class PythonVersion:
+    @staticmethod
+    def is_38_or_high() -> bool:
+        return sys.version_info >= (3, 8, 0)
+
+    @staticmethod
+    def is_37_or_high() -> bool:
+        return sys.version_info >= (3, 7, 0)
+
+
+if PythonVersion.is_38_or_high() and is_win_os():
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     __get_running_loop = asyncio.get_running_loop
-elif sys.version_info >= (3, 7, 0):
+elif PythonVersion.is_37_or_high():
     __get_running_loop = asyncio.get_running_loop
 else:
 
