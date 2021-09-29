@@ -14,7 +14,10 @@ from typing import (
     Union,
 )
 
-if sys.version_info >= (3, 7, 0):
+if sys.version_info >= (3, 8, 0) and sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    __get_running_loop = asyncio.get_running_loop
+elif sys.version_info >= (3, 7, 0):
     __get_running_loop = asyncio.get_running_loop
 else:
 
