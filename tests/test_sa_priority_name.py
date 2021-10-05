@@ -64,3 +64,15 @@ async def test_priority_name_all_get(connect):
     assert row["name"] == "test_name"
     assert row[0] == "test_name"
     assert row[tbl.c.name] == "test_name"
+
+
+async def test_use_labels(connect):
+    """key property is ignored"""
+    await connect.execute(tbl.insert().values(id="test_id", name="test_name"))
+    query = tbl.select(use_labels=True)
+    row = await (await connect.execute(query)).first()
+    assert row.sa_tbl5_Name == "test_name"
+    assert row.sa_tbl5_ID == "test_id"
+
+    assert not hasattr(row, "name")
+    assert not hasattr(row, "id")

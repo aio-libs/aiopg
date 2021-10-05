@@ -171,7 +171,7 @@ class ResultMetaData:
         map_column_name = {}
         for elem in data_map:
             name = elem[0]
-            priority_name = getattr(elem[2][0], "key", name)
+            priority_name = getattr(elem[2][0], "key", None) or name
             map_type[name] = elem[3]  # type column
             map_column_name[name] = priority_name
 
