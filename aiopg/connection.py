@@ -834,10 +834,13 @@ class Connection:
                     self._writing = False
             elif state == psycopg2.extensions.POLL_WRITE:
                 if not self._writing:
-                    self._loop.add_writer(
-                        self._fileno, self._ready, weak_self  # type: ignore
-                    )
-                    self._writing = True
+                    try:
+                        self._loop.add_writer(
+                            self._fileno, self._ready, weak_self  # type: ignore
+                        )
+                        self._writing = True
+                    except Exception as e:
+                        waiter.set_exception(e)
             elif state == psycopg2.extensions.POLL_ERROR:
                 self._fatal_error(
                     "Fatal error on aiopg connection: "
