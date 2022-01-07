@@ -839,7 +839,7 @@ class Connection:
                             self._fileno, self._ready, weak_self  # type: ignore
                         )
                         self._writing = True
-                    except Exception as e:
+                    except OSError as e:
                         waiter.set_exception(e)
             elif state == psycopg2.extensions.POLL_ERROR:
                 self._fatal_error(
