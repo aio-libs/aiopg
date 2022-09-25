@@ -441,6 +441,13 @@ async def test_unlimited_size(create_pool):
     assert pool._free.maxlen is None
 
 
+async def test_unlimited_size_minsize_0_acquire(create_pool):
+    pool = await create_pool(minsize=0, maxsize=0)
+    async with pool.acquire() as conn:
+        cur = await conn.cursor()
+        await cur.execute("SELECT 1")
+
+
 async def test_connection_closed_after_timeout(create_pool):
     async def sleep(conn):
         cur = await conn.cursor()
