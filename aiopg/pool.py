@@ -347,6 +347,9 @@ class Pool:
                 # raise exception if pool is closing
                 self._free.append(conn)
                 self._cond.notify()
+            except asyncio.CancelledError:
+                conn.close()
+                raise
             finally:
                 self._acquiring -= 1
         if self._free:
@@ -369,6 +372,9 @@ class Pool:
                 # raise exception if pool is closing
                 self._free.append(conn)
                 self._cond.notify()
+            except asyncio.CancelledError:
+                conn.close()
+                raise
             finally:
                 self._acquiring -= 1
 
