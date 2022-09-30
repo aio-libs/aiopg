@@ -332,6 +332,7 @@ class Pool:
 
         while self.size < self.minsize:
             self._acquiring += 1
+            conn = None
             try:
                 conn = await connect(
                     self._dsn,
@@ -348,7 +349,8 @@ class Pool:
                 self._free.append(conn)
                 self._cond.notify()
             except asyncio.CancelledError:
-                conn.close()
+                if conn is not None:
+                    conn.close()
                 raise
             finally:
                 self._acquiring -= 1
@@ -357,6 +359,7 @@ class Pool:
 
         if override_min and (not self.maxsize or self.size < self.maxsize):
             self._acquiring += 1
+            conn = None
             try:
                 conn = await connect(
                     self._dsn,
@@ -373,7 +376,8 @@ class Pool:
                 self._free.append(conn)
                 self._cond.notify()
             except asyncio.CancelledError:
-                conn.close()
+                if conn is not None:
+                    conn.close()
                 raise
             finally:
                 self._acquiring -= 1
