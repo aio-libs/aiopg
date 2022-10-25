@@ -3,7 +3,7 @@ from pathlib import Path
 
 from setuptools import setup, find_packages
 
-install_requires = ["psycopg2-binary>=2.8.4", "async_timeout>=3.0,<5.0"]
+install_requires = ["psycopg2-binary>=2.9.5", "async_timeout>=3.0,<5.0"]
 extras_require = {"sa": ["sqlalchemy[postgresql_psycopg2binary]>=1.3,<1.5"]}
 
 
@@ -34,11 +34,11 @@ classifiers = [
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Operating System :: POSIX",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
@@ -58,7 +58,7 @@ setup(
     classifiers=classifiers,
     platforms=["macOS", "POSIX", "Windows"],
     author="Andrew Svetlov",
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     project_urls={
         "Chat: Gitter": "https://gitter.im/aio-libs/Lobby",
         "CI: GA": "https://github.com/aio-libs/aiopg/actions?query=workflow%3ACI",
