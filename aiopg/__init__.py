@@ -41,7 +41,7 @@ __all__ = (
     "Transaction",
 )
 
-__version__ = "1.3.5"
+__version__ = "1.4.0"
 
 version = f"{__version__}, Python {sys.version}"
 
