@@ -3,6 +3,8 @@ import collections
 import contextlib
 import gc
 import logging
+import os
+import pathlib
 import re
 import socket
 import sys
@@ -27,6 +29,11 @@ warnings.filterwarnings(
 
 
 @pytest.fixture(scope="session")
+def base_dir():
+    return os.path.abspath(pathlib.Path(__file__).parents[1])
+
+
+@pytest.fixture(scope="session")
 def unused_port():
     def f():
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -38,6 +45,13 @@ def unused_port():
 
 @pytest.fixture
 def loop(request):
+    # support running unit tests on Windows
+    asyncio_supports_iocp = (
+        float(f"{sys.version_info.major}.{sys.version_info.minor}") > 3.6
+    )
+    if sys.platform == "win32" and asyncio_supports_iocp:
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(None)
 
@@ -107,6 +121,22 @@ def docker():
     return APIClient(version="auto")
 
 
+@pytest.fixture
+def retrieve_task_result():
+    """Done callback to retrieve and immediately log possible exceptions
+    from unawaited background tasks, otherwise logging may be postponed till
+    the task gets garbage collected.
+    """
+
+    def go(task):
+        try:
+            task.result()
+        except asyncio.CancelledError:
+            pass
+
+    return go
+
+
 def pytest_addoption(parser):
     parser.addoption(
         "--pg_tag",
@@ -126,6 +156,23 @@ def pytest_addoption(parser):
     )
 
 
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "skip_pg_tag(pg_tag): skip test for a given version of postgres",
+    )
+    config.addinivalue_line(
+        "markers",
+        "skip_pg_tag_older_than(pg_tag): skip test "
+        "for postgres versions older than a specific version",
+    )
+    config.addinivalue_line(
+        "markers",
+        "skip_pg_tag_newer_than(pg_tag): skip test "
+        "for postgres versions newer than a specific version",
+    )
+
+
 def pytest_generate_tests(metafunc):
     if "pg_tag" in metafunc.fixturenames:
         tags = set(metafunc.config.option.pg_tag)
@@ -139,7 +186,7 @@ def pytest_generate_tests(metafunc):
 
 
 @pytest.fixture(scope="session")
-def pg_server(unused_port, docker, session_id, pg_tag, request):
+def pg_server(base_dir, unused_port, docker, session_id, pg_tag, request):
     if not request.config.option.no_pull:
         docker.pull(f"postgres:{pg_tag}")
 
@@ -148,15 +195,36 @@ def pg_server(unused_port, docker, session_id, pg_tag, request):
         name=f"aiopg-test-server-{pg_tag}-{session_id}",
         ports=[5432],
         detach=True,
+        command="-c hba_file='/etc/postgresql/pg_hba.conf' "
+        "-c shared_preload_libraries='wal2json' "
+        "-c wal_level=logical "
+        "-c max_wal_senders=10 "
+        "-c max_replication_slots=10",
     )
+
+    volume_bindings = {
+        os.path.join(base_dir, "tests", "pg_configs", "pg_hba.conf"): {
+            "bind": "/etc/postgresql/pg_hba.conf",
+            "mode": "rw",
+        },
+        os.path.join(base_dir, "tests", "pg_plugins", pg_tag, "wal2json.so"): {
+            "bind": f"/usr/lib/postgresql/{pg_tag}/lib/wal2json.so",
+            "mode": "rw",
+        },
+    }
 
     # bound IPs do not work on OSX
     host = "127.0.0.1"
     host_port = unused_port()
     container_args["host_config"] = docker.create_host_config(
-        port_bindings={5432: (host, host_port)}
+        port_bindings={5432: (host, host_port)},
+        binds=volume_bindings,
     )
     container_args["environment"] = {"POSTGRES_HOST_AUTH_METHOD": "trust"}
+    container_args["volumes"] = [
+        "/etc/postgresql/pg_hba.conf",
+        f"/usr/lib/postgresql/{pg_tag}/lib/wal2json.so",
+    ]
 
     container = docker.create_container(**container_args)
 
@@ -199,6 +267,32 @@ def pg_params(pg_server):
     return dict(**pg_server["pg_params"])
 
 
+@pytest.fixture(autouse=True)
+def skip_by_pg_tag(request, pg_tag):
+    """Custom pytest marker allowing to skip some tests if the feature under test
+    isn't supported by a particular version of postgres
+    (allows specifying exact, 'older than' and 'newer than' version matches)
+    """
+
+    tag = request.node.get_closest_marker("skip_pg_tag")
+    if tag and tag.args[0] == float(pg_tag):
+        pytest.skip(f"not supported on postgres version {pg_tag}")
+
+    newer_tag = request.node.get_closest_marker("skip_pg_tag_older_than")
+    if newer_tag and float(pg_tag) < newer_tag.args[0]:
+        pytest.skip(
+            f"not supported on postgres versions "
+            f"older than {newer_tag.args[0]}"
+        )
+
+    older_tag = request.node.get_closest_marker("skip_pg_tag_newer_than")
+    if older_tag and float(pg_tag) > older_tag.args[0]:
+        pytest.skip(
+            f"not supported on postgres versions "
+            f"newer than {older_tag.args[0]}"
+        )
+
+
 @pytest.fixture
 def make_connection(loop, pg_params):
     conns = []
@@ -212,6 +306,32 @@ def make_connection(loop, pg_params):
         cur = await conn2.cursor()
         await cur.execute("DROP TABLE IF EXISTS foo")
         await conn2.close()
+        conns.append(conn)
+        return conn
+
+    yield go
+
+    for conn in conns:
+        loop.run_until_complete(conn.close())
+
+
+@pytest.fixture
+def make_replication_connection(loop, pg_params):
+    conns = []
+
+    async def go(**kwargs):
+        nonlocal conn
+        kwargs["enable_hstore"] = kwargs.pop("enable_hstore", False)
+        params = pg_params.copy()
+        params.update(kwargs)
+        conn = await aiopg.connect(**params)
+
+        async with conn.cursor() as cur:
+            try:
+                await cur.drop_replication_slot("test_slot")
+            except psycopg2.errors.UndefinedObject:
+                pass
+
         conns.append(conn)
         return conn
 

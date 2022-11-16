@@ -1,5 +1,8 @@
 import asyncio
+import time
 
+import async_timeout
+import psycopg2.extras
 import pytest
 
 import aiopg
@@ -260,3 +263,40 @@ async def test_sa_connection_execute(pg_params):
                 result.append(value)
             assert result == [(1,), (2,), (3,), (4,), (5,)]
     assert conn.closed
+
+
+async def test_replication_cursor_read_message_non_blocking(
+    loop,
+    retrieve_task_result,
+    make_replication_connection,
+    make_connection,
+):
+    async def read_message():
+        async with async_timeout.timeout(timeout=2.2, loop=loop):
+            await repl_cur.read_message()
+
+    conn = await make_connection()
+    cur = await conn.cursor()
+    repl_conn = await make_replication_connection(
+        connection_factory=psycopg2.extras.LogicalReplicationConnection
+    )
+    repl_cur = await repl_conn.cursor()
+    await repl_cur.create_replication_slot(
+        slot_name="test_slot",
+        output_plugin="test_decoding",
+    )
+    await repl_cur.start_replication(slot_name="test_slot", status_interval=2)
+
+    task = loop.create_task(read_message())
+    task.add_done_callback(retrieve_task_result)
+    # let one loop iteration go through so the task's `__step()`
+    # method gets run to let our `read_message()` function block on receiving
+    # a message from the server
+    await asyncio.sleep(0)
+    t1 = time.time()
+    await cur.execute("SELECT 1")
+    t2 = time.time()
+    dt = t2 - t1
+    task.cancel()
+
+    assert dt < 2, dt

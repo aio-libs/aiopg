@@ -39,17 +39,17 @@ lint: .lint
 	fi
 
 test: flake
-	pytest -q tests
+	pytest -q tests --no-flaky-report
 
 vtest: flake
-	pytest tests
+	pytest tests --no-flaky-report
 
 cov cover coverage: flake
-	py.test -svvv -rs --cov=aiopg --cov-report=html --cov-report=term tests
+	py.test -svvv -rs --cov=aiopg --cov-report=html --cov-report=term tests --no-flaky-report
 	@echo "open file://`pwd`/htmlcov/index.html"
 
 cov-ci: flake
-	py.test -svvv -rs --cov=aiopg --cov-report=term tests --pg_tag all
+	py.test -svvv -rs --cov=aiopg --cov-report=term tests --pg_tag all --no-flaky-report
 
 clean-pip:
 	pip freeze | grep -v "^-e" | xargs pip uninstall -y
