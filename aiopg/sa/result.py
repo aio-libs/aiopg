@@ -1,10 +1,28 @@
 import weakref
-from collections.abc import Mapping, Sequence
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterator,
+    List,
+    Mapping,
+    NoReturn,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
+from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.sql import expression, sqltypes
 
 from . import exc
 from .utils import SQLALCHEMY_VERSION
+
+if TYPE_CHECKING:
+    from ..connection import Cursor
+    from .connection import SAConnection
+
 
 if SQLALCHEMY_VERSION >= ["1", "4"]:
     from sqlalchemy.util import string_or_unprintable
@@ -13,24 +31,40 @@ else:
         _string_or_unprintable as string_or_unprintable,
     )
 
+_KeyMapKey = Union[str, int]
+_KeyMapValue = Tuple[Optional[Any], Optional[Any], Optional[int]]
+_KeyMap = Dict[_KeyMapKey, _KeyMapValue]
 
-class RowProxy(Mapping):
+_ResultColumn = Tuple[Any, Any, Any, Any]
+_ResultColumns = List[_ResultColumn]
+
+_RowProxyKey = Union[str, int, expression.ColumnElement]
+_RowProxyValue = Any
+
+
+class RowProxy(Mapping[_RowProxyKey, _RowProxyValue]):
     __slots__ = ("_result_proxy", "_row", "_processors", "_keymap")
 
-    def __init__(self, result_proxy, row, processors, keymap):
+    def __init__(
+        self,
+        result_proxy: "ResultMetaData",
+        row: Any,
+        processors: List[Any],
+        keymap: _KeyMap,
+    ) -> None:
         """RowProxy objects are constructed by ResultProxy objects."""
         self._result_proxy = result_proxy
         self._row = row
         self._processors = processors
         self._keymap = keymap
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         return iter(self._result_proxy.keys)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._row)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: _RowProxyKey) -> Any:
         try:
             processor, obj, index = self._keymap[key]
         except KeyError:
@@ -58,18 +92,18 @@ class RowProxy(Mapping):
         else:
             return self._row[index]
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         try:
             return self[name]
         except KeyError as e:
             raise AttributeError(e.args[0])
 
-    def __contains__(self, key):
-        return self._result_proxy._has_key(self._row, key)
+    def __contains__(self, key: _RowProxyKey) -> bool:
+        return self._result_proxy._has_key(key)
 
-    __hash__ = None
+    __hash__ = None  # type: ignore
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if isinstance(other, RowProxy):
             return self.as_tuple() == other.as_tuple()
         elif isinstance(other, Sequence):
@@ -77,13 +111,13 @@ class RowProxy(Mapping):
         else:
             return NotImplemented
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self == other
 
-    def as_tuple(self):
+    def as_tuple(self) -> Tuple[Any, ...]:
         return tuple(self[k] for k in self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return repr(self.as_tuple())
 
 
@@ -91,16 +125,22 @@ class ResultMetaData:
     """Handle cursor.description, applying additional info from an execution
     context."""
 
-    def __init__(self, result_proxy, cursor_description):
-        self._processors = processors = []
+    def __init__(
+        self,
+        result_proxy: "ResultProxy",
+        cursor_description: Sequence[Any],
+    ) -> None:
+        self._processors: List[Any] = []
 
+        map_type: Dict[str, Any]
+        map_column_name: Dict[str, Any]
         map_type, map_column_name = self.result_map(result_proxy._result_map)
 
         # We do not strictly need to store the processor in the key mapping,
         # though it is faster in the Python version (probably because of the
         # saved attribute lookup self._processors)
-        self._keymap = keymap = {}
-        self.keys = []
+        self._keymap: _KeyMap = {}
+        self.keys: List[str] = []
         dialect = result_proxy.dialect
 
         # `dbapi_type_map` property removed in SQLAlchemy 1.2+.
@@ -113,7 +153,7 @@ class ResultMetaData:
         ), "Doesn't support case insensitive database connection"
 
         # high precedence key values.
-        primary_keymap = {}
+        primary_keymap: _KeyMap = {}
 
         assert (
             not dialect.description_encoding
@@ -135,7 +175,7 @@ class ResultMetaData:
 
             processor = type_._cached_result_processor(dialect, coltype)
 
-            processors.append(processor)
+            self._processors.append(processor)
             rec = (processor, obj, i)
 
             # indexes as keys. This is only needed for the Python version of
@@ -155,7 +195,7 @@ class ResultMetaData:
             self.keys.append(name)
             if obj:
                 for o in obj:
-                    keymap[o] = rec
+                    self._keymap[o] = rec
                     # technically we should be doing this but we
                     # are saving on callcounts by not doing so.
                     # if keymap.setdefault(o, rec) is not rec:
@@ -163,21 +203,26 @@ class ResultMetaData:
 
         # overwrite keymap values with those of the
         # high precedence keymap.
-        keymap.update(primary_keymap)
+        self._keymap.update(primary_keymap)
 
-    def result_map(self, data_map):
-        data_map = data_map or {}
+    def result_map(
+        self,
+        data_map: Optional[_ResultColumns],
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        data_map = data_map or []
         map_type = {}
         map_column_name = {}
         for elem in data_map:
-            name = elem[0]
+            name: str = elem[0]
             priority_name = getattr(elem[2][0], "key", None) or name
             map_type[name] = elem[3]  # type column
             map_column_name[name] = priority_name
 
         return map_type, map_column_name
 
-    def _key_fallback(self, key, raiseerr=True):
+    def _key_fallback(
+        self, key: Union[str, expression.ColumnElement], raiseerr: bool = True
+    ) -> Any:
         map = self._keymap
         result = None
         if isinstance(key, str):
@@ -214,7 +259,7 @@ class ResultMetaData:
             map[key] = result
         return result
 
-    def _has_key(self, row, key):
+    def _has_key(self, key: _RowProxyKey) -> bool:
         if key in self._keymap:
             return True
         else:
@@ -241,26 +286,32 @@ class ResultProxy:
     the originating SQL statement that produced this result set.
     """
 
-    def __init__(self, connection, cursor, dialect, result_map=None):
+    def __init__(
+        self,
+        connection: "SAConnection",
+        cursor: "Cursor",
+        dialect: DefaultDialect,
+        result_map: Optional[_ResultColumns] = None,
+    ) -> None:
         self._dialect = dialect
         self._result_map = result_map
         self._cursor = cursor
         self._connection = connection
-        self._rowcount = cursor.rowcount
-        self._metadata = None
-        self._weak = None
+        self._rowcount: int = cursor.rowcount
+        self._metadata: Optional[ResultMetaData] = None
+        self._weak: Optional[weakref.ReferenceType[ResultProxy]] = None
         self._init_metadata()
 
     @property
-    def dialect(self):
+    def dialect(self) -> DefaultDialect:
         """SQLAlchemy dialect."""
         return self._dialect
 
     @property
-    def cursor(self):
+    def cursor(self) -> "Cursor":
         return self._cursor
 
-    def keys(self):
+    def keys(self) -> Tuple[str, ...]:
         """Return the current set of string keys for rows."""
         if self._metadata:
             return tuple(self._metadata.keys)
@@ -268,7 +319,7 @@ class ResultProxy:
             return ()
 
     @property
-    def rowcount(self):
+    def rowcount(self) -> int:
         """Return the 'rowcount' for this result.
 
         The 'rowcount' reports the number of rows *matched*
@@ -298,7 +349,7 @@ class ResultProxy:
         """
         return self._rowcount
 
-    def _init_metadata(self):
+    def _init_metadata(self) -> None:
         cursor_description = self.cursor.description
         if cursor_description is not None:
             self._metadata = ResultMetaData(self, cursor_description)
@@ -307,7 +358,7 @@ class ResultProxy:
             self.close()
 
     @property
-    def returns_rows(self):
+    def returns_rows(self) -> bool:
         """True if this ResultProxy returns rows.
 
         I.e. if it is legal to call the methods .fetchone(),
@@ -316,13 +367,13 @@ class ResultProxy:
         return self._metadata is not None
 
     @property
-    def closed(self):
+    def closed(self) -> bool:
         if self._cursor is None:
             return True
 
         return bool(self._cursor.closed)
 
-    def close(self):
+    def close(self) -> None:
         """Close this ResultProxy.
 
         Closes the underlying DBAPI cursor corresponding to the execution.
@@ -346,19 +397,19 @@ class ResultProxy:
         if not self._cursor.closed:
             self._cursor.close()
 
-        self._cursor = None
+        self._cursor = None  # type: ignore
         self._weak = None
 
-    def __aiter__(self):
+    def __aiter__(self) -> "ResultProxy":
         return self
 
-    async def __anext__(self):
+    async def __anext__(self) -> RowProxy:
         ret = await self.fetchone()
         if ret is not None:
             return ret
         raise StopAsyncIteration
 
-    def _non_result(self):
+    def _non_result(self) -> NoReturn:
         if self._metadata is None:
             raise exc.ResourceClosedError(
                 "This result object does not return rows. "
@@ -367,14 +418,14 @@ class ResultProxy:
         else:
             raise exc.ResourceClosedError("This result object is closed.")
 
-    def _process_rows(self, rows):
+    def _process_rows(self, rows: List[Any]) -> List[RowProxy]:
         process_row = RowProxy
-        metadata = self._metadata
+        metadata: ResultMetaData = self._metadata  # type: ignore
         keymap = metadata._keymap
         processors = metadata._processors
         return [process_row(metadata, row, processors, keymap) for row in rows]
 
-    async def fetchall(self):
+    async def fetchall(self) -> List[RowProxy]:
         """Fetch all rows, just like DB-API cursor.fetchall()."""
         try:
             rows = await self.cursor.fetchall()
@@ -385,7 +436,7 @@ class ResultProxy:
             self.close()
             return res
 
-    async def fetchone(self):
+    async def fetchone(self) -> Optional[RowProxy]:
         """Fetch one row, just like DB-API cursor.fetchone().
 
         If a row is present, the cursor remains open after this is called.
@@ -402,7 +453,7 @@ class ResultProxy:
                 self.close()
                 return None
 
-    async def fetchmany(self, size=None):
+    async def fetchmany(self, size: Optional[int] = None) -> List[RowProxy]:
         """Fetch many rows, just like DB-API
         cursor.fetchmany(size=cursor.arraysize).
 
@@ -422,7 +473,7 @@ class ResultProxy:
                 self.close()
             return res
 
-    async def first(self):
+    async def first(self) -> Optional[RowProxy]:
         """Fetch the first row and then close the result set unconditionally.
 
         Returns None if no row is present.
@@ -434,7 +485,7 @@ class ResultProxy:
         finally:
             self.close()
 
-    async def scalar(self):
+    async def scalar(self) -> Any:
         """Fetch the first column of the first row, and close the result set.
 
         Returns None if no row is present.

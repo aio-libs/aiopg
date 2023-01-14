@@ -1,3 +1,6 @@
+* Add type hints for aiopg.sa package `#896 <https://github.com/aio-libs/aiopg/pull/896>`_
+
+
 1.4.0 (2022-10-26)
 ^^^^^^^^^^^^^^^^^^
 

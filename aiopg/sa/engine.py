@@ -1,11 +1,19 @@
 import asyncio
 import json
+from types import TracebackType
+from typing import TYPE_CHECKING, Any, Callable, Generator, Optional, Type
+
+from sqlalchemy.engine.default import DefaultDialect
 
 import aiopg
 
 from ..connection import TIMEOUT
 from ..utils import _ContextManager, get_running_loop
 from .connection import SAConnection
+
+if TYPE_CHECKING:
+    from ..pool import Pool
+
 
 try:
     from sqlalchemy.dialects.postgresql.psycopg2 import (
@@ -16,8 +24,8 @@ except ImportError:  # pragma: no cover
     raise ImportError("aiopg.sa requires sqlalchemy")
 
 
-class APGCompiler_psycopg2(PGCompiler_psycopg2):
-    def construct_params(self, *args, **kwargs):
+class APGCompiler_psycopg2(PGCompiler_psycopg2):  # type: ignore
+    def construct_params(self, *args: Any, **kwargs: Any) -> Any:
         pd = super().construct_params(*args, **kwargs)
 
         for column in self.prefetch:
@@ -25,14 +33,17 @@ class APGCompiler_psycopg2(PGCompiler_psycopg2):
 
         return pd
 
-    def _exec_default(self, default):
+    def _exec_default(self, default: Any) -> Any:
         if default.is_callable:
             return default.arg(self.dialect)
         else:
             return default.arg
 
 
-def get_dialect(json_serializer=json.dumps, json_deserializer=lambda x: x):
+def get_dialect(
+    json_serializer: Callable[[Any], Any] = json.dumps,
+    json_deserializer: Callable[[Any], Any] = lambda x: x,
+) -> DefaultDialect:
     dialect = PGDialect_psycopg2(
         json_serializer=json_serializer, json_deserializer=json_deserializer
     )
@@ -52,15 +63,15 @@ _dialect = get_dialect()
 
 
 def create_engine(
-    dsn=None,
+    dsn: Optional[str] = None,
     *,
-    minsize=1,
-    maxsize=10,
-    dialect=_dialect,
-    timeout=TIMEOUT,
-    pool_recycle=-1,
-    **kwargs
-):
+    minsize: int = 1,
+    maxsize: int = 10,
+    dialect: DefaultDialect = _dialect,
+    timeout: float = TIMEOUT,
+    pool_recycle: int = -1,
+    **kwargs: Any
+) -> _ContextManager["Engine"]:
     """A coroutine for Engine creation.
 
     Returns Engine instance with embedded connection pool.
@@ -77,19 +88,19 @@ def create_engine(
         pool_recycle=pool_recycle,
         **kwargs
     )
-    return _ContextManager(coro, _close_engine)
+    return _ContextManager["Engine"](coro, _close_engine)
 
 
 async def _create_engine(
-    dsn=None,
+    dsn: Optional[str] = None,
     *,
-    minsize=1,
-    maxsize=10,
-    dialect=_dialect,
-    timeout=TIMEOUT,
-    pool_recycle=-1,
-    **kwargs
-):
+    minsize: int = 1,
+    maxsize: int = 10,
+    dialect: DefaultDialect = _dialect,
+    timeout: float = TIMEOUT,
+    pool_recycle: int = -1,
+    **kwargs: Any
+) -> "Engine":
 
     pool = await aiopg.create_pool(
         dsn,
@@ -127,57 +138,62 @@ class Engine:
 
     __slots__ = ("_dialect", "_pool", "_dsn", "_loop")
 
-    def __init__(self, dialect, pool, dsn):
+    def __init__(
+        self,
+        dialect: DefaultDialect,
+        pool: "Pool",
+        dsn: Optional[str],
+    ) -> None:
         self._dialect = dialect
         self._pool = pool
         self._dsn = dsn
         self._loop = get_running_loop()
 
     @property
-    def dialect(self):
+    def dialect(self) -> DefaultDialect:
         """An dialect for engine."""
         return self._dialect
 
     @property
-    def name(self):
+    def name(self) -> str:
         """A name of the dialect."""
-        return self._dialect.name
+        return self._dialect.name  # type: ignore
 
     @property
-    def driver(self):
+    def driver(self) -> str:
         """A driver of the dialect."""
-        return self._dialect.driver
+        return self._dialect.driver  # type: ignore
 
     @property
-    def dsn(self):
+    def dsn(self) -> Optional[str]:
         """DSN connection info"""
         return self._dsn
 
     @property
-    def timeout(self):
+    def timeout(self) -> float:
         return self._pool.timeout
 
     @property
-    def minsize(self):
+    def minsize(self) -> int:
         return self._pool.minsize
 
     @property
-    def maxsize(self):
+    def maxsize(self) -> Optional[int]:
         return self._pool.maxsize
 
     @property
-    def size(self):
+    def size(self) -> int:
         return self._pool.size
 
     @property
-    def freesize(self):
+    def freesize(self) -> int:
         return self._pool.freesize
 
     @property
-    def closed(self):
+    def closed(self) -> bool:
         return self._pool.closed
 
-    def close(self):
+    def close(self) -> None:
         """Close engine.
 
         Mark all engine connections to be closed on getting back to pool.
@@ -185,7 +201,7 @@ class Engine:
         """
         self._pool.close()
 
-    def terminate(self):
+    def terminate(self) -> None:
         """Terminate engine.
 
         Terminate engine pool with instantly closing all acquired
@@ -193,33 +209,35 @@ class Engine:
         """
         self._pool.terminate()
 
-    async def wait_closed(self):
+    async def wait_closed(self) -> None:
         """Wait for closing all engine's connections."""
         await self._pool.wait_closed()
 
-    def acquire(self):
+    def acquire(self) -> _ContextManager[SAConnection]:
         """Get a connection from pool."""
         coro = self._acquire()
         return _ContextManager[SAConnection](coro, _close_connection)
 
-    async def _acquire(self):
+    async def _acquire(self) -> SAConnection:
         raw = await self._pool.acquire()
         return SAConnection(raw, self)
 
-    def release(self, conn):
+    def release(self, conn: SAConnection) -> "asyncio.Future[None]":
         return self._pool.release(conn.connection)
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         raise RuntimeError(
             '"await" should be used as context manager expression'
         )
 
-    def __exit__(self, *args):
+    def __exit__(self, *args: Any) -> None:
         # This must exist because __enter__ exists, even though that
         # always raises; that's how the with-statement works.
         pass  # pragma: nocover
 
-    def __await__(self):
+    def __await__(
+        self,
+    ) -> Generator[None, SAConnection, "_ConnectionContextManager"]:
         # This is not a coroutine.  It is meant to enable the idiom:
         #
         #     with (await engine) as conn:
@@ -235,10 +253,15 @@ class Engine:
         conn = yield from self._acquire().__await__()
         return _ConnectionContextManager(conn, self._loop)
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "Engine":
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        tb: Optional[TracebackType],
+    ) -> None:
         self.close()
         await self.wait_closed()
 
@@ -260,13 +283,17 @@ class _ConnectionContextManager:
 
     __slots__ = ("_conn", "_loop")
 
-    def __init__(self, conn: SAConnection, loop: asyncio.AbstractEventLoop):
-        self._conn = conn
+    def __init__(
+        self,
+        conn: SAConnection,
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
+        self._conn: SAConnection = conn
         self._loop = loop
 
-    def __enter__(self):
+    def __enter__(self) -> SAConnection:
         return self._conn
 
-    def __exit__(self, *args):
+    def __exit__(self, *args: Any) -> None:
         asyncio.ensure_future(self._conn.close(), loop=self._loop)
-        self._conn = None
+        self._conn = None  # type: ignore
