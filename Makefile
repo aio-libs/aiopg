@@ -33,7 +33,7 @@ lint: .lint
             isort --diff aiopg tests examples; \
             false; \
 	fi
-	@if ! mypy --strict --ignore-missing-imports --exclude sa aiopg; then \
+	@if ! mypy --strict --ignore-missing-imports aiopg; then \
 	    echo "Typing errors"; \
 	    false; \
 	fi

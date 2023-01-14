@@ -1,4 +1,10 @@
+from types import TracebackType
+from typing import TYPE_CHECKING, Optional, Type
+
 from . import exc
+
+if TYPE_CHECKING:
+    from .connection import SAConnection
 
 
 class Transaction:
@@ -26,22 +32,26 @@ class Transaction:
 
     __slots__ = ("_connection", "_parent", "_is_active")
 
-    def __init__(self, connection, parent):
+    def __init__(
+        self,
+        connection: "SAConnection",
+        parent: Optional["Transaction"],
+    ) -> None:
         self._connection = connection
         self._parent = parent or self
-        self._is_active = True
+        self._is_active: bool = True
 
     @property
-    def is_active(self):
+    def is_active(self) -> bool:
         """Return ``True`` if a transaction is active."""
         return self._is_active
 
     @property
-    def connection(self):
+    def connection(self) -> "SAConnection":
         """Return transaction's connection (SAConnection instance)."""
         return self._connection
 
-    async def close(self):
+    async def close(self) -> None:
         """Close this transaction.
 
         If this transaction is the base transaction in a begin/commit
@@ -58,17 +68,17 @@ class Transaction:
         else:
             self._is_active = False
 
-    async def rollback(self):
+    async def rollback(self) -> None:
         """Roll back this transaction."""
         if not self._parent._is_active:
             return
         await self._do_rollback()
         self._is_active = False
 
-    async def _do_rollback(self):
+    async def _do_rollback(self) -> None:
         await self._parent.rollback()
 
-    async def commit(self):
+    async def commit(self) -> None:
         """Commit this transaction."""
 
         if not self._parent._is_active:
@@ -76,13 +86,18 @@ class Transaction:
         await self._do_commit()
         self._is_active = False
 
-    async def _do_commit(self):
+    async def _do_commit(self) -> None:
         pass
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "Transaction":
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
         if exc_type:
             await self.rollback()
         elif self._is_active:
@@ -92,13 +107,13 @@ class Transaction:
 class RootTransaction(Transaction):
     __slots__ = ()
 
-    def __init__(self, connection):
+    def __init__(self, connection: "SAConnection") -> None:
         super().__init__(connection, None)
 
-    async def _do_rollback(self):
+    async def _do_rollback(self) -> None:
         await self._connection._rollback_impl()
 
-    async def _do_commit(self):
+    async def _do_commit(self) -> None:
         await self._connection._commit_impl()
 
 
@@ -113,18 +128,22 @@ class NestedTransaction(Transaction):
 
     __slots__ = ("_savepoint",)
 
-    def __init__(self, connection, parent):
+    def __init__(
+        self,
+        connection: "SAConnection",
+        parent: Transaction,
+    ) -> None:
         super().__init__(connection, parent)
-        self._savepoint = None
+        self._savepoint: Optional[str] = None
 
-    async def _do_rollback(self):
+    async def _do_rollback(self) -> None:
         assert self._savepoint is not None, "Broken transaction logic"
         if self._is_active:
             await self._connection._rollback_to_savepoint_impl(
                 self._savepoint, self._parent
             )
 
-    async def _do_commit(self):
+    async def _do_commit(self) -> None:
         assert self._savepoint is not None, "Broken transaction logic"
         if self._is_active:
             await self._connection._release_savepoint_impl(
@@ -144,17 +163,17 @@ class TwoPhaseTransaction(Transaction):
 
     __slots__ = ("_is_prepared", "_xid")
 
-    def __init__(self, connection, xid):
+    def __init__(self, connection: "SAConnection", xid: str) -> None:
         super().__init__(connection, None)
         self._is_prepared = False
         self._xid = xid
 
     @property
-    def xid(self):
+    def xid(self) -> str:
         """Returns twophase transaction id."""
         return self._xid
 
-    async def prepare(self):
+    async def prepare(self) -> None:
         """Prepare this TwoPhaseTransaction.
 
         After a PREPARE, the transaction can be committed.
@@ -165,12 +184,16 @@ class TwoPhaseTransaction(Transaction):
         await self._connection._prepare_twophase_impl(self._xid)
         self._is_prepared = True
 
-    async def _do_rollback(self):
-        await self._connection._rollback_twophase_impl(
+    async def _do_rollback(self) -> None:
+        # TODO: The connection has no _rollback_twophase_impl method.
+        #  Does it even work?
+        await self._connection._rollback_twophase_impl(  # type: ignore
             self._xid, is_prepared=self._is_prepared
         )
 
-    async def _do_commit(self):
-        await self._connection._commit_twophase_impl(
+    async def _do_commit(self) -> None:
+        # TODO: The connection has no _commit_twophase_impl method.
+        #  Does it even work?
+        await self._connection._commit_twophase_impl(  # type: ignore
             self._xid, is_prepared=self._is_prepared
         )

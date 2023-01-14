@@ -1,7 +1,9 @@
 import asyncio
 import contextlib
 import weakref
+from typing import TYPE_CHECKING, Any, List, Optional
 
+from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.sql import ClauseElement
 from sqlalchemy.sql.ddl import DDLElement
 from sqlalchemy.sql.dml import UpdateBase
@@ -15,6 +17,11 @@ from .transaction import (
     Transaction,
     TwoPhaseTransaction,
 )
+
+if TYPE_CHECKING:
+    from .. import Connection, Cursor
+    from . import Engine
+    from .result import _ResultColumns
 
 
 async def _commit_transaction_if_active(t: Transaction) -> None:
@@ -43,16 +50,21 @@ class SAConnection:
         "_query_compile_kwargs",
     )
 
-    def __init__(self, connection, engine):
-        self._connection = connection
-        self._transaction = None
-        self._savepoint_seq = 0
-        self._engine = engine
-        self._dialect = engine.dialect
-        self._cursors = weakref.WeakSet()
+    def __init__(self, connection: "Connection", engine: "Engine") -> None:
+        self._connection: "Connection" = connection
+        self._transaction: Optional[Transaction] = None
+        self._savepoint_seq: int = 0
+        self._engine: "Engine" = engine
+        self._dialect: DefaultDialect = engine.dialect
+        self._cursors: weakref.WeakSet["Cursor"] = weakref.WeakSet()
         self._query_compile_kwargs = dict(self._QUERY_COMPILE_KWARGS)
 
-    def execute(self, query, *multiparams, **params):
+    def execute(
+        self,
+        query: Any,
+        *multiparams: Any,
+        **params: Any,
+    ) -> _IterableContextManager[ResultProxy]:
         """Executes a SQL query with optional parameters.
 
         query - a SQL query string or any sqlalchemy expression.
@@ -92,18 +104,23 @@ class SAConnection:
         coro = self._execute(query, *multiparams, **params)
         return _IterableContextManager[ResultProxy](coro, _close_result_proxy)
 
-    async def _open_cursor(self):
+    async def _open_cursor(self) -> "Cursor":
         if self._connection is None:
             raise exc.ResourceClosedError("This connection is closed.")
         cursor = await self._connection.cursor()
         self._cursors.add(cursor)
         return cursor
 
-    def _close_cursor(self, cursor):
+    def _close_cursor(self, cursor: "Cursor") -> None:
         self._cursors.remove(cursor)
         cursor.close()
 
-    async def _execute(self, query, *multiparams, **params):
+    async def _execute(
+        self,
+        query: Any,
+        *multiparams: Any,
+        **params: Any,
+    ) -> ResultProxy:
         cursor = await self._open_cursor()
         dp = _distill_params(multiparams, params)
         if len(dp) > 1:
@@ -111,7 +128,7 @@ class SAConnection:
         elif dp:
             dp = dp[0]
 
-        result_map = None
+        result_map: Optional["_ResultColumns"] = None
 
         if isinstance(query, str):
             await cursor.execute(query, dp)
@@ -175,21 +192,31 @@ class SAConnection:
 
         return ResultProxy(self, cursor, self._dialect, result_map)
 
-    async def scalar(self, query, *multiparams, **params):
+    async def scalar(
+        self,
+        query: Any,
+        *multiparams: Any,
+        **params: Any,
+    ) -> Any:
         """Executes a SQL query and returns a scalar value."""
         res = await self.execute(query, *multiparams, **params)
         return await res.scalar()
 
     @property
-    def closed(self):
+    def closed(self) -> bool:
         """The readonly property that returns True if connections is closed."""
         return self.connection is None or self.connection.closed
 
     @property
-    def connection(self):
+    def connection(self) -> "Connection":
         return self._connection
 
-    def begin(self, isolation_level=None, readonly=False, deferrable=False):
+    def begin(
+        self,
+        isolation_level: Optional[str] = None,
+        readonly: bool = False,
+        deferrable: bool = False,
+    ) -> _ContextManager[Transaction]:
         """Begin a transaction and return a transaction handle.
 
         isolation_level - The isolation level of the transaction,
@@ -231,14 +258,24 @@ class SAConnection:
             coro, _commit_transaction_if_active, _rollback_transaction
         )
 
-    async def _begin(self, isolation_level, readonly, deferrable):
+    async def _begin(
+        self,
+        isolation_level: Optional[str],
+        readonly: bool,
+        deferrable: bool,
+    ) -> Transaction:
         if self._transaction is None:
             self._transaction = RootTransaction(self)
             await self._begin_impl(isolation_level, readonly, deferrable)
             return self._transaction
         return Transaction(self, self._transaction)
 
-    async def _begin_impl(self, isolation_level, readonly, deferrable):
+    async def _begin_impl(
+        self,
+        isolation_level: Optional[str],
+        readonly: bool,
+        deferrable: bool,
+    ) -> None:
         stmt = "BEGIN"
         if isolation_level is not None:
             stmt += f" ISOLATION LEVEL {isolation_level}"
@@ -253,7 +290,7 @@ class SAConnection:
         finally:
             self._close_cursor(cursor)
 
-    async def _commit_impl(self):
+    async def _commit_impl(self) -> None:
         cursor = await self._open_cursor()
         try:
             await cursor.execute("COMMIT")
@@ -261,7 +298,7 @@ class SAConnection:
             self._close_cursor(cursor)
             self._transaction = None
 
-    async def _rollback_impl(self):
+    async def _rollback_impl(self) -> None:
         try:
             if self._connection.closed:
                 return
@@ -273,7 +310,7 @@ class SAConnection:
         finally:
             self._transaction = None
 
-    def begin_nested(self):
+    def begin_nested(self) -> _ContextManager[Transaction]:
         """Begin a nested transaction and return a transaction handle.
 
         The returned object is an instance of :class:`.NestedTransaction`.
@@ -289,7 +326,7 @@ class SAConnection:
             coro, _commit_transaction_if_active, _rollback_transaction
         )
 
-    async def _begin_nested(self):
+    async def _begin_nested(self) -> Transaction:
         if self._transaction is None:
             self._transaction = RootTransaction(self)
             await self._begin_impl(None, False, False)
@@ -298,7 +335,7 @@ class SAConnection:
             self._transaction._savepoint = await self._savepoint_impl()
         return self._transaction
 
-    async def _savepoint_impl(self):
+    async def _savepoint_impl(self) -> str:
         self._savepoint_seq += 1
         name = f"aiopg_sa_savepoint_{self._savepoint_seq}"
 
@@ -309,7 +346,11 @@ class SAConnection:
         finally:
             self._close_cursor(cursor)
 
-    async def _rollback_to_savepoint_impl(self, name, parent):
+    async def _rollback_to_savepoint_impl(
+        self,
+        name: Optional[str],
+        parent: Transaction,
+    ) -> None:
         try:
             if self._connection.closed:
                 return
@@ -321,7 +362,11 @@ class SAConnection:
         finally:
             self._transaction = parent
 
-    async def _release_savepoint_impl(self, name, parent):
+    async def _release_savepoint_impl(
+        self,
+        name: Optional[str],
+        parent: Transaction,
+    ) -> None:
         cursor = await self._open_cursor()
         try:
             await cursor.execute(f"RELEASE SAVEPOINT {name}")
@@ -330,7 +375,7 @@ class SAConnection:
 
         self._transaction = parent
 
-    async def begin_twophase(self, xid=None):
+    async def begin_twophase(self, xid: Optional[str] = None) -> Transaction:
         """Begin a two-phase or XA transaction and return a transaction
         handle.
 
@@ -354,22 +399,32 @@ class SAConnection:
         await self._begin_impl(None, False, False)
         return self._transaction
 
-    async def _prepare_twophase_impl(self, xid):
+    async def _prepare_twophase_impl(self, xid: str) -> None:
         await self.execute(f"PREPARE TRANSACTION {xid!r}")
 
-    async def recover_twophase(self):
+    async def recover_twophase(self) -> List[str]:
         """Return a list of prepared twophase transaction ids."""
         result = await self.execute("SELECT gid FROM pg_prepared_xacts")
-        return [row[0] for row in result]
+        return [row[0] async for row in result]
 
-    async def rollback_prepared(self, xid, *, is_prepared=True):
+    async def rollback_prepared(
+        self,
+        xid: str,
+        *,
+        is_prepared: bool = True,
+    ) -> None:
         """Rollback prepared twophase transaction."""
         if is_prepared:
             await self.execute(f"ROLLBACK PREPARED {xid:!r}")
         else:
             await self._rollback_impl()
 
-    async def commit_prepared(self, xid, *, is_prepared=True):
+    async def commit_prepared(
+        self,
+        xid: str,
+        *,
+        is_prepared: bool = True,
+    ) -> None:
         """Commit prepared twophase transaction."""
         if is_prepared:
             await self.execute(f"COMMIT PREPARED {xid!r}")
@@ -377,11 +432,11 @@ class SAConnection:
             await self._commit_impl()
 
     @property
-    def in_transaction(self):
+    def in_transaction(self) -> bool:
         """Return True if a transaction is in progress."""
         return self._transaction is not None and self._transaction.is_active
 
-    async def close(self):
+    async def close(self) -> None:
         """Close this SAConnection.
 
         This results in a release of the underlying database
@@ -401,7 +456,7 @@ class SAConnection:
 
         await asyncio.shield(self._close())
 
-    async def _close(self):
+    async def _close(self) -> None:
         if self._transaction is not None:
             with contextlib.suppress(Exception):
                 await self._transaction.rollback()
@@ -414,11 +469,11 @@ class SAConnection:
         if self._engine is not None:
             with contextlib.suppress(Exception):
                 await self._engine.release(self)
-            self._connection = None
-            self._engine = None
+            self._connection = None  # type: ignore
+            self._engine = None  # type: ignore
 
 
-def _distill_params(multiparams, params):
+def _distill_params(multiparams: Any, params: Any) -> Any:
     """Given arguments from the calling form *multiparams, **params,
     return a list of bind parameter structures, usually a list of
     dictionaries.
