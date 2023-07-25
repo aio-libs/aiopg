@@ -1,5 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import json
+
+from sqlalchemy.dialects.postgresql.base import PGDialect
 
 import aiopg
 
@@ -32,7 +36,7 @@ class APGCompiler_psycopg2(PGCompiler_psycopg2):
             return default.arg
 
 
-def get_dialect(json_serializer=json.dumps, json_deserializer=lambda x: x):
+def get_dialect(json_serializer=json.dumps, json_deserializer=lambda x: x) -> PGDialect:
     dialect = PGDialect_psycopg2(
         json_serializer=json_serializer, json_deserializer=json_deserializer
     )
@@ -60,7 +64,7 @@ def create_engine(
     timeout=TIMEOUT,
     pool_recycle=-1,
     **kwargs
-):
+) -> _ContextManager[Engine]:
     """A coroutine for Engine creation.
 
     Returns Engine instance with embedded connection pool.
@@ -89,7 +93,7 @@ async def _create_engine(
     timeout=TIMEOUT,
     pool_recycle=-1,
     **kwargs
-):
+) -> Engine:
 
     pool = await aiopg.create_pool(
         dsn,
@@ -107,7 +111,7 @@ async def _create_engine(
         await pool.release(conn)
 
 
-async def _close_engine(engine: "Engine") -> None:
+async def _close_engine(engine: Engine) -> None:
     engine.close()
     await engine.wait_closed()
 
@@ -127,19 +131,19 @@ class Engine:
 
     __slots__ = ("_dialect", "_pool", "_dsn", "_loop")
 
-    def __init__(self, dialect, pool, dsn):
+    def __init__(self, dialect, pool, dsn) -> None:
         self._dialect = dialect
         self._pool = pool
         self._dsn = dsn
         self._loop = get_running_loop()
 
     @property
-    def dialect(self):
+    def dialect(self) -> PGDialect:
         """An dialect for engine."""
         return self._dialect
 
     @property
-    def name(self):
+    def name(self) -> str:
         """A name of the dialect."""
         return self._dialect.name
 
@@ -177,7 +181,7 @@ class Engine:
     def closed(self):
         return self._pool.closed
 
-    def close(self):
+    def close(self) -> None:
         """Close engine.
 
         Mark all engine connections to be closed on getting back to pool.
@@ -185,7 +189,7 @@ class Engine:
         """
         self._pool.close()
 
-    def terminate(self):
+    def terminate(self) -> None:
         """Terminate engine.
 
         Terminate engine pool with instantly closing all acquired
@@ -197,12 +201,12 @@ class Engine:
         """Wait for closing all engine's connections."""
         await self._pool.wait_closed()
 
-    def acquire(self):
+    def acquire(self) -> _ContextManager[SAConnection]:
         """Get a connection from pool."""
         coro = self._acquire()
         return _ContextManager[SAConnection](coro, _close_connection)
 
-    async def _acquire(self):
+    async def _acquire(self) -> SAConnection:
         raw = await self._pool.acquire()
         return SAConnection(raw, self)
 
@@ -235,10 +239,10 @@ class Engine:
         conn = yield from self._acquire().__await__()
         return _ConnectionContextManager(conn, self._loop)
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Engine:
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         self.close()
         await self.wait_closed()
 
@@ -260,13 +264,13 @@ class _ConnectionContextManager:
 
     __slots__ = ("_conn", "_loop")
 
-    def __init__(self, conn: SAConnection, loop: asyncio.AbstractEventLoop):
+    def __init__(self, conn: SAConnection, loop: asyncio.AbstractEventLoop) -> None:
         self._conn = conn
         self._loop = loop
 
-    def __enter__(self):
+    def __enter__(self) -> SAConnection:
         return self._conn
 
-    def __exit__(self, *args):
+    def __exit__(self, *args) -> None:
         asyncio.ensure_future(self._conn.close(), loop=self._loop)
         self._conn = None
