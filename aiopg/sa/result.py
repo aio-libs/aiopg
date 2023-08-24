@@ -111,8 +111,8 @@ class ResultMetaData:
         # `case_sensitive` property removed in SQLAlchemy 2.0+.
         # Usage of `getattr` only needed for backward compatibility with
         # older versions of SQLAlchemy.
-        assert (
-            getattr(dialect, "case_sensitive", True)
+        assert getattr(
+            dialect, "case_sensitive", True
         ), "Doesn't support case insensitive database connection"
 
         # high precedence key values.
@@ -121,8 +121,8 @@ class ResultMetaData:
         # `description_encoding` property removed in SQLAlchemy 2.0+.
         # Usage of `getattr` only needed for backward compatibility with
         # older versions of SQLAlchemy.
-        assert (
-            not getattr(dialect, "description_encoding", None)
+        assert not getattr(
+            dialect, "description_encoding", None
         ), "psycopg in py3k should not use this"
 
         for i, rec in enumerate(cursor_description):

@@ -9,14 +9,17 @@ from .connection import SAConnection
 
 try:
     from sqlalchemy import __version__
-    sa_version = tuple(map(int, __version__.split('.')))
+
+    sa_version = tuple(map(int, __version__.split(".")))
     if sa_version[0] < 2:
         from sqlalchemy.dialects.postgresql.psycopg2 import (
             PGCompiler_psycopg2,
             PGDialect_psycopg2,
         )
     else:
-        from sqlalchemy.dialects.postgresql.base import PGCompiler as PGCompiler_psycopg2
+        from sqlalchemy.dialects.postgresql.base import (
+            PGCompiler as PGCompiler_psycopg2,
+        )
         from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
 except ImportError:  # pragma: no cover
     raise ImportError("aiopg.sa requires sqlalchemy")
