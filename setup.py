@@ -4,7 +4,7 @@ from pathlib import Path
 from setuptools import setup, find_packages
 
 install_requires = ["psycopg2-binary>=2.9.5", "async_timeout>=3.0,<5.0"]
-extras_require = {"sa": ["sqlalchemy[postgresql_psycopg2binary]>=1.3,<1.5"]}
+extras_require = {"sa": ["sqlalchemy[postgresql_psycopg2binary]>=1.3,<2.1"]}
 
 
 def read(*parts):
