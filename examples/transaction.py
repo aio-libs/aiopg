@@ -21,6 +21,7 @@ async def main():
     async with create_pool(dsn) as pool:
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
+                await cur.execute("DROP TABLE IF EXISTS tbl")
                 await cur.execute("CREATE TABLE tbl (id int)")
                 await transaction(cur, IsolationLevel.repeatable_read)
                 await transaction(cur, IsolationLevel.read_committed)

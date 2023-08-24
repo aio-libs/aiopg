@@ -100,12 +100,12 @@ async def fill_data(conn):
 
 
 async def count(conn):
-    c1 = await conn.scalar(users.count())
-    c2 = await conn.scalar(emails.count())
+    c1 = await conn.scalar(sa.select(sa.func.count(users.c.id)))
+    c2 = await conn.scalar(sa.select(sa.func.count(emails.c.id)))
     print("Population consists of", c1, "people with", c2, "emails in total")
     join = sa.join(emails, users, users.c.id == emails.c.user_id)
     query = (
-        sa.select([users.c.name])
+        sa.select(users.c.name)
         .select_from(join)
         .where(emails.c.private == False)  # noqa
         .group_by(users.c.name)
@@ -121,11 +121,11 @@ async def count(conn):
 
 async def show_julia(conn):
     print("Lookup for Julia:")
-    join = sa.join(emails, users, users.c.id == emails.c.user_id)
     query = (
-        sa.select([users, emails], use_labels=True)
-        .select_from(join)
+        sa.select(users, emails)
+        .join(emails, users.c.id == emails.c.user_id)
         .where(users.c.name == "Julia")
+        .set_label_style(sa.LABEL_STYLE_TABLENAME_PLUS_COL)
     )
     async for row in conn.execute(query):
         print(
@@ -138,9 +138,7 @@ async def show_julia(conn):
 
 
 async def ave_age(conn):
-    query = sa.select(
-        [sa.func.avg(sa.func.age(users.c.birthday))]
-    ).select_from(users)
+    query = sa.select(sa.func.avg(sa.func.age(users.c.birthday)))
     ave = await conn.scalar(query)
     print(
         "Average age of population is",
