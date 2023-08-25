@@ -53,12 +53,12 @@ def xa_connect(connect):
 async def test_without_transactions(connect):
     conn1 = await connect()
     conn2 = await connect()
-    res1 = await conn1.scalar(select([func.count()]).select_from(tbl))
+    res1 = await conn1.scalar(select(func.count()).select_from(tbl))
     assert 1 == res1
 
     await conn2.execute(tbl.delete())
 
-    res2 = await conn1.scalar(select([func.count()]).select_from(tbl))
+    res2 = await conn1.scalar(select(func.count()).select_from(tbl))
     assert 0 == res2
 
 
@@ -76,14 +76,14 @@ async def test_root_transaction(connect):
     assert tr.is_active
     await conn1.execute(tbl.delete())
 
-    res1 = await conn2.scalar(select([func.count()]).select_from(tbl))
+    res1 = await conn2.scalar(select(func.count()).select_from(tbl))
     assert 1 == res1
 
     await tr.commit()
 
     assert not tr.is_active
     assert not conn1.in_transaction
-    res2 = await conn2.scalar(select([func.count()]).select_from(tbl))
+    res2 = await conn2.scalar(select(func.count()).select_from(tbl))
     assert 0 == res2
 
 
@@ -95,13 +95,13 @@ async def test_root_transaction_rollback(connect):
     assert tr.is_active
     await conn1.execute(tbl.delete())
 
-    res1 = await conn2.scalar(select([func.count()]).select_from(tbl))
+    res1 = await conn2.scalar(select(func.count()).select_from(tbl))
     assert 1 == res1
 
     await tr.rollback()
 
     assert not tr.is_active
-    res2 = await conn2.scalar(select([func.count()]).select_from(tbl))
+    res2 = await conn2.scalar(select(func.count()).select_from(tbl))
     assert 1 == res2
 
 
@@ -113,13 +113,13 @@ async def test_root_transaction_close(connect):
     assert tr.is_active
     await conn1.execute(tbl.delete())
 
-    res1 = await conn2.scalar(select([func.count()]).select_from(tbl))
+    res1 = await conn2.scalar(select(func.count()).select_from(tbl))
     assert 1 == res1
 
     await tr.close()
 
     assert not tr.is_active
-    res2 = await conn2.scalar(select([func.count()]).select_from(tbl))
+    res2 = await conn2.scalar(select(func.count()).select_from(tbl))
     assert 1 == res2
 
 
@@ -175,12 +175,12 @@ async def test_rollback_on_connection_close(connect):
     tr = await conn1.begin()
     await conn1.execute(tbl.delete())
 
-    res1 = await conn2.scalar(select([func.count()]).select_from(tbl))
+    res1 = await conn2.scalar(select(func.count()).select_from(tbl))
     assert 1 == res1
 
     await conn1.close()
 
-    res2 = await conn2.scalar(select([func.count()]).select_from(tbl))
+    res2 = await conn2.scalar(select(func.count()).select_from(tbl))
     assert 1 == res2
     del tr
 
@@ -196,7 +196,7 @@ async def test_inner_transaction_rollback(connect):
     assert not tr2.is_active
     assert not tr1.is_active
 
-    res = await conn.scalar(select([func.count()]).select_from(tbl))
+    res = await conn.scalar(select(func.count()).select_from(tbl))
     assert 1 == res
 
 
@@ -212,7 +212,7 @@ async def test_inner_transaction_close(connect):
     assert tr1.is_active
     await tr1.commit()
 
-    res = await conn.scalar(select([func.count()]).select_from(tbl))
+    res = await conn.scalar(select(func.count()).select_from(tbl))
     assert 2 == res
 
 
@@ -228,14 +228,14 @@ async def test_nested_transaction_commit(connect):
     assert not tr2.is_active
     assert tr1.is_active
 
-    res = await conn.scalar(select([func.count()]).select_from(tbl))
+    res = await conn.scalar(select(func.count()).select_from(tbl))
     assert 2 == res
 
     await tr1.commit()
     assert not tr2.is_active
     assert not tr1.is_active
 
-    res = await conn.scalar(select([func.count()]).select_from(tbl))
+    res = await conn.scalar(select(func.count()).select_from(tbl))
     assert 2 == res
 
 
@@ -253,7 +253,7 @@ async def test_nested_transaction_commit_twice(connect):
     assert not tr2.is_active
     assert tr1.is_active
 
-    res = await conn.scalar(select([func.count()]).select_from(tbl))
+    res = await conn.scalar(select(func.count()).select_from(tbl))
     assert 2 == res
 
     await tr1.close()
@@ -271,14 +271,14 @@ async def test_nested_transaction_rollback(connect):
     assert not tr2.is_active
     assert tr1.is_active
 
-    res = await conn.scalar(select([func.count()]).select_from(tbl))
+    res = await conn.scalar(select(func.count()).select_from(tbl))
     assert 1 == res
 
     await tr1.commit()
     assert not tr2.is_active
     assert not tr1.is_active
 
-    res = await conn.scalar(select([func.count()]).select_from(tbl))
+    res = await conn.scalar(select(func.count()).select_from(tbl))
     assert 1 == res
 
 
@@ -297,7 +297,7 @@ async def test_nested_transaction_rollback_twice(connect):
     assert tr1.is_active
 
     await tr1.commit()
-    res = await conn.scalar(select([func.count()]).select_from(tbl))
+    res = await conn.scalar(select(func.count()).select_from(tbl))
     assert 1 == res
 
 
@@ -312,7 +312,7 @@ async def test_twophase_transaction_commit(xa_connect):
     await tr.commit()
     assert not tr.is_active
 
-    res = await conn.scalar(select([func.count()]).select_from(tbl))
+    res = await conn.scalar(select(func.count()).select_from(tbl))
     assert 2 == res
 
 
@@ -337,7 +337,7 @@ async def test_transactions_sequence(xa_connect):
     tr1 = await conn.begin()
     assert tr1 is conn._transaction
     await conn.execute(tbl.insert().values(name="a"))
-    res1 = await conn.scalar(select([func.count()]).select_from(tbl))
+    res1 = await conn.scalar(select(func.count()).select_from(tbl))
     assert 1 == res1
 
     await tr1.commit()
@@ -346,7 +346,7 @@ async def test_transactions_sequence(xa_connect):
     tr2 = await conn.begin()
     assert tr2 is conn._transaction
     await conn.execute(tbl.insert().values(name="b"))
-    res2 = await conn.scalar(select([func.count()]).select_from(tbl))
+    res2 = await conn.scalar(select(func.count()).select_from(tbl))
     assert 2 == res2
 
     await tr2.rollback()
@@ -355,7 +355,7 @@ async def test_transactions_sequence(xa_connect):
     tr3 = await conn.begin()
     assert tr3 is conn._transaction
     await conn.execute(tbl.insert().values(name="b"))
-    res3 = await conn.scalar(select([func.count()]).select_from(tbl))
+    res3 = await conn.scalar(select(func.count()).select_from(tbl))
     assert 2 == res3
 
     await tr3.commit()
@@ -369,42 +369,42 @@ async def test_transaction_mode(connect):
 
     tr1 = await conn.begin(isolation_level="SERIALIZABLE")
     await conn.execute(tbl.insert().values(name="a"))
-    res1 = await conn.scalar(select([func.count()]).select_from(tbl))
+    res1 = await conn.scalar(select(func.count()).select_from(tbl))
     assert 1 == res1
     await tr1.commit()
 
     tr2 = await conn.begin(isolation_level="REPEATABLE READ")
     await conn.execute(tbl.insert().values(name="b"))
-    res2 = await conn.scalar(select([func.count()]).select_from(tbl))
+    res2 = await conn.scalar(select(func.count()).select_from(tbl))
     assert 2 == res2
     await tr2.commit()
 
     tr3 = await conn.begin(isolation_level="READ UNCOMMITTED")
     await conn.execute(tbl.insert().values(name="c"))
-    res3 = await conn.scalar(select([func.count()]).select_from(tbl))
+    res3 = await conn.scalar(select(func.count()).select_from(tbl))
     assert 3 == res3
     await tr3.commit()
 
     tr4 = await conn.begin(readonly=True)
     assert tr4 is conn._transaction
-    res1 = await conn.scalar(select([func.count()]).select_from(tbl))
+    res1 = await conn.scalar(select(func.count()).select_from(tbl))
     assert 3 == res1
     await tr4.commit()
 
     tr5 = await conn.begin(isolation_level="READ UNCOMMITTED", readonly=True)
-    res1 = await conn.scalar(select([func.count()]).select_from(tbl))
+    res1 = await conn.scalar(select(func.count()).select_from(tbl))
     assert 3 == res1
     await tr5.commit()
 
     tr6 = await conn.begin(deferrable=True)
     await conn.execute(tbl.insert().values(name="f"))
-    res1 = await conn.scalar(select([func.count()]).select_from(tbl))
+    res1 = await conn.scalar(select(func.count()).select_from(tbl))
     assert 4 == res1
     await tr6.commit()
 
     tr7 = await conn.begin(isolation_level="REPEATABLE READ", deferrable=True)
     await conn.execute(tbl.insert().values(name="g"))
-    res1 = await conn.scalar(select([func.count()]).select_from(tbl))
+    res1 = await conn.scalar(select(func.count()).select_from(tbl))
     assert 5 == res1
     await tr7.commit()
 
@@ -412,7 +412,7 @@ async def test_transaction_mode(connect):
         isolation_level="SERIALIZABLE", readonly=True, deferrable=True
     )
     assert tr8 is conn._transaction
-    res1 = await conn.scalar(select([func.count()]).select_from(tbl))
+    res1 = await conn.scalar(select(func.count()).select_from(tbl))
     assert 5 == res1
     await tr8.commit()
 

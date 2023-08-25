@@ -1,7 +1,7 @@
 import asyncio
 
 import sqlalchemy as sa
-from sqlalchemy.schema import CreateTable
+from sqlalchemy.schema import CreateTable, DropTable
 
 from aiopg.sa import create_engine
 
@@ -16,6 +16,7 @@ users = sa.Table(
 
 
 async def create_sa_transaction_tables(conn):
+    await conn.execute(DropTable(users, if_exists=True))
     await conn.execute(CreateTable(users))
 
 

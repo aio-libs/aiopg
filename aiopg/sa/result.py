@@ -108,15 +108,21 @@ class ResultMetaData:
         # older versions of SQLAlchemy.
         typemap = getattr(dialect, "dbapi_type_map", {})
 
-        assert (
-            dialect.case_sensitive
+        # `case_sensitive` property removed in SQLAlchemy 2.0+.
+        # Usage of `getattr` only needed for backward compatibility with
+        # older versions of SQLAlchemy.
+        assert getattr(
+            dialect, "case_sensitive", True
         ), "Doesn't support case insensitive database connection"
 
         # high precedence key values.
         primary_keymap = {}
 
-        assert (
-            not dialect.description_encoding
+        # `description_encoding` property removed in SQLAlchemy 2.0+.
+        # Usage of `getattr` only needed for backward compatibility with
+        # older versions of SQLAlchemy.
+        assert not getattr(
+            dialect, "description_encoding", None
         ), "psycopg in py3k should not use this"
 
         for i, rec in enumerate(cursor_description):

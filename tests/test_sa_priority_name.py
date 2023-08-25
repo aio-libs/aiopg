@@ -1,5 +1,6 @@
 import pytest
 import sqlalchemy as sa
+from sqlalchemy import LABEL_STYLE_TABLENAME_PLUS_COL
 
 meta = sa.MetaData()
 tbl = sa.Table(
@@ -36,7 +37,7 @@ async def test_priority_name(connect):
 
 async def test_priority_name_label(connect):
     await connect.execute(tbl.insert().values(id="test_id", name="test_name"))
-    query = sa.select([tbl.c.name.label("test_label_name"), tbl.c.id])
+    query = sa.select(tbl.c.name.label("test_label_name"), tbl.c.id)
     query = query.select_from(tbl)
     row = await (await connect.execute(query)).first()
     assert row.test_label_name == "test_name"
@@ -46,7 +47,7 @@ async def test_priority_name_label(connect):
 async def test_priority_name_and_label(connect):
     await connect.execute(tbl.insert().values(id="test_id", name="test_name"))
     query = sa.select(
-        [tbl.c.name.label("test_label_name"), tbl.c.name, tbl.c.id]
+        tbl.c.name.label("test_label_name"), tbl.c.name, tbl.c.id
     )
     query = query.select_from(tbl)
     row = await (await connect.execute(query)).first()
@@ -57,7 +58,7 @@ async def test_priority_name_and_label(connect):
 
 async def test_priority_name_all_get(connect):
     await connect.execute(tbl.insert().values(id="test_id", name="test_name"))
-    query = sa.select([tbl.c.name])
+    query = sa.select(tbl.c.name)
     query = query.select_from(tbl)
     row = await (await connect.execute(query)).first()
     assert row.name == "test_name"
@@ -69,7 +70,7 @@ async def test_priority_name_all_get(connect):
 async def test_use_labels(connect):
     """key property is ignored"""
     await connect.execute(tbl.insert().values(id="test_id", name="test_name"))
-    query = tbl.select(use_labels=True)
+    query = tbl.select().set_label_style(LABEL_STYLE_TABLENAME_PLUS_COL)
     row = await (await connect.execute(query)).first()
     assert row.sa_tbl5_Name == "test_name"
     assert row.sa_tbl5_ID == "test_id"
