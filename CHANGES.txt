@@ -1,5 +1,5 @@
 1.5.0a1 (2023-08-29)
-^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^
 
 * SQLAlchemy 2.0 compatibility `#901 <https://github.com/aio-libs/aiopg/pull/901>`_
 
