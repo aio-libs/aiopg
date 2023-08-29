@@ -72,7 +72,7 @@ class _PoolConnectionContextManager:
 
     __slots__ = ("_pool", "_conn")
 
-    def __init__(self, pool: "Pool", conn: Connection):
+    def __init__(self, pool: "Pool", conn: Connection) -> None:
         self._pool: Optional[Pool] = pool
         self._conn: Optional[Connection] = conn
 
@@ -130,7 +130,7 @@ class _PoolCursorContextManager:
 
     __slots__ = ("_pool", "_conn", "_cursor")
 
-    def __init__(self, pool: "Pool", conn: Connection, cursor: Cursor):
+    def __init__(self, pool: "Pool", conn: Connection, cursor: Cursor) -> None:
         self._pool = pool
         self._conn = conn
         self._cursor = cursor

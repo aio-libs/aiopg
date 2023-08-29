@@ -26,13 +26,13 @@ class Transaction:
 
     __slots__ = ("_connection", "_parent", "_is_active")
 
-    def __init__(self, connection, parent):
+    def __init__(self, connection, parent) -> None:
         self._connection = connection
         self._parent = parent or self
         self._is_active = True
 
     @property
-    def is_active(self):
+    def is_active(self) -> bool:
         """Return ``True`` if a transaction is active."""
         return self._is_active
 
@@ -41,7 +41,7 @@ class Transaction:
         """Return transaction's connection (SAConnection instance)."""
         return self._connection
 
-    async def close(self):
+    async def close(self) -> None:
         """Close this transaction.
 
         If this transaction is the base transaction in a begin/commit
@@ -58,17 +58,17 @@ class Transaction:
         else:
             self._is_active = False
 
-    async def rollback(self):
+    async def rollback(self) -> None:
         """Roll back this transaction."""
         if not self._parent._is_active:
             return
         await self._do_rollback()
         self._is_active = False
 
-    async def _do_rollback(self):
+    async def _do_rollback(self) -> None:
         await self._parent.rollback()
 
-    async def commit(self):
+    async def commit(self) -> None:
         """Commit this transaction."""
 
         if not self._parent._is_active:
@@ -76,13 +76,13 @@ class Transaction:
         await self._do_commit()
         self._is_active = False
 
-    async def _do_commit(self):
+    async def _do_commit(self) -> None:
         pass
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "Transaction":
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         if exc_type:
             await self.rollback()
         elif self._is_active:
@@ -92,7 +92,7 @@ class Transaction:
 class RootTransaction(Transaction):
     __slots__ = ()
 
-    def __init__(self, connection):
+    def __init__(self, connection) -> None:
         super().__init__(connection, None)
 
     async def _do_rollback(self):
@@ -113,7 +113,7 @@ class NestedTransaction(Transaction):
 
     __slots__ = ("_savepoint",)
 
-    def __init__(self, connection, parent):
+    def __init__(self, connection, parent) -> None:
         super().__init__(connection, parent)
         self._savepoint = None
 
@@ -144,7 +144,7 @@ class TwoPhaseTransaction(Transaction):
 
     __slots__ = ("_is_prepared", "_xid")
 
-    def __init__(self, connection, xid):
+    def __init__(self, connection, xid) -> None:
         super().__init__(connection, None)
         self._is_prepared = False
         self._xid = xid

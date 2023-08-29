@@ -6,6 +6,7 @@ from sqlalchemy.sql import ClauseElement
 from sqlalchemy.sql.ddl import DDLElement
 from sqlalchemy.sql.dml import UpdateBase
 
+from ..connection import Cursor
 from ..utils import _ContextManager, _IterableContextManager
 from . import exc
 from .result import ResultProxy
@@ -43,7 +44,7 @@ class SAConnection:
         "_query_compile_kwargs",
     )
 
-    def __init__(self, connection, engine):
+    def __init__(self, connection, engine) -> None:
         self._connection = connection
         self._transaction = None
         self._savepoint_seq = 0
@@ -52,7 +53,7 @@ class SAConnection:
         self._cursors = weakref.WeakSet()
         self._query_compile_kwargs = dict(self._QUERY_COMPILE_KWARGS)
 
-    def execute(self, query, *multiparams, **params):
+    def execute(self, query, *multiparams, **params) -> _IterableContextManager[ResultProxy]:
         """Executes a SQL query with optional parameters.
 
         query - a SQL query string or any sqlalchemy expression.
@@ -92,18 +93,18 @@ class SAConnection:
         coro = self._execute(query, *multiparams, **params)
         return _IterableContextManager[ResultProxy](coro, _close_result_proxy)
 
-    async def _open_cursor(self):
+    async def _open_cursor(self) -> Cursor:
         if self._connection is None:
             raise exc.ResourceClosedError("This connection is closed.")
         cursor = await self._connection.cursor()
         self._cursors.add(cursor)
         return cursor
 
-    def _close_cursor(self, cursor):
+    def _close_cursor(self, cursor) -> None:
         self._cursors.remove(cursor)
         cursor.close()
 
-    async def _execute(self, query, *multiparams, **params):
+    async def _execute(self, query, *multiparams, **params) -> ResultProxy:
         cursor = await self._open_cursor()
         dp = _distill_params(multiparams, params)
         if len(dp) > 1:
@@ -181,7 +182,7 @@ class SAConnection:
         return await res.scalar()
 
     @property
-    def closed(self):
+    def closed(self) -> bool:
         """The readonly property that returns True if connections is closed."""
         return self.connection is None or self.connection.closed
 
@@ -231,7 +232,7 @@ class SAConnection:
             coro, _commit_transaction_if_active, _rollback_transaction
         )
 
-    async def _begin(self, isolation_level, readonly, deferrable):
+    async def _begin(self, isolation_level, readonly, deferrable) -> Transaction:
         if self._transaction is None:
             self._transaction = RootTransaction(self)
             await self._begin_impl(isolation_level, readonly, deferrable)
@@ -377,11 +378,11 @@ class SAConnection:
             await self._commit_impl()
 
     @property
-    def in_transaction(self):
+    def in_transaction(self) -> bool:
         """Return True if a transaction is in progress."""
         return self._transaction is not None and self._transaction.is_active
 
-    async def close(self):
+    async def close(self) -> None:
         """Close this SAConnection.
 
         This results in a release of the underlying database
@@ -401,7 +402,7 @@ class SAConnection:
 
         await asyncio.shield(self._close())
 
-    async def _close(self):
+    async def _close(self) -> None:
         if self._transaction is not None:
             with contextlib.suppress(Exception):
                 await self._transaction.rollback()
