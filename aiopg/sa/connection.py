@@ -53,7 +53,9 @@ class SAConnection:
         self._cursors = weakref.WeakSet()
         self._query_compile_kwargs = dict(self._QUERY_COMPILE_KWARGS)
 
-    def execute(self, query, *multiparams, **params) -> _IterableContextManager[ResultProxy]:
+    def execute(
+        self, query, *multiparams, **params
+    ) -> _IterableContextManager[ResultProxy]:
         """Executes a SQL query with optional parameters.
 
         query - a SQL query string or any sqlalchemy expression.
@@ -232,7 +234,9 @@ class SAConnection:
             coro, _commit_transaction_if_active, _rollback_transaction
         )
 
-    async def _begin(self, isolation_level, readonly, deferrable) -> Transaction:
+    async def _begin(
+        self, isolation_level, readonly, deferrable
+    ) -> Transaction:
         if self._transaction is None:
             self._transaction = RootTransaction(self)
             await self._begin_impl(isolation_level, readonly, deferrable)

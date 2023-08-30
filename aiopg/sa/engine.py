@@ -45,7 +45,9 @@ class APGCompiler_psycopg2(PGCompiler_psycopg2):
             return default.arg
 
 
-def get_dialect(json_serializer=json.dumps, json_deserializer=lambda x: x) -> PGDialect:
+def get_dialect(
+    json_serializer=json.dumps, json_deserializer=lambda x: x
+) -> PGDialect:
     dialect = PGDialect_psycopg2(
         json_serializer=json_serializer, json_deserializer=json_deserializer
     )
@@ -72,7 +74,7 @@ def create_engine(
     dialect=_dialect,
     timeout=TIMEOUT,
     pool_recycle=-1,
-    **kwargs
+    **kwargs,
 ) -> _ContextManager[Engine]:
     """A coroutine for Engine creation.
 
@@ -88,7 +90,7 @@ def create_engine(
         dialect=dialect,
         timeout=timeout,
         pool_recycle=pool_recycle,
-        **kwargs
+        **kwargs,
     )
     return _ContextManager(coro, _close_engine)
 
@@ -101,7 +103,7 @@ async def _create_engine(
     dialect=_dialect,
     timeout=TIMEOUT,
     pool_recycle=-1,
-    **kwargs
+    **kwargs,
 ) -> Engine:
 
     pool = await aiopg.create_pool(
@@ -110,7 +112,7 @@ async def _create_engine(
         maxsize=maxsize,
         timeout=timeout,
         pool_recycle=pool_recycle,
-        **kwargs
+        **kwargs,
     )
     conn = await pool.acquire()
     try:
@@ -273,7 +275,7 @@ class _ConnectionContextManager:
 
     __slots__ = ("_conn", "_loop")
 
-    def __init__(self, conn: SAConnection, loop: asyncio.AbstractEventLoop) -> None:
+    def __init__(self, conn: SAConnection, loop: asyncio.AbstractEventLoop):
         self._conn = conn
         self._loop = loop
 
