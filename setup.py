@@ -34,7 +34,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -58,7 +57,7 @@ setup(
     classifiers=classifiers,
     platforms=["macOS", "POSIX", "Windows"],
     author="Andrew Svetlov",
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     project_urls={
         "Chat: Gitter": "https://gitter.im/aio-libs/Lobby",
         "CI: GA": "https://github.com/aio-libs/aiopg/actions?query=workflow%3ACI",

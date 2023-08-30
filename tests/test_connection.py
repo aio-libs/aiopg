@@ -1,7 +1,6 @@
 import asyncio
 import gc
 import socket
-import sys
 import time
 from unittest import mock
 
@@ -12,8 +11,6 @@ import pytest
 
 import aiopg
 from aiopg import DEFAULT_TIMEOUT, Connection, Cursor
-
-PY_341 = sys.version_info >= (3, 4, 1)
 
 
 @pytest.fixture

@@ -1,5 +1,4 @@
 import asyncio
-import sys
 from types import TracebackType
 from typing import (
     Any,
@@ -14,19 +13,9 @@ from typing import (
     Union,
 )
 
-if sys.version_info >= (3, 7, 0):
-    __get_running_loop = asyncio.get_running_loop
-else:
-
-    def __get_running_loop() -> asyncio.AbstractEventLoop:
-        loop = asyncio.get_event_loop()
-        if not loop.is_running():
-            raise RuntimeError("no running event loop")
-        return loop
-
 
 def get_running_loop() -> asyncio.AbstractEventLoop:
-    return __get_running_loop()
+    return asyncio.get_running_loop()
 
 
 def create_completed_future(
