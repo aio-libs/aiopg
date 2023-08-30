@@ -1,6 +1,6 @@
 import weakref
 from collections.abc import Mapping, Sequence
-from typing import Tuple, Dict, List, Union
+from typing import Dict, List, Tuple, Union
 
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.sql import expression, sqltypes
