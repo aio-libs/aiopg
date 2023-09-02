@@ -1,0 +1,13 @@
+version: 2
+updates:
+- package-ecosystem: pip
+  directory: "/"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: sqlalchemy[postgresql_psycopg2binary]
+    versions:
+    - 1.4.0
+    - 1.4.1
+    - 1.4.2
