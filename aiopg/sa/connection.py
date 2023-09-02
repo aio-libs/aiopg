@@ -365,12 +365,12 @@ class SAConnection:
     async def recover_twophase(self):
         """Return a list of prepared twophase transaction ids."""
         result = await self.execute("SELECT gid FROM pg_prepared_xacts")
-        return [row[0] for row in result]
+        return [row[0] async for row in result]
 
     async def rollback_prepared(self, xid, *, is_prepared=True):
         """Rollback prepared twophase transaction."""
         if is_prepared:
-            await self.execute(f"ROLLBACK PREPARED {xid:!r}")
+            await self.execute(f"ROLLBACK PREPARED {xid!r}")
         else:
             await self._rollback_impl()
 

@@ -340,7 +340,6 @@ Connection
 
    .. comethod:: begin_twophase(xid=None)
       :coroutine:
-      :async-with:
 
       Begin a two-phase or XA transaction and return a transaction
       handle.
