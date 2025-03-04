@@ -3,7 +3,7 @@ from pathlib import Path
 
 from setuptools import setup, find_packages
 
-install_requires = ["psycopg2-binary>=2.9.5", "async_timeout>=3.0,<5.0"]
+install_requires = ["psycopg2-binary>=2.9.5", "async_timeout>=3.0,<5.0; python_version < \"3.11\""]
 extras_require = {"sa": ["sqlalchemy[postgresql_psycopg2binary]>=1.4,<2.1"]}
 
 
