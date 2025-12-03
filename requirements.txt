@@ -3,7 +3,7 @@ docker==6.1.2
 flake8==3.9.2
 isort==5.9.3
 -e .[sa]
-sphinx==4.1.2
+sphinx==7.4.7
 pytest==6.2.4
 pytest-cov==2.12.1
 pytest-sugar==0.9.4
