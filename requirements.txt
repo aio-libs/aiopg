@@ -14,4 +14,4 @@ sqlalchemy[postgresql_psycopg2binary]==2.0.20
 async-timeout==4.0.0
 mypy==0.910
 black==22.3.0
-six==1.16.0
+six==1.17.0
