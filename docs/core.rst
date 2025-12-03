@@ -72,7 +72,7 @@ Example::
    A connection to a :term:`PostgreSQL` database instance. It encapsulates a
    database session.
 
-   Its insterface is very close to :class:`psycopg2.connection`
+   Its interface is very close to :class:`psycopg2.connection`
    (http://initd.org/psycopg/docs/connection.html) except all methods
    are :ref:`coroutines <coroutine>`.
 
@@ -318,7 +318,7 @@ Cursor
    connections can or can not be isolated, depending on the
    connections’ isolation level.
 
-   Its insterface is very close to :class:`psycopg2.cursor`
+   Its interface is very close to :class:`psycopg2.cursor`
    (http://initd.org/psycopg/docs/cursor.html) except all methods
    are :ref:`coroutines <coroutine>`.
 
