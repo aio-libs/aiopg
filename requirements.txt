@@ -4,7 +4,7 @@ flake8==3.9.2
 isort==5.9.3
 -e .[sa]
 sphinx==4.1.2
-pytest==6.2.4
+pytest==8.4.2
 pytest-cov==2.12.1
 pytest-sugar==0.9.4
 pytest-timeout==1.4.2
