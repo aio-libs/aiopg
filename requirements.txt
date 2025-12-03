@@ -1,7 +1,7 @@
 coverage==5.5
 docker==6.1.2
 flake8==3.9.2
-isort==5.9.3
+isort==6.1.0
 -e .[sa]
 sphinx==4.1.2
 pytest==6.2.4
