@@ -1,5 +1,6 @@
 import asyncio
 import collections
+import sys
 import warnings
 from types import TracebackType
 from typing import (
@@ -13,7 +14,10 @@ from typing import (
     Type,
 )
 
-import async_timeout
+if sys.version_info >= (3, 11):
+    import asyncio as async_timeout
+else:
+    import async_timeout
 import psycopg2.extensions
 
 from .connection import TIMEOUT, Connection, Cursor, connect
