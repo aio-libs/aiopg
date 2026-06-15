@@ -800,6 +800,18 @@ class Connection:
                             # forget a bad file descriptor, don't try to
                             # touch it
                             self._fileno = None
+                else:
+                    # fd is still valid but the connection has failed
+                    # (e.g. "Connection refused" during async handshake).
+                    # Remove the reader now so the event loop does not
+                    # hold a stale reference to this fd.  If the OS
+                    # recycles the same fd for a subsequent connection
+                    # attempt, uvloop would otherwise crash with
+                    # "RuntimeError: unable to perform operation on
+                    # <UVPoll closed=True ...>; the handler is closed".
+                    # See https://github.com/aio-libs/aiopg/issues/909
+                    with contextlib.suppress(OSError):
+                        self._loop.remove_reader(self._fileno)
 
             try:
                 if self._writing:
