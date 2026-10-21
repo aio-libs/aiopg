@@ -795,10 +795,6 @@ class Connection:
                 self._fileno = fileno
                 self._loop.add_reader(fileno, self._ready, weak_self)
             state = self._conn.poll()
-            if state == psycopg2.extensions.POLL_OK:
-                if waiter is not None and not waiter.done():
-                    waiter.set_result(None)
-                return
             while self._conn.notifies:
                 notify = self._conn.notifies.pop(0)
                 self._notifies.put_nowait(notify)
@@ -866,16 +862,6 @@ class Connection:
                     f"unknown answer {state} from underlying "
                     f".poll() call"
                 )
-            if (
-                state in (
-                    psycopg2.extensions.POLL_READ,
-                    psycopg2.extensions.POLL_WRITE,
-                )
-                and waiter is not None
-                and not waiter.done()
-            ):
-                # libpq can switch candidate sockets without a selector event.
-                self._loop.call_later(0.01, self._ready, weak_self)
 
     def _fatal_error(self, message: str) -> None:
         # Should be called from exception handler only.
