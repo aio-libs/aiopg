@@ -536,7 +536,7 @@ async def test_remove_reader_from_alive_fd(connect):
     assert not m_remove_reader.called
 
     conn.close()
-    assert m_remove_reader.called_with(fileno)
+    m_remove_reader.assert_called_with(fileno)
 
 
 async def test_remove_reader_from_dead_fd(connect):
@@ -557,7 +557,7 @@ async def test_remove_reader_from_dead_fd(connect):
     conn._loop.remove_reader = m_remove_reader
 
     conn._ready(conn._weakref)
-    assert m_remove_reader.called_with(fileno)
+    m_remove_reader.assert_called_with(fileno)
 
     m_remove_reader.reset_mock()
     conn.close()

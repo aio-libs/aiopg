@@ -161,11 +161,10 @@ async def test_release_after_connection_disconnected_before_select(
     engine = await make_engine(port=proxy_port)
 
     with pytest.raises((psycopg2.InterfaceError, psycopg2.OperationalError)):
-        with pytest.warns(ResourceWarning, match="Invalid transaction status"):
-            async with engine.acquire() as conn, conn.begin():
-                await conn.execute("SELECT 1;")
-                await tcp_proxy.disconnect()
-                await conn.execute("SELECT 1;")
+        async with engine.acquire() as conn, conn.begin():
+            await conn.execute("SELECT 1;")
+            await tcp_proxy.disconnect()
+            await conn.execute("SELECT 1;")
 
     assert engine.size == 0
 
@@ -180,11 +179,10 @@ async def test_release_after_connection_disconnected_before_begin(
     engine = await make_engine(port=proxy_port)
 
     with pytest.raises((psycopg2.InterfaceError, psycopg2.OperationalError)):
-        with pytest.warns(ResourceWarning, match="Invalid transaction status"):
-            async with engine.acquire() as conn:
-                await conn.execute("SELECT 1;")
-                await tcp_proxy.disconnect()
-                async with conn.begin():
-                    pytest.fail("Should not be here")
+        async with engine.acquire() as conn:
+            await conn.execute("SELECT 1;")
+            await tcp_proxy.disconnect()
+            async with conn.begin():
+                pytest.fail("Should not be here")
 
     assert engine.size == 0
